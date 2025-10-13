@@ -2,19 +2,23 @@ import Mathlib.Algebra.Lie.OfAssociative
 import Mathlib.Data.Real.StarOrdered
 import Mathlib.Order.CompletePartialOrder
 import Mathlib.Probability.Distributions.Gaussian.Real
+import Mathlib.Probability.Distributions.Gaussian.Fernique
 import Mathlib.Topology.Algebra.Module.ModuleTopology
 import Mathlib.Topology.EMetricSpace.Paracompact
 import Mathlib.Topology.Separation.CompletelyRegular
+import Mathlib.MeasureTheory.Measure.Tilted
 
 open MeasureTheory Filter Set Real
 open scoped ProbabilityTheory NNReal ENNReal Filter Topology
+
+set_option linter.style.longFile 0
 
 /-!
 # Gaussian integration by parts via exponential tilt (Stein’s identity)
 
 We prove Stein’s lemma and the integration by parts formula for real Gaussian
 measures by an explicit control of the exponential tilt and a dominated
-differentiation argument. This should works in full generality for one–dimensional 
+differentiation argument. This should works in full generality for one–dimensional
 (possibly degenerate) Gaussians, under minimal hypotheses on the test function.
 
 Let `γ_{μ,v}` denote the law of the real normal `N(μ,v)` (variance `v : ℝ≥0`).
@@ -60,7 +64,7 @@ Main statements:
 
 - `HasModerateGrowth`:
     A simple “polynomial growth” predicate on `F` and `F'` ensuring all integrability
-    requirements against a Gaussian. This replaces ad‑hoc, local integrability checks.
+    requirements against a Gaussian, to avoid ad‑hoc, local integrability checks.
 
 - `gaussianTilt_hasDerivAt_left`, `gaussianTilt_hasDerivAt_right`:
     Differentiation under the integral sign at `t = 0` for the tilted functional.
@@ -146,111 +150,209 @@ lemma integral_sq_gaussianReal_centered (v : ℝ≥0) :
     ∫ x, x^2 ∂ gaussianReal 0 v = v := by
   simpa using (integral_sq_sub_mean_gaussianReal (μ := 0) (v := v))
 
-/-- Exponential tilt identity for the centered Gaussian density. -/
+/-- Complete-the-square algebra for the Gaussian tilt exponent (centered case).
+For `v ≠ 0`, we have (t x − v t²/2) − x²/(2 v) = − (x − v t)² / (2 v). -/
+lemma tiltExponent_complete_square
+    {v : ℝ≥0} (hv : v ≠ 0) (t x : ℝ) :
+  (t * x - (v:ℝ) * t^2 / 2) - x^2 / (2 * (v:ℝ))
+    = - ((x - (v:ℝ) * t)^2) / (2 * (v:ℝ)) := by
+  have h2vne : (2 * (v:ℝ)) ≠ 0 := by
+    simp_all only [ne_eq, mul_eq_zero, OfNat.ofNat_ne_zero, NNReal.coe_eq_zero, or_self,
+      not_false_eq_true]
+  apply (mul_right_cancel₀ h2vne)
+  have hL :
+      ((t * x - (v:ℝ) * t^2 / 2) - x^2 / (2 * (v:ℝ))) * (2 * (v:ℝ))
+        = 2 * (v:ℝ) * t * x - (v:ℝ)^2 * t^2 - x^2 := by
+    ring_nf
+    simp_all only [ne_eq, mul_eq_zero, OfNat.ofNat_ne_zero, NNReal.coe_eq_zero, or_self,
+      not_false_eq_true, mul_inv_cancel_right₀]
+  have hR :
+      (- ((x - (v:ℝ) * t)^2) / (2 * (v:ℝ))) * (2 * (v:ℝ))
+        = - (x - (v:ℝ) * t)^2 := by
+    field_simp [h2vne]
+  have hR' :
+      - (x - (v:ℝ) * t)^2 = 2 * (v:ℝ) * t * x - (v:ℝ)^2 * t^2 - x^2 := by
+    have hsq : (x - (v:ℝ) * t)^2
+                  = x^2 - 2 * (v:ℝ) * t * x + (v:ℝ)^2 * t^2 := by ring
+    calc
+      - (x - (v:ℝ) * t)^2
+          = - (x^2 - 2 * (v:ℝ) * t * x + (v:ℝ)^2 * t^2) := by simp [hsq]
+      _ = (-x^2 + 2 * (v:ℝ) * t * x - (v:ℝ)^2 * t^2) := by ring
+      _ = 2 * (v:ℝ) * t * x - (v:ℝ)^2 * t^2 - x^2 := by ring
+  simp_all only [ne_eq, mul_eq_zero, OfNat.ofNat_ne_zero, NNReal.coe_eq_zero, or_self,
+    not_false_eq_true, isUnit_iff_ne_zero, IsUnit.div_mul_cancel]
+
+/-- Exponential version of `tiltExponent_complete_square`. -/
+lemma exp_tiltExponent_complete_square
+    {v : ℝ≥0} (hv : v ≠ 0) (t x : ℝ) :
+  Real.exp ((t * x - (v:ℝ) * t^2 / 2) - x^2 / (2 * (v:ℝ)))
+    = Real.exp ( - ((x - (v:ℝ) * t)^2) / (2 * (v:ℝ)) ) := by
+  simp [tiltExponent_complete_square (v := v) hv t x]
+
+/-- Exponential tilt identity for the centered Gaussian density (refactored). -/
 lemma gaussian_tilt_identity_zero
     {v : ℝ≥0} (hv : v ≠ 0) :
     ∀ t x : ℝ,
       Real.exp (t * x - (v:ℝ) * t^2 / 2) * gaussianPDFReal 0 v x
         = gaussianPDFReal 0 v (x - (v:ℝ) * t) := by
   intro t x
-  have hvpos : 0 < (v:ℝ) := by exact_mod_cast (pos_iff_ne_zero.mpr hv)
-  have hsq : (x - (v:ℝ) * t)^2 = x^2 - 2 * (v:ℝ) * t * x + (v:ℝ)^2 * t^2 := by
-    ring
-  have hExp :
-      (t * x - (v:ℝ) * t^2 / 2) - x^2 / (2 * (v:ℝ))
-        = - ((x - (v:ℝ) * t)^2) / (2 * (v:ℝ)) := by
-    have h2vne : (2 * (v:ℝ)) ≠ 0 := by nlinarith
-    apply (mul_right_cancel₀ h2vne)
-    have hL :
-        ((t * x - (v:ℝ) * t^2 / 2) - x^2 / (2 * (v:ℝ))) * (2 * (v:ℝ))
-          = 2 * (v:ℝ) * t * x - (v:ℝ)^2 * t^2 - x^2 := by ring_nf; aesop
-    have hR :
-        (- ((x - (v:ℝ) * t)^2) / (2 * (v:ℝ))) * (2 * (v:ℝ))
-          = - (x - (v:ℝ) * t)^2 := by
-      field_simp [h2vne]
-    have hR' :
-        - (x - (v:ℝ) * t)^2 = 2 * (v:ℝ) * t * x - (v:ℝ)^2 * t^2 - x^2 := by
-      calc
-        - (x - (v:ℝ) * t)^2
-            = - (x^2 - 2 * (v:ℝ) * t * x + (v:ℝ)^2 * t^2) := by simp [hsq]
-        _ = (-x^2 + 2 * (v:ℝ) * t * x - (v:ℝ)^2 * t^2) := by ring
-        _ = 2 * (v:ℝ) * t * x - (v:ℝ)^2 * t^2 - x^2 := by ring
-    aesop
-  have : gaussianPDFReal 0 v x
-      = (√(2 * π * (v:ℝ)))⁻¹ * Real.exp (- x^2 / (2 * (v:ℝ))) := by
+  have hpdf_x :
+      gaussianPDFReal 0 v x = (√(2 * π * (v:ℝ)))⁻¹ * Real.exp (- x^2 / (2 * (v:ℝ))) := by
     simp [gaussianPDFReal, sub_eq_add_neg, mul_comm, mul_left_comm]
-  have : Real.exp (t * x - (v:ℝ) * t^2 / 2) * gaussianPDFReal 0 v x
-      = (√(2 * π * (v:ℝ)))⁻¹
+  have hComb :
+      Real.exp (t * x - (v:ℝ) * t^2 / 2) * gaussianPDFReal 0 v x
+        = (√(2 * π * (v:ℝ)))⁻¹
           * Real.exp ((t * x - (v:ℝ) * t^2 / 2) - x^2 / (2 * (v:ℝ))) := by
-    simp [this, sub_eq_add_neg, Real.exp_add, add_assoc, mul_comm, mul_left_comm, mul_assoc]
+    rw [hpdf_x, mul_comm (Real.exp _), mul_assoc, ← Real.exp_add]
     ring_nf
   calc
     Real.exp (t * x - (v:ℝ) * t^2 / 2) * gaussianPDFReal 0 v x
         = (√(2 * π * (v:ℝ)))⁻¹
-            * Real.exp ((t * x - (v:ℝ) * t^2 / 2) - x^2 / (2 * (v:ℝ))) := this
+            * Real.exp ((t * x - (v:ℝ) * t^2 / 2) - x^2 / (2 * (v:ℝ))) := hComb
     _ = (√(2 * π * (v:ℝ)))⁻¹
             * Real.exp ( - ((x - (v:ℝ) * t)^2) / (2 * (v:ℝ)) ) := by
-          simp [hExp]
+          have hsq :=
+            exp_tiltExponent_complete_square (v := v) hv t x
+          simpa [mul_comm, mul_left_comm, mul_assoc]
+            using congrArg (fun y => (√(2 * π * (v:ℝ)))⁻¹ * y) hsq
     _ = gaussianPDFReal 0 v (x - (v:ℝ) * t) := by
           simp [gaussianPDFReal, sub_eq_add_neg, mul_comm, mul_left_comm, pow_two]
 
 /-- Tilted Gaussian expectation functional. -/
 noncomputable def gaussianTilt (F : ℝ → ℝ) (v : ℝ≥0) (t : ℝ) : ℝ :=
-  ∫ x, F x * Real.exp (t * x - (v:ℝ) * t^2 / 2) ∂ (gaussianReal 0 v)
+  ∫ x, F x ∂((gaussianReal 0 v).tilted (fun x => t * x - (v:ℝ) * t^2 / 2))
 
+/-- The normalizing constant of the exponential tilt for `γ = gaussianReal 0 v`. -/
+@[simp]
+lemma gaussianTilt_Z_def
+    {v : ℝ≥0} (t : ℝ) :
+    (∫ x, Real.exp (t * x - (v:ℝ) * t^2 / 2) ∂ gaussianReal 0 v)
+      = Real.exp (-(v:ℝ) * t^2 / 2)
+          * (∫ x, Real.exp (t * x) ∂ gaussianReal 0 v) := by
+  set c := Real.exp (-(v:ℝ) * t^2 / 2)
+  have hpt : ∀ x, Real.exp (t * x - (v:ℝ) * t^2 / 2) = c * Real.exp (t * x) := by
+    intro x
+    simp [c, sub_eq_add_neg, Real.exp_add, mul_comm]
+    rw [@neg_div']
+  have hconst :
+      (∫ x, c * Real.exp (t * x) ∂ gaussianReal 0 v)
+        = c * (∫ x, Real.exp (t * x) ∂ gaussianReal 0 v) := by
+    simpa using
+      (integral_const_mul (μ := gaussianReal 0 v)
+        (r := c) (f := fun x : ℝ => Real.exp (t * x)))
+  simpa [hpt] using hconst
+
+/-- The normalizing constant of the exponential tilt equals `1`
+for the centered Gaussian, by the mgf identity. -/
+lemma gaussianTilt_Z_eq_one
+    {v : ℝ≥0} (t : ℝ) :
+    (∫ x, Real.exp (t * x - (v:ℝ) * t^2 / 2) ∂ gaussianReal 0 v) = 1 := by
+  have hZ := gaussianTilt_Z_def (v := v) t
+  have hIntExp : ∫ x, Real.exp (t * x) ∂ gaussianReal 0 v
+      = Real.exp ((v:ℝ) * t^2 / 2) := by
+    have hmgf := ProbabilityTheory.mgf_fun_id_gaussianReal (μ := 0) (v := v)
+    have hmgf_t := congrArg (fun f => f t) hmgf
+    simpa [ProbabilityTheory.mgf] using hmgf_t
+  calc
+    (∫ x, Real.exp (t * x - (v:ℝ) * t^2 / 2) ∂ gaussianReal 0 v)
+        = Real.exp (-(v:ℝ) * t^2 / 2) * ∫ x, Real.exp (t * x) ∂ gaussianReal 0 v := hZ
+    _ = Real.exp (-(v:ℝ) * t^2 / 2) * Real.exp ((v:ℝ) * t^2 / 2) := by simp [hIntExp]
+    _ = 1 := by
+      have : Real.exp (-(v:ℝ) * t^2 / 2 + (v:ℝ) * t^2 / 2) = Real.exp 0 := by
+        congr 1; ring
+      simpa [Real.exp_add] using this
+
+/-- Change-of-measure: rewrite the tilted integral on `gaussianReal 0 v` under Lebesgue,
+and simplify the normalizing constant to `1`. -/
+lemma gaussianTilt_to_Lebesgue
+    {v : ℝ≥0} (hv : v ≠ 0) {F : ℝ → ℝ} (t : ℝ) :
+  gaussianTilt F v t
+    = ∫ x, F x * Real.exp (t * x - (v:ℝ) * t^2 / 2)
+            * gaussianPDFReal 0 v x := by
+  let Z : ℝ :=
+    ∫ x, Real.exp (t * x - (v:ℝ) * t^2 / 2) ∂ gaussianReal 0 v
+  have hConv :=
+    integral_gaussianReal_eq_integral_smul
+      (μ := 0) (v := v) hv (E := ℝ)
+      (f := fun x =>
+        (Real.exp (t * x - (v:ℝ) * t^2 / 2) / Z) • F x)
+  have hZ1 : Z = 1 := by
+    simpa [Z] using gaussianTilt_Z_eq_one (v := v) t
+  have hStep :
+      gaussianTilt F v t
+        = ∫ x, gaussianPDFReal 0 v x •
+            ((Real.exp (t * x - (v:ℝ) * t^2 / 2) / Z) • F x) := by
+    simpa [gaussianTilt, integral_tilted, Z] using hConv
+  simpa [smul_eq_mul, hZ1, Z, div_eq_mul_inv, mul_comm, mul_left_comm, mul_assoc] using hStep
+
+/-- Translation of the Gaussian density inside a Lebesgue integral. -/
+lemma integral_mul_pdf_translate
+    {v : ℝ≥0} {F : ℝ → ℝ} (c : ℝ) :
+  (∫ x, F x * gaussianPDFReal 0 v (x - c))
+    = ∫ x, F (x + c) * gaussianPDFReal 0 v x := by
+  let g := fun x : ℝ => F x * gaussianPDFReal 0 v (x - c)
+  have hInv : (∫ x, g (x + c)) = ∫ x, g x := by
+    simpa using (integral_add_right_eq_self (μ := (volume : Measure ℝ)) (f := g) c)
+  have : (fun x => g (x + c)) = fun x => F (x + c) * gaussianPDFReal 0 v x := by
+    funext x; simp [g, sub_eq_add_neg, add_assoc]
+  simpa [g, this, sub_eq_add_neg, mul_comm, mul_left_comm, mul_assoc] using hInv.symm
+
+/-- Convert a Lebesgue integral with the Gaussian pdf back to a Gaussian integral. -/
+lemma integral_pdf_to_gaussian
+    {v : ℝ≥0} (hv : v ≠ 0) {F : ℝ → ℝ} :
+  (∫ x, F x * gaussianPDFReal 0 v x)
+    = ∫ x, F x ∂ gaussianReal 0 v := by
+  simpa [mul_comm, mul_left_comm, mul_assoc] using
+    (integral_gaussianReal_eq_integral_smul
+      (μ := 0) (v := v) hv (E := ℝ) (f := F)).symm
+
+/-- Replace the exponential–pdf product by the shifted pdf inside the Lebesgue integral. -/
+lemma gaussianTilt_replace_density_by_shift
+    {v : ℝ≥0} (hv : v ≠ 0) {F : ℝ → ℝ} (t : ℝ) :
+  gaussianTilt F v t
+    = ∫ x, F x * gaussianPDFReal 0 v (x - (v:ℝ) * t) := by
+  have h1 := gaussianTilt_to_Lebesgue (v := v) hv (F := F) t
+  have hTilt :
+      ∀ x, Real.exp (t * x - (v:ℝ) * t^2 / 2) * gaussianPDFReal 0 v x
+            = gaussianPDFReal 0 v (x - (v:ℝ) * t) := by
+    intro x; simpa using gaussian_tilt_identity_zero (v := v) hv t x
+  refine h1.trans ?_
+  have hAE :
+      (fun x =>
+        F x * Real.exp (t * x - (v:ℝ) * t^2 / 2) * gaussianPDFReal 0 v x)
+        =ᵐ[volume]
+      (fun x =>
+        F x * gaussianPDFReal 0 v (x - (v:ℝ) * t)) := by
+    refine Filter.Eventually.of_forall (fun x => ?_)
+    have hx :
+        F x * (Real.exp (t * x - (v:ℝ) * t^2 / 2) * gaussianPDFReal 0 v x)
+          = F x * gaussianPDFReal 0 v (x - (v:ℝ) * t) := by
+      simpa [mul_comm, mul_left_comm, mul_assoc] using
+        congrArg (fun y => F x * y) (hTilt x)
+    simpa [mul_comm, mul_left_comm, mul_assoc] using hx
+  simpa using integral_congr_ae hAE
+
+/-- Final shifted form of the tilted integral, as an expectation under `gaussianReal 0 v`. -/
+lemma gaussianTilt_shifted_form
+    {v : ℝ≥0} (hv : v ≠ 0) {F : ℝ → ℝ} (t : ℝ) :
+  gaussianTilt F v t
+    = ∫ x, F (x + (v:ℝ) * t) ∂ gaussianReal 0 v := by
+  have h2 := gaussianTilt_replace_density_by_shift (v := v) hv (F := F) t
+  have hTrans := integral_mul_pdf_translate (v := v) (F := F) ((v:ℝ) * t)
+  have hBack := integral_pdf_to_gaussian (v := v) hv (F := fun x => F (x + (v:ℝ) * t))
+  calc
+    gaussianTilt F v t
+        = ∫ x, F x * gaussianPDFReal 0 v (x - (v:ℝ) * t) := h2
+    _ = ∫ x, F (x + (v:ℝ) * t) * gaussianPDFReal 0 v x := hTrans
+    _ = ∫ x, F (x + (v:ℝ) * t) ∂ gaussianReal 0 v := hBack
+
+/-- Exponential tilt equals a spatial shift of the test function under `gaussianReal 0 v`. -/
 lemma gaussianTilt_eq_shift
     {v : ℝ≥0} (hv : v ≠ 0) {F : ℝ → ℝ} :
     ∀ t, gaussianTilt F v t
         = ∫ x, F (x + (v:ℝ) * t) ∂ (gaussianReal 0 v) := by
   intro t
-  set φ := fun (μ₀ : ℝ) x => gaussianPDFReal μ₀ v x
-  set c := (v : ℝ) * t
-  have hConv :
-    ∀ (μ₀ : ℝ) (f : ℝ → ℝ),
-      (∫ x, f x ∂ gaussianReal μ₀ v)
-        = ∫ x, φ μ₀ x • f x :=
-      fun μ₀ f => integral_gaussianReal_eq_integral_smul
-        (μ := μ₀) (v := v) hv (f := f)
-  have h1 :
-      gaussianTilt F v t
-        = ∫ x, F x * Real.exp (t * x - (v:ℝ) * t^2 / 2) * φ 0 x := by
-    simp [gaussianTilt, hConv 0, φ, mul_comm, mul_left_comm]
-  have hTilt :
-      ∀ x,
-        Real.exp (t * x - (v:ℝ) * t^2 / 2) * φ 0 x
-          = φ 0 (x - c) := by
-    intro x
-    simpa [φ, c] using gaussian_tilt_identity_zero (v := v) hv t x
-  have h2 :
-      gaussianTilt F v t
-        = ∫ x, F x * φ 0 (x - c) := by
-    calc
-      gaussianTilt F v t
-          = ∫ x, F x * Real.exp (t * x - (v:ℝ) * t^2 / 2) * φ 0 x := h1
-      _ = ∫ x, F x * (Real.exp (t * x - (v:ℝ) * t^2 / 2) * φ 0 x) := by
-            simp [mul_comm, mul_left_comm]
-      _ = ∫ x, F x * φ 0 (x - c) := by
-            simp [hTilt]
-  have hTrans :
-      (∫ x, F x * φ 0 (x - c))
-        = ∫ x, F (x + c) * φ 0 x := by
-    let g := fun x : ℝ => F x * φ 0 (x - c)
-    have hInv : (∫ x, g (x + c)) = ∫ x, g x := by
-      simpa using
-        (integral_add_right_eq_self (μ := (volume : Measure ℝ)) (f := g) c)
-    have : (fun x => g (x + c)) = fun x => F (x + c) * φ 0 x := by
-      funext x; simp [g, φ, sub_eq_add_neg, add_assoc]
-    simpa [g, this, φ, sub_eq_add_neg, mul_comm, mul_left_comm, mul_assoc] using hInv.symm
-  have hR :
-      (∫ x, F (x + c) * φ 0 x)
-        = ∫ x, F (x + c) ∂ gaussianReal 0 v := by
-    have hConv' := hConv 0 (fun x => F (x + c))
-    simpa [φ, mul_comm, mul_left_comm, mul_assoc] using hConv'.symm
-  calc
-    gaussianTilt F v t
-        = ∫ x, F x * φ 0 (x - c) := h2
-    _ = ∫ x, F (x + c) * φ 0 x := hTrans
-    _ = ∫ x, F (x + c) ∂ gaussianReal 0 v := hR
+  simpa using gaussianTilt_shifted_form (v := v) hv (F := F) t
 
 /-! ### Prereuqisites for the proof of `gaussianTilt_hasDerivAt_left`
 
@@ -309,7 +411,8 @@ lemma hasDerivAt_F_mul_tiltKernel_at0
     (hasDerivAt_F_mul_tiltKernel v F x 0)
 
 /-- The integrand (as a 2-variable function) used in `gaussianTilt`. -/
-@[simp] noncomputable def gaussianTiltIntegrand (F : ℝ → ℝ) (v : ℝ≥0) (t x : ℝ) : ℝ :=
+@[simp]
+noncomputable def gaussianTiltIntegrand (F : ℝ → ℝ) (v : ℝ≥0) (t x : ℝ) : ℝ :=
   F x * tiltKernel v t x
 
 /-- Pointwise derivative (in `t`) of the integrand (parametrized by `x`). -/
@@ -351,10 +454,6 @@ lemma tiltKernel_le_exp_abs (v : ℝ≥0) (t x : ℝ) :
     exact this.trans hx
   simpa [tiltKernel] using (Real.exp_le_exp.mpr hineq)
 
-/-- Triangle inequality in the form used later. -/
-lemma abs_add_le_abs_add_abs (x y : ℝ) : |x + y| ≤ |x| + |y| :=
-  abs_add _ _
-
 /-- Positive–increment representation: for `a > 0`,
 `exp a - 1 = a * exp c` for some `c ∈ (0,a)`. -/
 lemma exp_sub_one_pos_rep {a : ℝ} (h : 0 < a) :
@@ -370,6 +469,7 @@ lemma exp_sub_one_pos_rep {a : ℝ} (h : 0 < a) :
       simp [hcEq, sub_eq_add_neg]
     have ha : a ≠ 0 := ne_of_gt h
     field_simp [this, ha] at *
+    simp_all only [mem_Ioo, and_imp, ne_eq, sub_zero, exp_zero]
   exact ⟨c, hcIoo, hEq'⟩
 
 /-- Negative–increment representation: for `a < 0`,
@@ -389,14 +489,13 @@ lemma exp_sub_one_neg_rep {a : ℝ} (h : a < 0) :
     have hflip : (1 - Real.exp a)/(-a) = (Real.exp a - 1)/a := by
       have htmp : (1 - Real.exp a)/(-a) = -(1 - Real.exp a)/a := by
         field_simp [ha0, sub_eq_add_neg]
-        ring_nf
       have hnum : -(1 - Real.exp a) = Real.exp a - 1 := by
         simp
       simp [htmp, hnum]
     have hExpc : Real.exp c = (Real.exp a - 1)/a := by
       simpa [hflip] using h1
     have : a * Real.exp c = Real.exp a - 1 := by
-      field_simp [ha0, hExpc]
+      field_simp [ha0, hExpc]; ring_nf; grind
     exact this.symm
   exact ⟨c, hcIoo, hEq'⟩
 
@@ -446,7 +545,8 @@ lemma mul_div_cancel_left' {G : Type*} [CommGroupWithZero G] (a : G) {b : G} (hb
   rw [mul_comm];rw [propext (div_eq_iff_mul_eq hb)]
 
 /-! ### Difference–quotient bounds for the tilt kernel  -/
-/-- Absolute-value bound on the exponent of the Gaussian tilt kernel.  -/
+
+/-- Absolute-value bound on the exponent of the Gaussian tilt kernel. -/
 lemma abs_tiltExponent_bound (v : ℝ≥0) (t x : ℝ) :
     |t * x - (v:ℝ) * t^2 / 2| ≤ |t| * |x| + (v:ℝ) * t^2 / 2 := by
   have hx : |t * x| = |t| * |x| := by simp [abs_mul]
@@ -459,15 +559,14 @@ lemma abs_tiltExponent_bound (v : ℝ≥0) (t x : ℝ) :
     simp [abs_of_nonneg hv]
   have hAbsVneg : |-(v:ℝ) * t^2 / 2| = (v:ℝ) * t^2 / 2 := by
     have h' : (-(v:ℝ) * t^2 / 2) = -((v:ℝ) * t^2 / 2) := by ring
-    simp
-    aesop
+    simp_all only [abs_mul, abs_eq_self, neg_mul, abs_neg]
   calc
     |t * x - (v:ℝ) * t^2 / 2|
         = |t * x + (-(v:ℝ) * t^2 / 2)| := by ring_nf
-    _ ≤ |t * x| + |-(v:ℝ) * t^2 / 2| := abs_add _ _
+    _ ≤ |t * x| + |-(v:ℝ) * t^2 / 2| := abs_add_le _ _
     _ = |t| * |x| + (v:ℝ) * t^2 / 2 := by
           simp [hx]
-          aesop
+          simp_all only [abs_mul, abs_eq_self, neg_mul]
 
 /-- Algebraic factorization of the tilt exponent. -/
 lemma tiltExponent_factor (v : ℝ≥0) (t x : ℝ) :
@@ -491,13 +590,13 @@ lemma abs_nnreal_mul_div_two (v : ℝ≥0) (t : ℝ) :
   have h3 : |2| = (2:ℝ) := by norm_num
   simpa [h2, h3] using h1
 
-/-- Triangle-type bound specialized to the inner expression. (Fixed version) -/
+/-- Triangle-type bound specialized to the inner expression. -/
 lemma abs_x_sub_vt_half_le (v : ℝ≥0) (t x : ℝ) :
     |x - (v:ℝ) * t / 2| ≤ |x| + (v:ℝ) * |t| / 2 := by
   have h₁ : |x - (v:ℝ) * t / 2| ≤ |x| + |(v:ℝ) * t / 2| := by
     have hrewrite : x - (v:ℝ) * t / 2 = x + (-((v:ℝ) * t / 2)) := by ring
     simpa [hrewrite, abs_neg] using
-      (abs_add x (-((v:ℝ) * t / 2)))
+      (abs_add_le x (-((v:ℝ) * t / 2)))
   have h₂ : |(v:ℝ) * t / 2| = (v:ℝ) * |t| / 2 :=
     abs_nnreal_mul_div_two v t
   simpa [h₂, add_comm, add_left_comm, add_assoc] using h₁
@@ -507,7 +606,6 @@ lemma abs_tiltExponent_div_le_inner (v : ℝ≥0) {t x : ℝ} (ht : t ≠ 0) :
     |t * x - (v:ℝ) * t^2 / 2| / |t| ≤ |x - (v:ℝ) * t / 2| := by
   simp [abs_tiltExponent_div_eq (v := v) ht]
 
-/-- Final divided bound (original statement), now factored through helper lemmas. -/
 lemma abs_tiltExponent_div_bound (v : ℝ≥0) {t x : ℝ} (ht : t ≠ 0) :
     |t * x - (v:ℝ) * t^2 / 2| / |t| ≤ |x| + (v:ℝ) * |t| / 2 := by
   calc
@@ -947,8 +1045,8 @@ section YoungBounds
 open Real
 
 /-- Core algebraic inequality
-`4 v δ |x| ≤ |x|² + 4 v² δ²`, obtained from the non-negativity of
-`(|x| − 2 v δ)²`.  Only the assumption `0 < v : ℝ` is needed. -/
+`4vδ|x| ≤ |x|² + 4v²δ²`, obtained from the non-negativity of
+`(|x| − 2vδ)²`.  Only the assumption `0 < v : ℝ` is needed. -/
 lemma four_mul_mul_le_sq_add_sq
     {v δ x : ℝ} (_ : 0 < v) :
     4 * v * δ * |x| ≤ |x| ^ 2 + 4 * v ^ 2 * δ ^ 2 := by
@@ -964,33 +1062,21 @@ lemma four_mul_mul_le_sq_add_sq
   simpa using this
 
 /-- “Young” inequality in *undivided* form
-`4 v δ |x| ≤ |x|² + 4 v² δ²`. -/
+`4vδ|x| ≤ |x|² + 4v²δ²`. -/
 lemma young_linear_quadratic_mul
     {v δ x : ℝ} (hv : 0 < v) :
     4 * v * δ * |x| ≤ |x| ^ 2 + 4 * v ^ 2 * δ ^ 2 :=
   four_mul_mul_le_sq_add_sq hv
 
-namespace Real
-
-open Real
-
-lemma div_le_iff_of_pos {α : Type*} [Field α] [LinearOrder α] [IsStrictOrderedRing α]
+lemma Real.div_le_iff_of_pos {α : Type*} [Field α] [LinearOrder α] [IsStrictOrderedRing α]
     {a b c : α} (hc : 0 < c) :
     a ≤ b / c ↔ a * c ≤ b := by
   simp [div_eq_mul_inv]
   rw [@le_iff_le_iff_lt_iff_lt]
   exact mul_inv_lt_iff₀ hc
 
-end Real
-open Real
-
-
-section YoungBounds
-
-open Real
-
 /-- Divided Young inequality
-`δ |x| ≤ |x|² /(4 v) + v δ²` (with `v > 0`). -/
+`δ|x| ≤ |x|² /(4v) + vδ²` (with `v > 0`). -/
 lemma young_linear_quadratic_div
     {v δ x : ℝ} (hv : 0 < v) :
     δ * |x| ≤ |x| ^ 2 / (4 * v) + v * δ ^ 2 := by
@@ -1001,13 +1087,11 @@ lemma young_linear_quadratic_div
   have h₁ : δ * |x| ≤ (|x| ^ 2 + 4 * v ^ 2 * δ ^ 2) / (4 * v) := by
     have hmul : (δ * |x|) * (4 * v) ≤ |x| ^ 2 + 4 * v ^ 2 * δ ^ 2 := by
       simpa [mul_comm, mul_left_comm, mul_assoc] using h₀
-    exact (div_le_iff_of_pos hpos).mpr hmul
+    exact (Real.div_le_iff_of_pos hpos).mpr hmul
   have h_split :
       (|x| ^ 2 + 4 * v ^ 2 * δ ^ 2) / (4 * v)
         = |x| ^ 2 / (4 * v) + v * δ ^ 2 := by
     field_simp [mul_comm, mul_left_comm, mul_assoc]
-    ring_nf
-    aesop
   aesop
 
 /-- **Young inequality (Gaussian form) for `ℝ≥0` variance**. -/
@@ -1286,7 +1370,7 @@ lemma pow_abs_add_const_global_allB (k : ℕ) (B : ℝ) :
   have h1 : |(|x| + B)^k| = |(|x| + B)| ^ k := by
     simp [abs_pow]
   have h2 : |(|x| + B)| ≤ |x| + |B| := by
-    have := abs_add (|x|) B
+    have := abs_add_le (|x|) B
     simpa using this
   have h2pow : |(|x| + B)| ^ k ≤ (|x| + |B|)^k :=
     pow_le_pow_left₀ (abs_nonneg _) h2 k
@@ -1477,13 +1561,15 @@ lemma lintegral_gaussian_poly_step2
 /-- For every non-negative real `r`, `ENNReal.ofReal r` coincides with the
 corresponding coercion of the `nnnorm`.  (Tiny wrapper around
 `Real.nnnorm_of_nonneg` / `ofReal_eq_coe_nnreal`.) -/
-@[simp] lemma ofReal_eq_nnnorm {r : ℝ} (hr : 0 ≤ r) :
+@[simp]
+lemma ofReal_eq_nnnorm {r : ℝ} (hr : 0 ≤ r) :
     (‖r‖₊ : ℝ≥0∞) = ENNReal.ofReal r := by
   rw [nnnorm_of_nonneg hr]; rw [← ENNReal.ofReal_eq_coe_nnreal]
 
 /-- Splitting rule for `ofReal` on a non-negative product, with the *forward*
 orientation that is more convenient for rewriting. -/
-@[simp] lemma ofReal_mul'
+@[simp]
+lemma ofReal_mul'
     {a b : ℝ} (_ : 0 ≤ a) (hb : 0 ≤ b) :
     ENNReal.ofReal (a * b) =
       ENNReal.ofReal a * ENNReal.ofReal b := by
@@ -1492,9 +1578,10 @@ orientation that is more convenient for rewriting. -/
 /-- `nnnorm` of the polynomial–exponential product that appears in the
 Gaussian moment lemmas.  Stated once and for all so that later proofs can
 `rw [nnnorm_poly_exp]` instead of reproducing the same reasoning. -/
-@[simp] lemma nnnorm_poly_exp
-    {k : ℕ} {a x : ℝ} (hk : 0 ≤ (1 + |x|)^k)
-    (h_exp : 0 ≤ Real.exp (-a * x^2)) :
+@[simp]
+lemma nnnorm_poly_exp
+    {k : ℕ} {a x : ℝ} (hk : 0 ≤ (1 + |x|) ^ k)
+    (h_exp : 0 ≤ Real.exp (-a * x ^ 2)) :
     (‖((1 + |x|)^k * Real.exp (-a * x^2))‖₊ : ℝ≥0∞)
       = ENNReal.ofReal ((1 + |x|)^k * Real.exp (-a * x^2)) := by
   have h_nonneg : 0 ≤ (1 + |x|)^k * Real.exp (-a * x^2) :=
@@ -1522,14 +1609,15 @@ lemma gaussian_poly_pointwise_factor
     have : 0 ≤ (1 : ℝ) + |x| := by linarith [abs_nonneg x]
     exact pow_nonneg this _
   have h_exp_nonneg : 0 ≤ Real.exp (-a * x^2) := (Real.exp_pos _).le
-
   calc
     (‖(1 + |x|)^k‖₊ : ℝ≥0∞) * ENNReal.ofReal (c * Real.exp (-a * x^2))
       = ENNReal.ofReal ((1 + |x|)^k) * ENNReal.ofReal (c * Real.exp (-a * x^2)) := by
         rw [ofReal_eq_nnnorm h_pow_nonneg]
-    _ = ENNReal.ofReal ((1 + |x|)^k) * (ENNReal.ofReal c * ENNReal.ofReal (Real.exp (-a * x^2))) := by
+    _ = ENNReal.ofReal ((1 + |x|)^k) * (ENNReal.ofReal c *
+          ENNReal.ofReal (Real.exp (-a * x^2))) := by
         rw [ofReal_mul' hc_pos.le h_exp_nonneg]
-    _ = ENNReal.ofReal c * (ENNReal.ofReal ((1 + |x|)^k) * ENNReal.ofReal (Real.exp (-a * x^2))) := by
+    _ = ENNReal.ofReal c * (ENNReal.ofReal ((1 + |x|)^k) *
+          ENNReal.ofReal (Real.exp (-a * x^2))) := by
         rw [← mul_assoc, mul_comm (ENNReal.ofReal c)]; rw [mul_right_comm]
     _ = ENNReal.ofReal c * ENNReal.ofReal ((1 + |x|)^k * Real.exp (-a * x^2)) := by
         rw [← ofReal_mul' h_pow_nonneg h_exp_nonneg]
@@ -2201,13 +2289,12 @@ lemma integrable_dom_profile
   integrable_dom_profile_of_moderateGrowth hF v δ hδ hFmeas
 
 end YoungBounds
-end YoungBounds
+
 end DominationExponentialUpgrade
 
 /-- Domination near zero for the *difference quotient* of the Gaussian tilt integrand.
 Requires an explicit integrability assumption on the Gaussian law of the exponential–moment
-profile.  This is the version appropriate for a mathlib-quality proof of differentiation
-under the integral sign. -/
+profile. -/
 lemma gaussianTilt_diffquot_dom_integrable
     {v : ℝ≥0} {F : ℝ → ℝ}
     (δ : ℝ) (hδ₀ : 0 < δ) (hδ₁ : δ ≤ 1)
@@ -2223,7 +2310,8 @@ lemma gaussianTilt_diffquot_dom_integrable
   refine And.intro ht.left ?_
   have hPoint :
       ∀ x, |(F x * tiltKernel v t x - F x) / t|
-          ≤ |F x| * (|x| + (v:ℝ) * δ / 2) * Real.exp ((v:ℝ) * δ / 2) * Real.exp (δ * |x|) := ht.right
+          ≤ |F x| * (|x| + (v:ℝ) * δ / 2) * Real.exp ((v:ℝ) * δ / 2) * Real.exp (δ * |x|) :=
+            ht.right
   have hC :
       ∀ x, (|x| + (v:ℝ) * δ / 2) ≤ ((v:ℝ) * δ / 2 + 1) * (|x| + 1) := by
     intro x
@@ -2257,12 +2345,14 @@ lemma gaussianTilt_diffquot_dom_integrable
         (fun x => |(F x * tiltKernel v t x - F x) / t|) (gaussianReal 0 v) := by
     have hProd : Measurable (fun x : ℝ => F x * tiltKernel v t x) := hFmeas.mul hMeas_tilt
     have hDiff : Measurable (fun x : ℝ => F x * tiltKernel v t x - F x) := hProd.sub hFmeas
-    have hQuot : Measurable (fun x : ℝ => (F x * tiltKernel v t x - F x) / t) := Measurable.div_const hDiff t
+    have hQuot : Measurable (fun x : ℝ => (F x * tiltKernel v t x - F x) / t) :=
+      Measurable.div_const hDiff t
     exact hQuot.abs.aestronglyMeasurable
   have hAE :
       ∀ᵐ x ∂ gaussianReal 0 v,
         |(F x * tiltKernel v t x - F x) / t|
-          ≤ |F x| * ((v:ℝ) * δ / 2 + 1) * Real.exp ((v:ℝ) * δ / 2) * (|x| + 1) * Real.exp (δ * |x|) := by
+          ≤ |F x| * ((v:ℝ) * δ / 2 + 1) * Real.exp ((v:ℝ) * δ / 2) * (|x| + 1) *
+            Real.exp (δ * |x|) := by
     refine ae_of_all _ ?_
     intro x
     have hpt := hPoint x
@@ -2272,7 +2362,8 @@ lemma gaussianTilt_diffquot_dom_integrable
     have hposF   : 0 ≤ |F x| := abs_nonneg _
     have hxC' :
         |F x| * (|x| + (v:ℝ) * δ / 2) * Real.exp ((v:ℝ) * δ / 2) * Real.exp (δ * |x|)
-          ≤ |F x| * ((v:ℝ) * δ / 2 + 1) * Real.exp ((v:ℝ) * δ / 2) * (|x| + 1) * Real.exp (δ * |x|) := by
+          ≤ |F x| * ((v:ℝ) * δ / 2 + 1) * Real.exp ((v:ℝ) * δ / 2) * (|x| + 1) *
+            Real.exp (δ * |x|) := by
       have h1 := mul_le_mul_of_nonneg_left hxC hposF
       have h2 := mul_le_mul_of_nonneg_right h1 hposExp2
       have h3 := mul_le_mul_of_nonneg_right h2 hposExp1
@@ -2281,7 +2372,8 @@ lemma gaussianTilt_diffquot_dom_integrable
   have hAE_norm :
       ∀ᵐ x ∂ gaussianReal 0 v,
         ‖|(F x * tiltKernel v t x - F x) / t|‖
-          ≤ |F x| * ((v:ℝ) * δ / 2 + 1) * Real.exp ((v:ℝ) * δ / 2) * (|x| + 1) * Real.exp (δ * |x|) := by
+          ≤ |F x| * ((v:ℝ) * δ / 2 + 1) * Real.exp ((v:ℝ) * δ / 2) * (|x| + 1) *
+            Real.exp (δ * |x|) := by
     simpa [Real.norm_eq_abs, abs_abs] using hAE
   exact hDomInt.mono' hAEs_meas hAE_norm
 
@@ -2294,7 +2386,6 @@ lemma Measure.map_sub_right {α : Type*} [MeasurableSpace α]
   simpa [Function.comp] using
     (Measure.map_map (μ := μ) (f := f) (g := fun x : ℝ => x - c) (hf := hf) (hg := hg)).symm
 
-
 /-- Auxiliary integrability lemma: if both `x ↦ x * F x` and `x ↦ F x`
 are integrable under `gaussianReal 0 v`, then any function dominated by
 `x ↦ |x * F x| + |F x|` is integrable. -/
@@ -2304,7 +2395,7 @@ lemma Integrable.of_bound_gaussianTilt
     (h2 : Integrable (fun x => F x) (gaussianReal 0 v))
     {g : ℝ → ℝ}
     (hg_meas : AEStronglyMeasurable g (gaussianReal 0 v))
-    (hg : ∀ᵐ x ∂ gaussianReal 0 v,
+    (hg : ∀ᵐ x ∂gaussianReal 0 v,
       |g x| ≤ |x * F x| + |F x|) :
     Integrable g (gaussianReal 0 v) := by
   have h12 : Integrable (fun x => |x * F x| + |F x|) (gaussianReal 0 v) :=
@@ -2337,7 +2428,7 @@ lemma gaussianTilt_deriv_dom_bound
     ≤ |F x| * ((|(v:ℝ)| * δ) + 1) * (|x| + 1) * Real.exp (δ * |x|) := by
   -- 1) triangle: |x - v t| ≤ |x| + |v| |t|
   have h1 : |x - (v:ℝ) * t| ≤ |x| + |(v:ℝ)| * |t| := by
-    have := abs_add_le_abs_add_abs x (-(v:ℝ) * t)
+    have := abs_add_le x (-(v:ℝ) * t)
     simpa [sub_eq_add_neg, abs_mul, abs_neg, mul_comm, mul_left_comm, mul_assoc] using this
   -- 2) bound |t| by δ
   have h1' : |x - (v:ℝ) * t| ≤ |x| + |(v:ℝ)| * δ := by
@@ -2363,7 +2454,8 @@ lemma gaussianTilt_deriv_dom_bound
   have hF_nonneg : 0 ≤ |F x| := abs_nonneg _
   have hK_nonneg : 0 ≤ tiltKernel v t x := tiltKernel_nonneg v t x
   have hExpNonneg : 0 ≤ Real.exp (δ * |x|) := by positivity
-  have hxvδ_nonneg : 0 ≤ |x| + |(v:ℝ)| * δ := by nlinarith [abs_nonneg x, abs_nonneg (v:ℝ), hδ_pos.le]
+  have hxvδ_nonneg : 0 ≤ |x| + |(v:ℝ)| * δ := by
+    nlinarith [abs_nonneg x, abs_nonneg (v:ℝ), hδ_pos.le]
   calc
     |F x * (x - (v:ℝ) * t) * tiltKernel v t x|
         = |F x| * |x - (v:ℝ) * t| * tiltKernel v t x := by
@@ -2413,7 +2505,7 @@ lemma aestronglyMeasurable_F_mul_id_of_measurable
   AEStronglyMeasurable (fun x => F x * x) (gaussianReal 0 v) := by
   exact (hFmeas.mul measurable_id).aestronglyMeasurable
 
-/-- Local dominated-differentiation lemma for the left tilt (general).-/
+/-- Local dominated-differentiation lemma for the left tilt (general). -/
 lemma gaussianTilt_hasDerivAt_left_of_dominated
     {v : ℝ≥0} {F : ℝ → ℝ}
     (hFmeas : Measurable F)
@@ -2421,7 +2513,7 @@ lemma gaussianTilt_hasDerivAt_left_of_dominated
     (B : ℝ → ℝ)
     (hB_int : Integrable B (gaussianReal 0 v))
     (hBound :
-      ∀ᵐ x ∂ gaussianReal 0 v,
+      ∀ᵐ x ∂gaussianReal 0 v,
         ∀ t ∈ Metric.ball (0 : ℝ) δ,
           ‖F x * (x - (v : ℝ) * t) * tiltKernel v t x‖ ≤ B x)
     (hF_int : Integrable (fun x => F x) (gaussianReal 0 v)) :
@@ -2458,11 +2550,20 @@ lemma gaussianTilt_hasDerivAt_left_of_dominated
       (h_bound        := h_bound)
       (bound_integrable := hB_int)
       (h_diff         := h_diff)
-  simpa [gaussianTilt, G, G', tiltKernel, mul_comm] using hDer.2
+  have hEq : (fun t => ∫ x, G t x ∂gaussianReal 0 v) = gaussianTilt F v := by
+    funext t
+    simp only [gaussianTilt, G, tiltKernel]
+    rw [integral_tilted]
+    have hZ : (∫ x, Real.exp (t * x - (v:ℝ) * t^2 / 2) ∂gaussianReal 0 v) = 1 :=
+      gaussianTilt_Z_eq_one t
+    simp [hZ, smul_eq_mul, mul_comm]
+
+  rw [← hEq]
+  simpa [G', tiltKernel, mul_comm] using hDer.2
 
 lemma gaussianTilt_hasDerivAt_left
     {v : ℝ≥0} (_ : v ≠ 0) {F : ℝ → ℝ}
-    (hF  : ContDiff ℝ 1 F)
+    (hF : ContDiff ℝ 1 F)
     (hMod : HasModerateGrowth F) :
     HasDerivAt (gaussianTilt F v)
       (∫ x, x * F x ∂ gaussianReal 0 v) 0 := by
@@ -2541,8 +2642,8 @@ lemma gaussianTilt_deriv_dom
   have h_deriv : |deriv F (x + (v:ℝ) * t)| ≤ C * (1 + |x + (v:ℝ) * t|) ^ m := by
     simpa using hF' (x + (v:ℝ) * t)
   have h_tri : |x + (v:ℝ) * t| ≤ |x| + |(v:ℝ)| * |t| := by
-    simpa [abs_add, abs_mul, mul_comm, mul_left_comm, mul_assoc]
-      using abs_add_le_abs_add_abs x ((v:ℝ) * t)
+    simpa [abs_add_le, abs_mul, mul_comm, mul_left_comm, mul_assoc]
+      using abs_add_le x ((v:ℝ) * t)
   have ht' : |(v:ℝ)| * |t| ≤ |(v:ℝ)| := by
     have := mul_le_mul_of_nonneg_left ht (abs_nonneg (v:ℝ))
     simpa [mul_one] using this
@@ -2650,9 +2751,9 @@ lemma gaussianTilt_hasDerivAt_right_aux
     {C : ℝ} {m : ℕ}
     (hDom : ∀ t, |t| ≤ 1 → ∀ x,
                 |(v : ℝ) * deriv F (x + (v : ℝ) * t)|
-                  ≤ |(v : ℝ)| * C * (1 + |x| + |(v : ℝ)|)^m)
+                  ≤ |(v : ℝ)| * C * (1 + |x| + |(v : ℝ)|) ^ m)
     (hInt : Integrable (fun x => |(v : ℝ)| * C *
-                               (1 + |x| + |(v : ℝ)|)^m) (gaussianReal 0 v)) :
+                               (1 + |x| + |(v : ℝ)|) ^ m) (gaussianReal 0 v)) :
     HasDerivAt (gaussianTilt F v)
       ((v : ℝ) * ∫ x, deriv F x ∂ gaussianReal 0 v) 0 := by
   have hShift := gaussianTilt_eq_shift (v := v) hv (F := F)
@@ -2763,7 +2864,7 @@ lemma gaussianTilt_hasDerivAt_right
 This version assumes moderate growth (which implies the needed integrability). -/
 theorem stein_lemma_gaussianReal
     {v : ℝ≥0} (hv : v ≠ 0) {F : ℝ → ℝ}
-    (hF  : ContDiff ℝ 1 F)
+    (hF : ContDiff ℝ 1 F)
     (hMod : HasModerateGrowth F) :
     ∫ x, x * F x ∂ (gaussianReal 0 v)
       = (v : ℝ) * ∫ x, deriv F x ∂ (gaussianReal 0 v) := by
@@ -2777,7 +2878,7 @@ theorem stein_lemma_gaussianReal
 Assumes moderate growth (no separate integrability hypotheses needed). -/
 lemma gaussianReal_integration_by_parts
     {F : ℝ → ℝ} {v : ℝ≥0} (hv : v ≠ 0)
-    (hF  : ContDiff ℝ 1 F)
+    (hF : ContDiff ℝ 1 F)
     (hMod : HasModerateGrowth F) :
     ∫ x, x * F x ∂(gaussianReal 0 v)
       = (v : ℝ) * ∫ x, deriv F x ∂(gaussianReal 0 v) :=
@@ -2850,7 +2951,7 @@ lemma gaussianRV_integration_by_parts
       have hFabs : ‖F x‖ ≤ C * (1 + |x|) ^ m := by
         simpa [Real.norm_eq_abs] using hFbound x
       have hineq : ‖x * F x‖ = |x| * ‖F x‖ := by
-        simp [Real.norm_eq_abs, abs_mul, mul_comm, mul_left_comm, mul_assoc]
+        simp [Real.norm_eq_abs]
       have hx : |x| ≤ 1 + |x| := by nlinarith [abs_nonneg x]
       calc
         ‖x * F x‖ = |x| * ‖F x‖ := hineq
@@ -2940,7 +3041,7 @@ theorem gaussian_integration_by_parts_general
     · -- bound for F_shifted
       intro x
       have htri : |x + μ| ≤ |x| + |μ| := by
-        simp [abs_add]
+        simp [abs_add_le]
       have hone_le : 1 + |x + μ| ≤ 1 + |x| + |μ| := by
         have := add_le_add_left htri 1
         simpa [add_comm, add_left_comm, add_assoc] using this
@@ -2976,7 +3077,7 @@ theorem gaussian_integration_by_parts_general
       have hpow_le :
           (1 + |x + μ|) ^ m ≤ (1 + |μ|) ^ m * (1 + |x|) ^ m := by
         have htri : |x + μ| ≤ |x| + |μ| := by
-          simp [abs_add]
+          simp [abs_add_le]
         have hone : 1 + |x + μ| ≤ 1 + |x| + |μ| := by
           have := add_le_add_left htri 1
           simpa [add_comm, add_left_comm, add_assoc] using this
