@@ -7,6 +7,7 @@ Authors: Matteo Cipollina, Jonathan Washburn
 module
 
 public import Mathlib.CategoryTheory.Subobject.MonoOver
+public import Mathlib.CategoryTheory.Subobject.Basic
 public import Mathlib.CategoryTheory.Limits.Shapes.Kernels
 public import Mathlib.CategoryTheory.ComposableArrows.Basic
 public import Mathlib.CategoryTheory.Limits.Shapes.Pullback.IsPullback.Basic
@@ -238,6 +239,22 @@ lemma succHom_comp_inj (F : DecFiltration (C := C) X) (n : ℤ) :
       ((homOfLE (show n ≤ n + 1 from
         le_add_of_nonneg_right (show (0 : ℤ) ≤ 1 by decide))).op)))
   simp [succHom, Filtration.inj]
+
+lemma succHom_eq_ofMkLEMk (F : DecFiltration (C := C) X) (n : ℤ) :
+    succHom (C := C) (X := X) F n =
+      Subobject.ofMkLEMk (F.inj (Opposite.op (n + 1))) (F.inj (Opposite.op n))
+        (by
+          -- `Subobject.mk (F^{n+1} ↪ X) ≤ Subobject.mk (F^n ↪ X)`
+          classical
+          exact Subobject.mk_le_mk_of_comm (succHom (C := C) (X := X) F n)
+            (by
+              -- `succHom` satisfies the required commutativity by `succHom_comp_inj`
+              simp)) := by
+  classical
+  -- Both maps are characterized by their composite with `F.inj (op n)`.
+  apply (cancel_mono (F.inj (Opposite.op n))).1
+  -- `succHom` case:
+  simp [succHom_comp_inj]
 
 section GradedZ
 

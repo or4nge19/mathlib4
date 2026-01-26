@@ -152,6 +152,15 @@ noncomputable def pushforward (F : Filtration X ι) (f : X ⟶ Y) : Filtration Y
       map_id := by intro i; apply Subsingleton.elim
       map_comp := by intro i j k g h; apply Subsingleton.elim }
 
+@[simp]
+lemma pushforward_subobject (F : Filtration X ι) (f : X ⟶ Y) (i : ι) :
+    Filtration.subobject (F := pushforward (C := C) (X := X) (Y := Y) (ι := ι) F f) i =
+      FilteredObject.imageSubobject (C := C) f (Filtration.subobject (F := F) i) := by
+  classical
+  -- The `i`-th map in the pushed-forward filtration is the arrow of the image subobject.
+  -- Taking `Subobject.mk` of that arrow gives back the same subobject.
+  simp [Filtration.subobject, Filtration.inj, pushforward, Subobject.mk_arrow]
+
 end Pushforward
 
 section Pullback
@@ -174,6 +183,13 @@ noncomputable def pullback (F : Filtration X ι) (f : Y ⟶ X) : Filtration Y ι
         simp [MonoOver.mk, MonoOver.arrow, Subobject.ofLE_arrow]
       map_id := by intro i; apply Subsingleton.elim
       map_comp := by intro i j k g h; apply Subsingleton.elim }
+
+@[simp]
+lemma pullback_subobject (F : Filtration X ι) (f : Y ⟶ X) (i : ι) :
+    Filtration.subobject (F := pullback (C := C) (X := X) (Y := Y) (ι := ι) F f) i =
+      (Subobject.pullback f).obj (Filtration.subobject (F := F) i) := by
+  classical
+  simp [Filtration.subobject, Filtration.inj, pullback, Subobject.mk_arrow]
 
 end Pullback
 

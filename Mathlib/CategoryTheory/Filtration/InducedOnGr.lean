@@ -6,7 +6,8 @@ Authors: Matteo Cipollina, Jonathan Washburn
 
 module
 
-public import Mathlib.CategoryTheory.Filtration.Opposed
+public import Mathlib.CategoryTheory.Filtration.Subobject
+public import Mathlib.CategoryTheory.Abelian.Basic
 
 /-!
 ## Induced filtrations on graded pieces
@@ -50,10 +51,19 @@ noncomputable def inducedOnGr
   refine Filtration.DecFiltration.ofAntitone (C := C) (X := G.gr q)
     (fun p => inducedOnGrStep (C := C) (X := X) F G q p) ?_
   intro p p' hp
-  have hIdx : (Opposite.op p' : ℤᵒᵖ) ⟶ (Opposite.op p : ℤᵒᵖ) := by
-    exact (homOfLE (show p ≤ p' from hp)).op
-  have hF : F.step p' ≤ F.step p := by
-    simpa using (Filtration.subobject_le_of_hom (F := F) hIdx)
+  have hF : F.step p' ≤ F.step p :=
+    step_le_step_of_le (C := C) (X := X) F hp
+  have hPull :
+      (Subobject.pullback (G.inj (Opposite.op q))).obj (F.step p') ≤
+        (Subobject.pullback (G.inj (Opposite.op q))).obj (F.step p) :=
+    (Subobject.pullback (G.inj (Opposite.op q))).monotone hF
+  exact FilteredObject.imageSubobject_mono (C := C) (G.grπ (C := C) (X := X) q) hPull
+
+lemma inducedOnGrStep_antitone (F G : Filtration.DecFiltration (C := C) X) (q : ℤ) :
+    Antitone (fun p => inducedOnGrStep (C := C) (X := X) F G q p) := by
+  intro p p' hp
+  have hF : F.step p' ≤ F.step p :=
+    step_le_step_of_le (C := C) (X := X) F hp
   have hPull :
       (Subobject.pullback (G.inj (Opposite.op q))).obj (F.step p') ≤
         (Subobject.pullback (G.inj (Opposite.op q))).obj (F.step p) :=
@@ -65,8 +75,8 @@ noncomputable def inducedOnGr
 lemma inducedOnGr_step
     (F G : Filtration.DecFiltration (C := C) X) (q p : ℤ) :
     (inducedOnGr (C := C) (X := X) F G q).step p = inducedOnGrStep (C := C) (X := X) F G q p := by
-  simp [inducedOnGr, inducedOnGrStep, Filtration.DecFiltration.ofAntitone, FilteredObject.imageSubobject,
-    Filtration.subobject, Filtration.inj, Subobject.mk_arrow]
+  classical
+  simp [inducedOnGr, inducedOnGrStep]
 
 end
 
