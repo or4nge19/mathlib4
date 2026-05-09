@@ -9,55 +9,114 @@ public import Mathlib.Geometry.Manifold.Instances.Quotient
 public import Mathlib.Geometry.Manifold.ContMDiff.Constructions
 public import Mathlib.Geometry.Manifold.ContMDiff.NormedSpace
 public import Mathlib.Geometry.Manifold.IsManifold.Basic
-public import Mathlib.Topology.Instances.AddCircle.Real
+public import Mathlib.Geometry.Manifold.Instances.AddCircle
 
 /-!
 # The Möbius strip
 
 This file defines the Möbius strip as the quotient of the plane by the usual `ℤ`-action
 `n • (x, y) = (x + n, (-1)^n y)`.
+
+This is the flat line bundle associated to the covering `ℝ → ℝ ⧸ ℤ` and the monodromy
+representation `n ↦ (-1)^n` on `ℝ`.
+
+## TODO
+
+* Upgrade the quotient charted-space construction to a smooth manifold structure, once the quotient
+  manifold API proves `IsManifold` for quotients by smooth properly discontinuous actions. Then
+  state smoothness of `proj`.
+* Express the flat line bundle structure. Mathlib's `FiberBundle` and `VectorBundle` classes are
+  currently formulated for sigma-type total spaces `Bundle.TotalSpace F E`, not arbitrary maps such
+  as `proj : MobiusStrip → UnitAddCircle`, so this likely needs a sigma-type presentation and a
+  comparison with the quotient model below.
+* Relate this quotient model to the tautological line bundle over `ℝP^1`.
 -/
 
 public noncomputable section
 
 open scoped ContDiff
 
+/-- The monodromy scalar in the flat line-bundle description of the Möbius strip. -/
+@[expose]
+def mobiusMonodromyUnit (n : ℤ) : ℝˣ :=
+  Units.mk0 ((-1 : ℝ) ^ n) (zpow_ne_zero n (by norm_num : (-1 : ℝ) ≠ 0))
+
+/-- The monodromy representation `ℤ → GL(ℝ)` of the Möbius strip. -/
+@[expose]
+def mobiusMonodromy (n : ℤ) : ℝ ≃L[ℝ] ℝ :=
+  ContinuousLinearEquiv.unitsEquivAut ℝ (mobiusMonodromyUnit n)
+
+/-- The scalar formula for the Möbius monodromy. -/
+@[simp]
+lemma mobiusMonodromy_apply (n : ℤ) (y : ℝ) :
+    mobiusMonodromy n y = (-1 : ℝ) ^ n * y := by
+  simp [mobiusMonodromy, mobiusMonodromyUnit, mul_comm]
+
+/-- The monodromy is compatible with addition in the deck group. -/
+lemma mobiusMonodromy_add_apply (n m : ℤ) (y : ℝ) :
+    mobiusMonodromy (n + m) y = mobiusMonodromy n (mobiusMonodromy m y) := by
+  simp only [mobiusMonodromy_apply]
+  rw [zpow_add₀ (by norm_num : (-1 : ℝ) ≠ 0)]
+  ring
+
+/-- The monodromy representation, as a homomorphism from the additive group `ℤ`. -/
+@[expose]
+def mobiusMonodromyHom : Multiplicative ℤ →* ℝ ≃L[ℝ] ℝ where
+  toFun n := mobiusMonodromy n.toAdd
+  map_one' := by
+    ext y
+    change mobiusMonodromy 0 y = y
+    simp
+  map_mul' n m := by
+    ext y
+    exact mobiusMonodromy_add_apply n.toAdd m.toAdd y
+
+/-- The same monodromy as a bare function, convenient in coordinate formulas. -/
+@[expose]
+def mobiusRep (n : ℤ) (y : ℝ) : ℝ :=
+  (-1 : ℝ) ^ n * y
+
+@[simp]
+lemma mobiusRep_apply (n : ℤ) (y : ℝ) : mobiusRep n y = (-1 : ℝ) ^ n * y :=
+  rfl
+
+@[simp]
+lemma mobiusRep_zero (y : ℝ) : mobiusRep 0 y = y := by
+  simp [mobiusRep]
+
+lemma mobiusRep_add (n m : ℤ) (y : ℝ) :
+    mobiusRep (n + m) y = mobiusRep n (mobiusRep m y) := by
+  unfold mobiusRep
+  rw [zpow_add₀ (by norm_num : (-1 : ℝ) ≠ 0)]
+  ring
+
+lemma mobiusRep_eq_mobiusMonodromy (n : ℤ) (y : ℝ) : mobiusRep n y = mobiusMonodromy n y := by
+  simp [mobiusRep]
+
 /-- A type synonym for the plane carrying the Möbius action. -/
 @[expose]
 def MobiusPlane :=
   ℝ × ℝ
+  deriving TopologicalSpace, T2Space, LocallyCompactSpace, SecondCountableTopology
 
 namespace MobiusPlane
 
-instance : TopologicalSpace MobiusPlane :=
-  inferInstanceAs (TopologicalSpace (ℝ × ℝ))
-
-instance : T2Space MobiusPlane :=
-  inferInstanceAs (T2Space (ℝ × ℝ))
-
-instance : LocallyCompactSpace MobiusPlane :=
-  inferInstanceAs (LocallyCompactSpace (ℝ × ℝ))
-
-instance : SecondCountableTopology MobiusPlane :=
-  inferInstanceAs (SecondCountableTopology (ℝ × ℝ))
-
 @[expose]
 instance : AddAction ℤ MobiusPlane where
-  vadd n p := (p.1 + n, (-1 : ℝ) ^ n * p.2)
-  zero_vadd p := by
-    rcases p with ⟨x, y⟩
-    change ((x + ((0 : ℤ) : ℝ), (-1 : ℝ) ^ (0 : ℤ) * y) : ℝ × ℝ) = (x, y)
+  vadd n p := (p.1 + n, mobiusRep n p.2)
+  zero_vadd := by
+    rintro ⟨x, y⟩
+    change ((x + ((0 : ℤ) : ℝ), mobiusRep 0 y) : ℝ × ℝ) = (x, y)
     ext <;> simp
-  add_vadd n m p := by
-    rcases p with ⟨x, y⟩
+  add_vadd n m := by
+    rintro ⟨x, y⟩
     change
-      ((x + ((n + m : ℤ) : ℝ), (-1 : ℝ) ^ (n + m) * y) : ℝ × ℝ) =
-        (x + (m : ℝ) + (n : ℝ), (-1 : ℝ) ^ n * ((-1 : ℝ) ^ m * y))
+      ((x + ((n + m : ℤ) : ℝ), mobiusRep (n + m) y) : ℝ × ℝ) =
+        (x + (m : ℝ) + (n : ℝ), mobiusRep n (mobiusRep m y))
     ext
     · norm_num
       ring
-    · rw [zpow_add₀ (by norm_num : (-1 : ℝ) ≠ 0)]
-      ring
+    · exact mobiusRep_add n m y
 
 @[simp]
 lemma vadd_fst (n : ℤ) (p : MobiusPlane) : (n +ᵥ p).1 = p.1 + n :=
@@ -70,7 +129,7 @@ lemma vadd_snd (n : ℤ) (p : MobiusPlane) : (n +ᵥ p).2 = (-1 : ℝ) ^ n * p.2
 instance : ContinuousConstVAdd ℤ MobiusPlane where
   continuous_const_vadd n := by
     change Continuous fun p : MobiusPlane ↦
-      ((p.1 + (n : ℝ), (-1 : ℝ) ^ n * p.2) : ℝ × ℝ)
+      ((p.1 + (n : ℝ), mobiusRep n p.2) : ℝ × ℝ)
     exact (continuous_fst.add continuous_const).prodMk (continuous_const.mul continuous_snd)
 
 instance : IsCancelVAdd ℤ MobiusPlane where
@@ -115,7 +174,7 @@ lemma contMDiff_vadd (n : ℤ) (k : ℕ∞ω) :
     ContMDiff (modelWithCornersSelf ℝ (ℝ × ℝ)) (modelWithCornersSelf ℝ (ℝ × ℝ)) k
       (fun p : MobiusPlane ↦ n +ᵥ p) := by
   change ContMDiff (modelWithCornersSelf ℝ (ℝ × ℝ)) (modelWithCornersSelf ℝ (ℝ × ℝ)) k
-    (fun p : ℝ × ℝ ↦ (p.1 + (n : ℝ), (-1 : ℝ) ^ n * p.2))
+    (fun p : ℝ × ℝ ↦ (p.1 + (n : ℝ), mobiusRep n p.2))
   exact ((contDiff_fst.add contDiff_const).prodMk (contDiff_const.mul contDiff_snd)).contMDiff
 
 end MobiusPlane
@@ -137,8 +196,8 @@ instance : SecondCountableTopology MobiusStrip :=
 
 /-- The quotient map from the plane to the Möbius strip. -/
 @[expose]
-def mk : MobiusPlane → MobiusStrip :=
-  Quotient.mk''
+def mk (p : MobiusPlane) : MobiusStrip :=
+  ⟦p⟧
 
 lemma mk_surjective : Function.Surjective mk :=
   Quotient.mk_surjective
@@ -167,8 +226,9 @@ instance : LocallyCompactSpace MobiusStrip :=
 `ℤ`-orbit. This is the quotient-oriented replacement for a hand-written `mobius_equiv`. -/
 lemma mk_eq_mk_iff_exists_vadd_eq_left {p q : MobiusPlane} :
     mk p = mk q ↔ ∃ n : ℤ, n +ᵥ q = p := by
-  change Quotient.mk'' p = Quotient.mk'' q ↔ ∃ n : ℤ, n +ᵥ q = p
-  rw [Quotient.eq'', AddAction.orbitRel_apply]
+  change (⟦p⟧ : AddAction.orbitRel.Quotient ℤ MobiusPlane) = ⟦q⟧ ↔
+    ∃ n : ℤ, n +ᵥ q = p
+  rw [Quotient.eq, AddAction.orbitRel_apply]
   rfl
 
 /-- The more common orientation of `mk_eq_mk_iff_exists_vadd_eq_left`: representatives define the
