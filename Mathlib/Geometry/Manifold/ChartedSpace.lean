@@ -350,6 +350,17 @@ theorem chartedSpaceSelf_atlas {H : Type*} [TopologicalSpace H] {e : OpenPartial
 theorem chartAt_self_eq {H : Type*} [TopologicalSpace H] {x : H} :
     chartAt H x = OpenPartialHomeomorph.refl H := rfl
 
+/-- Pull back a charted space structure along a homeomorphism. -/
+@[reducible]
+def Homeomorph.chartedSpace [TopologicalSpace H] [TopologicalSpace M] [TopologicalSpace M']
+    [ChartedSpace H M] (f : M' ≃ₜ M) : ChartedSpace H M' where
+  atlas := { f.toOpenPartialHomeomorph.trans e | e ∈ atlas H M }
+  chartAt x := f.toOpenPartialHomeomorph.trans (chartAt H (f x))
+  mem_chart_source x := by
+    simp
+  chart_mem_atlas x :=
+    ⟨chartAt H (f x), chart_mem_atlas H _, rfl⟩
+
 /-- Any discrete space is a charted space over a singleton set.
 We keep this as a definition (not an instance) to avoid instance search trying to search for
 `DiscreteTopology` or `Unique` instances.
