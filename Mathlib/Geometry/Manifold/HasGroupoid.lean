@@ -43,6 +43,113 @@ theorem StructureGroupoid.compatible {H : Type*} [TopologicalSpace H] (G : Struc
     e.symm ≫ₕ e' ∈ G :=
   HasGroupoid.compatible he he'
 
+/-- A structure-groupoid member can be checked locally by comparing restrictions with known
+members. -/
+theorem StructureGroupoid.mem_of_local_eqOnSource {H : Type*} [TopologicalSpace H]
+    (G : StructureGroupoid H) {e : OpenPartialHomeomorph H H}
+    (h : ∀ x ∈ e.source, ∃ s : Set H, IsOpen s ∧ x ∈ s ∧
+      ∃ e' : OpenPartialHomeomorph H H, e' ∈ G ∧ e.restr s ≈ e') :
+    e ∈ G := by
+  apply G.locality
+  intro x hx
+  rcases h x hx with ⟨s, hs, hxs, e', he', heq⟩
+  exact ⟨s, hs, hxs, G.mem_of_eqOnSource he' heq⟩
+
+omit [TopologicalSpace H] [TopologicalSpace M] [ChartedSpace H M] in
+/-- Pulling back a charted space structure along a homeomorphism preserves compatibility with a
+structure groupoid. -/
+theorem Homeomorph.hasGroupoid_chartedSpace [TopologicalSpace H] [TopologicalSpace M]
+    [TopologicalSpace M'] [ChartedSpace H M] {G : StructureGroupoid H} [HasGroupoid M G]
+    (f : M' ≃ₜ M) :
+    letI : ChartedSpace H M' := f.chartedSpace
+    HasGroupoid M' G := by
+  letI : ChartedSpace H M' := f.chartedSpace
+  constructor
+  rintro c c' ⟨d, hd, rfl⟩ ⟨d', hd', rfl⟩
+  rw [OpenPartialHomeomorph.trans_symm_eq_symm_trans_symm]
+  rw [← Homeomorph.symm_toOpenPartialHomeomorph]
+  rw [OpenPartialHomeomorph.trans_assoc]
+  rw [← OpenPartialHomeomorph.trans_assoc f.symm.toOpenPartialHomeomorph
+    f.toOpenPartialHomeomorph d']
+  rw [← Homeomorph.trans_toOpenPartialHomeomorph]
+  simpa using (StructureGroupoid.compatible (G := G) hd hd')
+
+omit [TopologicalSpace H] [TopologicalSpace M] [ChartedSpace H M] in
+/-- If each chart transition for the charted space pushed forward by a local homeomorphism is
+locally equivalent to a member of a structure groupoid, then the pushed-forward charted space admits
+that structure groupoid. -/
+theorem IsLocalHomeomorph.hasGroupoid_chartedSpaceOfRightInverse_of_local [TopologicalSpace H]
+    [TopologicalSpace M] [TopologicalSpace M'] [ChartedSpace H M] {f : M → M'}
+    (hf : IsLocalHomeomorph f) {g : M' → M} (hg : Function.RightInverse g f)
+    {G : StructureGroupoid H}
+    (hcompat : ∀ q q' : M', ∀ x,
+      x ∈ (((hf.localInverseAt (g q)).trans (chartAt H (g q))).symm ≫ₕ
+        ((hf.localInverseAt (g q')).trans (chartAt H (g q')))).source →
+      ∃ s : Set H, IsOpen s ∧ x ∈ s ∧ ∃ e : OpenPartialHomeomorph H H, e ∈ G ∧
+        ((((hf.localInverseAt (g q)).trans (chartAt H (g q))).symm ≫ₕ
+          ((hf.localInverseAt (g q')).trans (chartAt H (g q')))).restr s) ≈ e) :
+    letI : ChartedSpace H M' := hf.chartedSpaceOfRightInverse hg
+    HasGroupoid M' G := by
+  letI : ChartedSpace H M' := hf.chartedSpaceOfRightInverse hg
+  constructor
+  rintro c c' ⟨q, rfl⟩ ⟨q', rfl⟩
+  exact G.mem_of_local_eqOnSource (hcompat q q')
+
+omit [TopologicalSpace H] [TopologicalSpace M] [ChartedSpace H M] in
+/-- If each chart transition for the charted space pushed forward by a surjective local
+homeomorphism is locally equivalent to a member of a structure groupoid, then the pushed-forward
+charted space admits that structure groupoid. -/
+theorem IsLocalHomeomorph.hasGroupoid_chartedSpace_of_local [TopologicalSpace H]
+    [TopologicalSpace M] [TopologicalSpace M'] [ChartedSpace H M] {f : M → M'}
+    (hf : IsLocalHomeomorph f) (hf' : Function.Surjective f) {G : StructureGroupoid H}
+    (hcompat : ∀ q q' : M', ∀ x,
+      x ∈ (((hf.localInverseAt (hf'.hasRightInverse.choose q)).trans
+          (chartAt H (hf'.hasRightInverse.choose q))).symm ≫ₕ
+        ((hf.localInverseAt (hf'.hasRightInverse.choose q')).trans
+          (chartAt H (hf'.hasRightInverse.choose q')))).source →
+      ∃ s : Set H, IsOpen s ∧ x ∈ s ∧ ∃ e : OpenPartialHomeomorph H H, e ∈ G ∧
+        ((((hf.localInverseAt (hf'.hasRightInverse.choose q)).trans
+            (chartAt H (hf'.hasRightInverse.choose q))).symm ≫ₕ
+          ((hf.localInverseAt (hf'.hasRightInverse.choose q')).trans
+            (chartAt H (hf'.hasRightInverse.choose q')))).restr s) ≈ e) :
+    letI : ChartedSpace H M' := hf.chartedSpace hf'
+    HasGroupoid M' G := by
+  exact hf.hasGroupoid_chartedSpaceOfRightInverse_of_local hf'.hasRightInverse.choose_spec hcompat
+
+omit [TopologicalSpace H] [TopologicalSpace M] [ChartedSpace H M] in
+/-- If the chart transitions for the charted space pushed forward by a local homeomorphism with a
+chosen right inverse lie in a structure groupoid, then the pushed-forward charted space admits that
+structure groupoid. -/
+theorem IsLocalHomeomorph.hasGroupoid_chartedSpaceOfRightInverse [TopologicalSpace H]
+    [TopologicalSpace M] [TopologicalSpace M'] [ChartedSpace H M] {f : M → M'}
+    (hf : IsLocalHomeomorph f) {g : M' → M} (hg : Function.RightInverse g f)
+    {G : StructureGroupoid H}
+    (hcompat : ∀ q q' : M',
+      ((hf.localInverseAt (g q)).trans (chartAt H (g q))).symm ≫ₕ
+        ((hf.localInverseAt (g q')).trans (chartAt H (g q'))) ∈ G) :
+    letI : ChartedSpace H M' := hf.chartedSpaceOfRightInverse hg
+    HasGroupoid M' G := by
+  letI : ChartedSpace H M' := hf.chartedSpaceOfRightInverse hg
+  constructor
+  rintro c c' ⟨q, rfl⟩ ⟨q', rfl⟩
+  exact hcompat q q'
+
+omit [TopologicalSpace H] [TopologicalSpace M] [ChartedSpace H M] in
+/-- If the chart transitions for the charted space pushed forward by a surjective local
+homeomorphism lie in a structure groupoid, then the pushed-forward charted space admits that
+structure groupoid. -/
+theorem IsLocalHomeomorph.hasGroupoid_chartedSpace [TopologicalSpace H] [TopologicalSpace M]
+    [TopologicalSpace M'] [ChartedSpace H M] {f : M → M'} (hf : IsLocalHomeomorph f)
+    (hf' : Function.Surjective f) {G : StructureGroupoid H}
+    (hcompat : ∀ q q' : M',
+      ((hf.localInverseAt (hf'.hasRightInverse.choose q)).trans
+          (chartAt H (hf'.hasRightInverse.choose q))).symm ≫ₕ
+        ((hf.localInverseAt (hf'.hasRightInverse.choose q')).trans
+          (chartAt H (hf'.hasRightInverse.choose q'))) ∈ G) :
+    letI : ChartedSpace H M' := hf.chartedSpace hf'
+    HasGroupoid M' G := by
+  exact hf.hasGroupoid_chartedSpaceOfRightInverse hf'.hasRightInverse.choose_spec hcompat
+
 theorem hasGroupoid_of_le {G₁ G₂ : StructureGroupoid H} (h : HasGroupoid M G₁) (hle : G₁ ≤ G₂) :
     HasGroupoid M G₂ :=
   ⟨fun he he' ↦ hle (h.compatible he he')⟩
