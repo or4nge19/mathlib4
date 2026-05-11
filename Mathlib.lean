@@ -1696,6 +1696,7 @@ public import Mathlib.Analysis.Calculus.Conformal.InnerProduct
 public import Mathlib.Analysis.Calculus.Conformal.NormedSpace
 public import Mathlib.Analysis.Calculus.ContDiff.Basic
 public import Mathlib.Analysis.Calculus.ContDiff.Bounds
+public import Mathlib.Analysis.Calculus.ContDiff.CodRestrict
 public import Mathlib.Analysis.Calculus.ContDiff.CPolynomial
 public import Mathlib.Analysis.Calculus.ContDiff.Comp
 public import Mathlib.Analysis.Calculus.ContDiff.Convolution
