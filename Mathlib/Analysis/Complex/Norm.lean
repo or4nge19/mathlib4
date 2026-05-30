@@ -42,6 +42,10 @@ theorem abs_re_le_norm (z : ℂ) : |z.re| ≤ ‖z‖ := by
 theorem re_le_norm (z : ℂ) : z.re ≤ ‖z‖ :=
   (abs_le.1 (abs_re_le_norm _)).2
 
+@[bound]
+theorem neg_norm_le_re (z : ℂ) : -‖z‖ ≤ z.re :=
+  neg_le_of_abs_le (abs_re_le_norm z)
+
 protected theorem norm_add_le' (z w : ℂ) : ‖z + w‖ ≤ ‖z‖ + ‖w‖ :=
   (mul_self_le_mul_self_iff (Complex.norm_nonneg (z + w)) (add_nonneg (Complex.norm_nonneg z)
     (Complex.norm_nonneg w))).2 <| by

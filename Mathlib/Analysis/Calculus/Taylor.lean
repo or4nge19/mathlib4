@@ -1,7 +1,7 @@
 /-
 Copyright (c) 2022 Moritz Doll. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Moritz Doll
+Authors: Moritz Doll, Matteo Cipollina
 -/
 module
 
@@ -13,6 +13,7 @@ public import Mathlib.Analysis.Calculus.Deriv.Pow
 public import Mathlib.Analysis.Calculus.IteratedDeriv.Defs
 public import Mathlib.Analysis.Calculus.MeanValue
 public import Mathlib.Analysis.Calculus.Deriv.MeanValue
+public import Mathlib.MeasureTheory.Integral.IntervalIntegral.IntegrationByParts
 
 /-!
 # Taylor's theorem
@@ -141,6 +142,46 @@ theorem monomial_has_deriv_aux (t x : ℝ) (n : ℕ) :
   rw [← neg_one_mul, mul_comm (-1 : ℝ), mul_assoc, mul_comm (-1 : ℝ), ← mul_assoc]
   convert ((hasDerivAt_id t).neg.add_const x).pow (n + 1)
   simp only [Nat.cast_add, Nat.cast_one]
+
+private theorem hasDerivAt_taylorIntegralKernel (x t : ℝ) (n : ℕ) :
+    HasDerivAt (fun y ↦ (((n + 1 : ℝ) * n !)⁻¹ * (x - y) ^ (n + 1)))
+      (-((n ! : ℝ)⁻¹ * (x - t) ^ n)) t := by
+  have h := (monomial_has_deriv_aux t x n).const_mul (((n + 1 : ℝ) * n !)⁻¹)
+  have hcoeff :
+      (((n + 1 : ℝ) * n !)⁻¹ * (-(n + 1) * (x - t) ^ n)) =
+        -((n ! : ℝ)⁻¹ * (x - t) ^ n) := by
+    field_simp [Nat.factorial_succ]
+  convert h using 1
+  exact hcoeff.symm
+
+private theorem continuousOn_iteratedDerivWithin_uIcc {f : ℝ → E} {a b x : ℝ} {n m : ℕ}
+    (hab : a < b) (hx : x ∈ Icc a b) (hf : ContDiffOn ℝ n f (Icc a b)) (hmn : m ≤ n) :
+    ContinuousOn (iteratedDerivWithin m f (Icc a b)) [[a, x]] := by
+  have hmn' : (m : WithTop ℕ∞) ≤ n := by
+    exact_mod_cast hmn
+  simpa [Set.uIcc_of_le hx.1] using
+    ((hf.continuousOn_iteratedDerivWithin (m := m) hmn' (uniqueDiffOn_Icc hab)).mono
+      (Icc_subset_Icc_right hx.2))
+
+private theorem intervalIntegrable_iteratedDerivWithin {f : ℝ → E} {a b x : ℝ} {n m : ℕ}
+    [CompleteSpace E] (hab : a < b) (hx : x ∈ Icc a b) (hf : ContDiffOn ℝ n f (Icc a b))
+    (hmn : m ≤ n) :
+    IntervalIntegrable (iteratedDerivWithin m f (Icc a b)) MeasureTheory.volume a x :=
+  (continuousOn_iteratedDerivWithin_uIcc hab hx hf hmn).intervalIntegrable
+
+private theorem hasDerivAt_iteratedDerivWithin {f : ℝ → E} {a b t : ℝ} {n m : ℕ}
+    (hab : a < b) (ht : t ∈ Ioo a b) (hf : ContDiffOn ℝ n f (Icc a b))
+    (hmn : m < n) :
+    HasDerivAt (fun y ↦ iteratedDerivWithin m f (Icc a b) y)
+      (iteratedDerivWithin (m + 1) f (Icc a b) t) t := by
+  have hmn' : (m : WithTop ℕ∞) < n := by
+    exact_mod_cast hmn
+  have hdiff :
+      DifferentiableWithinAt ℝ (iteratedDerivWithin m f (Icc a b)) (Icc a b) t :=
+    hf.differentiableOn_iteratedDerivWithin (m := m) hmn' (uniqueDiffOn_Icc hab) t
+      (Ioo_subset_Icc_self ht)
+  rw [iteratedDerivWithin_succ]
+  exact hdiff.hasDerivWithinAt.hasDerivAt (Icc_mem_nhds ht.1 ht.2)
 
 theorem hasDerivWithinAt_taylor_coeff_within {f : ℝ → E} {x y : ℝ} {k : ℕ} {s t : Set ℝ}
     (ht : UniqueDiffWithinAt ℝ t y) (hs : s ∈ 𝓝[t] y)
@@ -282,6 +323,126 @@ theorem Real.taylor_tendsto {f : ℝ → ℝ} {x₀ : ℝ} {n : ℕ} {s : Set �
       (𝓝[s] x₀) (𝓝 0) := by
   convert _root_.taylor_tendsto hs hx₀s hf using 2 with x
   simp [div_eq_inv_mul]
+
+private theorem integral_remainder_succ {f : ℝ → E} {a b x : ℝ} {n : ℕ}
+    [CompleteSpace E]
+    (hab : a < b) (hx : x ∈ Icc a b) (hf : ContDiffOn ℝ (n + 2) f (Icc a b)) :
+    ∫ t in a..x, ((n ! : ℝ)⁻¹ * (x - t) ^ n) • iteratedDerivWithin (n + 1) f (Icc a b) t =
+      (((n + 1 : ℝ) * n !)⁻¹ * (x - a) ^ (n + 1)) • iteratedDerivWithin (n + 1) f (Icc a b) a +
+        ∫ t in a..x,
+          (((n + 1 : ℝ) * n !)⁻¹ * (x - t) ^ (n + 1)) •
+            iteratedDerivWithin (n + 2) f (Icc a b) t := by
+  let u : ℝ → ℝ := fun t ↦ (((n + 1 : ℝ) * n !)⁻¹ * (x - t) ^ (n + 1))
+  let u' : ℝ → ℝ := fun t ↦ -((n ! : ℝ)⁻¹ * (x - t) ^ n)
+  let v : ℝ → E := fun t ↦ iteratedDerivWithin (n + 1) f (Icc a b) t
+  let v' : ℝ → E := fun t ↦ iteratedDerivWithin (n + 2) f (Icc a b) t
+  have hu : ContinuousOn u [[a, x]] := by
+    fun_prop
+  have hv : ContinuousOn v [[a, x]] := by
+    simpa [v] using continuousOn_iteratedDerivWithin_uIcc hab hx hf
+      (by exact_mod_cast (show n + 1 ≤ n + 2 by omega))
+  have huu' : ∀ t ∈ Ioo (min a x) (max a x), HasDerivAt u (u' t) t := by
+    intro t ht
+    rw [min_eq_left hx.1, max_eq_right hx.1] at ht
+    simpa [u, u'] using hasDerivAt_taylorIntegralKernel x t n
+  have hvv' : ∀ t ∈ Ioo (min a x) (max a x), HasDerivAt v (v' t) t := by
+    intro t ht
+    rw [min_eq_left hx.1, max_eq_right hx.1] at ht
+    have htb : t ∈ Ioo a b := ⟨ht.1, lt_of_lt_of_le ht.2 hx.2⟩
+    simpa [v, v'] using hasDerivAt_iteratedDerivWithin hab htb hf
+      (by exact_mod_cast (show n + 1 < n + 2 by omega))
+  have hu'Int : IntervalIntegrable u' MeasureTheory.volume a x := by
+    exact Continuous.intervalIntegrable (by fun_prop) a x
+  have hv'Int : IntervalIntegrable v' MeasureTheory.volume a x := by
+    simpa [v'] using intervalIntegrable_iteratedDerivWithin hab hx hf (by simp)
+  have hparts :=
+    intervalIntegral.integral_smul_deriv_eq_deriv_smul_of_hasDerivAt hu hv huu' hvv' hu'Int hv'Int
+  have hparts' :
+      ∫ t in a..x, u t • v' t = -((((n + 1 : ℝ) * n !)⁻¹ * (x - a) ^ (n + 1)) •
+        iteratedDerivWithin (n + 1) f (Icc a b) a) +
+          ∫ t in a..x, ((n ! : ℝ)⁻¹ * (x - t) ^ n) • iteratedDerivWithin (n + 1) f (Icc a b) t := by
+    simpa [u, u', v, hx.1, sub_eq_add_neg, add_comm, add_left_comm, add_assoc] using hparts
+  calc
+    ∫ t in a..x, ((n ! : ℝ)⁻¹ * (x - t) ^ n) • iteratedDerivWithin (n + 1) f (Icc a b) t
+      = (((n + 1 : ℝ) * n !)⁻¹ * (x - a) ^ (n + 1)) • iteratedDerivWithin (n + 1) f (Icc a b) a +
+          ∫ t in a..x, u t • v' t := by
+            rw [hparts']
+            abel
+    _ = (((n + 1 : ℝ) * n !)⁻¹ * (x - a) ^ (n + 1)) • iteratedDerivWithin (n + 1) f (Icc a b) a +
+          ∫ t in a..x,
+            (((n + 1 : ℝ) * n !)⁻¹ * (x - t) ^ (n + 1)) •
+              iteratedDerivWithin (n + 2) f (Icc a b) t := by
+            simp [u, v']
+
+/-- **Taylor's theorem** with the integral form of the remainder. -/
+theorem taylor_integral_remainder {f : ℝ → E} {a b x : ℝ} {n : ℕ} (hab : a ≤ b)
+    [CompleteSpace E]
+    (hf : ContDiffOn ℝ (n + 1) f (Icc a b)) (hx : x ∈ Icc a b) :
+    f x - taylorWithinEval f n (Icc a b) a x =
+      ∫ t in a..x, ((n ! : ℝ)⁻¹ * (x - t) ^ n) • iteratedDerivWithin (n + 1) f (Icc a b) t := by
+  rcases eq_or_lt_of_le hab with rfl | hab
+  · rw [Icc_self, mem_singleton_iff] at hx
+    subst x
+    simp
+  induction n generalizing x with
+  | zero =>
+      have hderiv : ∀ t ∈ Ioo a x, HasDerivAt f (iteratedDerivWithin 1 f (Icc a b) t) t := by
+        intro t ht
+        have htb : t ∈ Ioo a b := ⟨ht.1, lt_of_lt_of_le ht.2 hx.2⟩
+        simpa using hasDerivAt_iteratedDerivWithin (m := 0) hab htb hf (by simp)
+      have hint :
+          IntervalIntegrable (iteratedDerivWithin 1 f (Icc a b)) MeasureTheory.volume a x := by
+        exact intervalIntegrable_iteratedDerivWithin hab hx hf (by simp)
+      calc
+        f x - taylorWithinEval f 0 (Icc a b) a x = f x - f a := by
+          simp [taylor_within_zero_eval]
+        _ = ∫ t in a..x, iteratedDerivWithin 1 f (Icc a b) t := by
+          symm
+          exact intervalIntegral.integral_eq_sub_of_hasDerivAt_of_le hx.1
+            (hf.continuousOn.mono (Icc_subset_Icc_right hx.2)) hderiv hint
+        _ = ∫ t in a..x, ((0 ! : ℝ)⁻¹ * (x - t) ^ 0) •
+              iteratedDerivWithin (0 + 1) f (Icc a b) t := by
+          simp [iteratedDerivWithin_one]
+  | succ n ih =>
+      have hprev := ih (hf.of_succ) hx
+      have hstep := integral_remainder_succ hab hx hf
+      let term : E :=
+        (((n + 1 : ℝ) * n !)⁻¹ * (x - a) ^ (n + 1)) • iteratedDerivWithin (n + 1) f (Icc a b) a
+      have hsucc :
+          taylorWithinEval f (n + 1) (Icc a b) a x = taylorWithinEval f n (Icc a b) a x + term := by
+        simp [term, taylorWithinEval_succ, mul_left_comm, mul_comm]
+      have hprev' :
+          (f x - taylorWithinEval f n (Icc a b) a x) - term =
+            (∫ t in a..x, ((n ! : ℝ)⁻¹ * (x - t) ^ n) •
+              iteratedDerivWithin (n + 1) f (Icc a b) t) - term := by
+        simpa [term] using congrArg (fun y => y - term) hprev
+      have hstep' :
+          (∫ t in a..x, ((n ! : ℝ)⁻¹ * (x - t) ^ n) •
+            iteratedDerivWithin (n + 1) f (Icc a b) t) - term =
+              ∫ t in a..x, (((n + 1 : ℝ) * n !)⁻¹ * (x - t) ^ (n + 1)) •
+                iteratedDerivWithin (n + 2) f (Icc a b) t := by
+        calc
+          (∫ t in a..x, ((n ! : ℝ)⁻¹ * (x - t) ^ n) •
+              iteratedDerivWithin (n + 1) f (Icc a b) t) - term
+              = (term +
+                  ∫ t in a..x, (((n + 1 : ℝ) * n !)⁻¹ * (x - t) ^ (n + 1)) •
+                    iteratedDerivWithin (n + 2) f (Icc a b) t) - term := by
+                      simpa [term] using congrArg (fun y => y - term) hstep
+          _ = ∫ t in a..x, (((n + 1 : ℝ) * n !)⁻¹ * (x - t) ^ (n + 1)) •
+                iteratedDerivWithin (n + 2) f (Icc a b) t := by
+                  abel
+      calc
+        f x - taylorWithinEval f (n + 1) (Icc a b) a x
+          = (f x - taylorWithinEval f n (Icc a b) a x) - term := by
+                  rw [hsucc]
+                  abel
+        _ = (∫ t in a..x, ((n ! : ℝ)⁻¹ * (x - t) ^ n) •
+              iteratedDerivWithin (n + 1) f (Icc a b) t) - term := hprev'
+        _ = ∫ t in a..x, (((n + 1 : ℝ) * n !)⁻¹ * (x - t) ^ (n + 1)) •
+              iteratedDerivWithin (n + 2) f (Icc a b) t := hstep'
+        _ = ∫ t in a..x, ((↑(n + 1)! : ℝ)⁻¹ * (x - t) ^ (n + 1)) •
+              iteratedDerivWithin (n + 1 + 1) f (Icc a b) t := by
+                  simp [Nat.factorial_succ, mul_comm]
 
 
 /-! ### Taylor's theorem with mean value type remainder estimate -/

@@ -64,7 +64,7 @@ lemma hasProdUniformlyOn_of_clog (hf : SummableUniformlyOn (fun i x ↦ log (f i
   obtain ⟨r, hr⟩ := hf.exists
   suffices H : TendstoUniformlyOn (fun s x ↦ ∏ i ∈ s, f i x) (cexp ∘ r) atTop s by
     refine H.congr_right (hr.tsum_eqOn.comp_left.symm.trans ?_)
-    exact fun x hx ↦ (cexp_tsum_eq_tprod (hfn x hx) (hf.summable hx))
+    exact fun x hx ↦ cexp_tsum_eq_tprod (hfn x hx) (hr.hasSum hx).summable
   refine (hr.tendstoUniformlyOn.comp_cexp ?_).congr ?_
   · simpa +contextual [← hr.tsum_eqOn _] using hg
   · filter_upwards with s i hi using by simp [exp_sum, fun y ↦ exp_log (hfn i hi y)]
