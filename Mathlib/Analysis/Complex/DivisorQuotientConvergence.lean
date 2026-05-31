@@ -130,22 +130,24 @@ theorem tendstoLocallyUniformlyOn_divisorPartialProduct_div_pow_sub
 /-!
 ## Passing the fiber/complement factorization to the infinite product (punctured neighborhood)
 
-This is the core “removable singularity” input: near `z₀`, the quotient
+This is the local factorization used for removability: near `z₀`, the quotient
 `divisorCanonicalProduct / (z - z₀)^k` agrees (on a punctured ball) with the product of
 `divisorComplementCanonicalProduct` and the analytic factor `u` coming from the fiber-only product.
 -/
 
 open Filter
 
--- The proof combines local uniform convergence of partial products
--- with a removable singularity argument around `z₀`.
 theorem exists_ball_eq_divisorCanonicalProduct_div_pow_eq
     (m : ℕ) (f : ℂ → ℂ)
     (h_sum : Summable (fun p : divisorZeroIndex₀ f (Set.univ : Set ℂ) =>
-    ‖divisorZeroIndex₀_val p‖⁻¹ ^ (m + 1))) (z₀ : ℂ) : ∃ ε > 0, ∃ u : ℂ → ℂ, AnalyticAt ℂ u z₀ ∧
-    u z₀ ≠ 0 ∧ ∀ z : ℂ, z ∈ Metric.ball z₀ ε → z ≠ z₀ → (divisorCanonicalProduct m f
-    (Set.univ : Set ℂ) z) / (z - z₀) ^ (divisorZeroIndex₀_fiberFinset (f := f) z₀).card =
-          (divisorComplementCanonicalProduct m f z₀ z) * u z := by
+      ‖divisorZeroIndex₀_val p‖⁻¹ ^ (m + 1)))
+    (z₀ : ℂ) :
+    ∃ ε > 0, ∃ u : ℂ → ℂ, AnalyticAt ℂ u z₀ ∧
+      u z₀ ≠ 0 ∧
+        ∀ z : ℂ, z ∈ Metric.ball z₀ ε → z ≠ z₀ →
+          (divisorCanonicalProduct m f (Set.univ : Set ℂ) z) /
+              (z - z₀) ^ (divisorZeroIndex₀_fiberFinset (f := f) z₀).card =
+            (divisorComplementCanonicalProduct m f z₀ z) * u z := by
   let fiber : Finset (divisorZeroIndex₀ f (Set.univ : Set ℂ)) :=
     divisorZeroIndex₀_fiberFinset (f := f) z₀
   have hfib : ∃ u : ℂ → ℂ, AnalyticAt ℂ u z₀ ∧ u z₀ ≠ 0 ∧

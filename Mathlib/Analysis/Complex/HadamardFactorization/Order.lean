@@ -10,7 +10,7 @@ public import Mathlib.Analysis.Complex.HadamardFactorization.Growth
 /-!
 ## Hadamard factorization for finite-order entire functions
 
-This file upgrades the intrinsic growth-form Hadamard factorization theorem to Tao's finite-order
+This file upgrades the growth-form Hadamard factorization theorem to the finite-order
 formulation: an entire function has order at most `ρ` if it satisfies an `ε`-family of exponential
 growth bounds.
 -/
@@ -24,7 +24,7 @@ open scoped Topology BigOperators
 
 namespace Complex.Hadamard
 
-/-- An entire function has order at most `ρ` if it satisfies Tao's `ε`-family growth bound. -/
+/-- An entire function has order at most `ρ` if it satisfies an `ε`-family growth bound. -/
 def EntireOfOrderAtMost (ρ : ℝ) (f : ℂ → ℂ) : Prop :=
   Differentiable ℂ f ∧
     ∀ ε : ℝ, 0 < ε →
@@ -53,6 +53,18 @@ theorem of_norm_le_exp {ρ : ℝ} {f : ℂ → ℂ} (hf : Differentiable ℂ f)
     (r := fun z : ℂ => 1 + ‖z‖) hC.le
     (fun z => by linarith [norm_nonneg z]) (by linarith : ρ ≤ ρ + ε) hCbound
 
+/-- A finite-order bound gives a logarithmic growth bound at any larger exponent. -/
+theorem exists_log_growth {ρ τ : ℝ} {f : ℂ → ℂ} (h : EntireOfOrderAtMost ρ f)
+    (hτ : ρ < τ) (hτ_nonneg : 0 ≤ τ) :
+    ∃ C' > 0, ∀ z : ℂ, Real.log (1 + ‖f z‖) ≤ C' * (1 + ‖z‖) ^ τ := by
+  rcases h.exists_bound (sub_pos.2 hτ) with ⟨C, hCpos, hC⟩
+  have hnorm : ∀ z : ℂ, ‖f z‖ ≤ Real.exp (C * (1 + ‖z‖) ^ τ) := by
+    intro z
+    simpa [sub_add_cancel] using (hC z)
+  exact log_growth_of_norm_le_exp_mul_rpow (f := f)
+    (r := fun z : ℂ => 1 + ‖z‖) hCpos hτ_nonneg
+    (fun z => by linarith [norm_nonneg z]) hnorm
+
 end EntireOfOrderAtMost
 
 theorem hadamard_factorization_of_order {f : ℂ → ℂ} {ρ : ℝ} (hρ : 0 ≤ ρ)
@@ -72,16 +84,9 @@ theorem hadamard_factorization_of_order {f : ℂ → ℂ} {ρ : ℝ} (hρ : 0 �
     ⟨τ, hτ, hτ_lt, hτ_nonneg, hfloorτ'⟩
   have hfloorτ : Nat.floor τ = m := by
     simpa [m] using hfloorτ'
-  have hε : 0 < τ - ρ := sub_pos.2 hτ
-  rcases horder.exists_bound hε with ⟨C, hCpos, hC⟩
   have hgrowthτ :
-      ∃ C' > 0, ∀ z : ℂ, Real.log (1 + ‖f z‖) ≤ C' * (1 + ‖z‖) ^ τ := by
-    have hnorm : ∀ z : ℂ, ‖f z‖ ≤ Real.exp (C * (1 + ‖z‖) ^ τ) := by
-      intro z
-      simpa [sub_add_cancel] using (hC z)
-    exact log_growth_of_norm_le_exp_mul_rpow (f := f)
-      (r := fun z : ℂ => 1 + ‖z‖) hCpos hτ_nonneg
-      (fun z => by linarith [norm_nonneg z]) hnorm
+      ∃ C' > 0, ∀ z : ℂ, Real.log (1 + ‖f z‖) ≤ C' * (1 + ‖z‖) ^ τ :=
+    horder.exists_log_growth hτ hτ_nonneg
   rcases hadamard_factorization_of_growth (f := f) (ρ := τ) hτ_nonneg
       hentire hnot hgrowthτ with
     ⟨P, hdeg, hfac⟩

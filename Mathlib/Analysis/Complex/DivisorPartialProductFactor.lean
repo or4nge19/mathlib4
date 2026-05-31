@@ -49,27 +49,10 @@ theorem analyticOrderAt_finset_prod_weierstrassFactor_divisorZeroIndex₀
     · have hp0 : divisorZeroIndex₀_val p ≠ 0 := p.property
       have han_fac :
           AnalyticAt ℂ (fun z : ℂ => weierstrassFactor m (z / divisorZeroIndex₀_val p)) z₀ := by
-        have hdiv : Differentiable ℂ (fun z : ℂ => z / divisorZeroIndex₀_val p) := by
-          simp [div_eq_mul_inv]
-        have hdiff :
-            Differentiable ℂ (fun z : ℂ => weierstrassFactor m (z / divisorZeroIndex₀_val p)) :=
-          (differentiable_weierstrassFactor m).comp hdiv
-        exact Differentiable.analyticAt (f := fun z : ℂ => weierstrassFactor m
-          (z / divisorZeroIndex₀_val p)) hdiff z₀
+        exact (differentiable_weierstrassFactor_divisorZeroIndex₀ m p).analyticAt z₀
       have han_rest : AnalyticAt ℂ (fun z : ℂ => ∏ q ∈ s, weierstrassFactor m
           (z / divisorZeroIndex₀_val q)) z₀ := by
-        have hdiff : Differentiable ℂ (fun z : ℂ => ∏ q ∈ s, weierstrassFactor m
-            (z / divisorZeroIndex₀_val q)) := by
-          let F : divisorZeroIndex₀ f (Set.univ : Set ℂ) → ℂ → ℂ :=
-            fun q z => weierstrassFactor m (z / divisorZeroIndex₀_val q)
-          have hF : ∀ q ∈ s, Differentiable ℂ (F q) := by
-            intro q hq
-            have hdiv : Differentiable ℂ (fun z : ℂ => z / divisorZeroIndex₀_val q) := by
-              simp [div_eq_mul_inv]
-            exact (differentiable_weierstrassFactor m).comp hdiv
-          simpa [F] using (Differentiable.fun_finset_prod (𝕜 := ℂ) (f := F) (u := s) hF)
-        exact Differentiable.analyticAt (f := fun z : ℂ => ∏ q ∈ s, weierstrassFactor m
-          (z / divisorZeroIndex₀_val q)) hdiff z₀
+        simpa [divisorPartialProduct] using analyticAt_divisorPartialProduct m f s z₀
       let fac : ℂ → ℂ := fun z : ℂ => weierstrassFactor m (z / divisorZeroIndex₀_val p)
       let rest : ℂ → ℂ := fun z : ℂ => ∏ q ∈ s, weierstrassFactor m (z / divisorZeroIndex₀_val q)
       have hmul :
@@ -103,13 +86,7 @@ theorem analyticOrderAt_finset_prod_weierstrassFactor_divisorZeroIndex₀
               simp [hcard, Nat.add_comm]
     · have han_fac :
           AnalyticAt ℂ (fun z : ℂ => weierstrassFactor m (z / divisorZeroIndex₀_val p)) z₀ := by
-        have hdiv : Differentiable ℂ (fun z : ℂ => z / divisorZeroIndex₀_val p) := by
-          simp [div_eq_mul_inv]
-        have hdiff :
-            Differentiable ℂ (fun z : ℂ => weierstrassFactor m (z / divisorZeroIndex₀_val p)) :=
-          (differentiable_weierstrassFactor m).comp hdiv
-        exact Differentiable.analyticAt (f := fun z : ℂ => weierstrassFactor m
-          (z / divisorZeroIndex₀_val p)) hdiff z₀
+        exact (differentiable_weierstrassFactor_divisorZeroIndex₀ m p).analyticAt z₀
       have hfac0 : analyticOrderAt (fun z : ℂ => weierstrassFactor m
           (z / divisorZeroIndex₀_val p)) z₀ = 0 := by
         have hp0 : divisorZeroIndex₀_val p ≠ 0 := p.property
@@ -129,18 +106,7 @@ theorem analyticOrderAt_finset_prod_weierstrassFactor_divisorZeroIndex₀
         simp [hEq, Finset.filter_insert]
       have han_rest : AnalyticAt ℂ (fun z : ℂ => ∏ q ∈ s, weierstrassFactor m
           (z / divisorZeroIndex₀_val q)) z₀ := by
-        have hdiff :  Differentiable ℂ (fun z : ℂ => ∏ q ∈ s, weierstrassFactor m
-            (z / divisorZeroIndex₀_val q)) := by
-          let F : divisorZeroIndex₀ f (Set.univ : Set ℂ) → ℂ → ℂ :=
-            fun q z => weierstrassFactor m (z / divisorZeroIndex₀_val q)
-          have hF : ∀ q ∈ s, Differentiable ℂ (F q) := by
-            intro q hq
-            have hdiv : Differentiable ℂ (fun z : ℂ => z / divisorZeroIndex₀_val q) := by
-              simp [div_eq_mul_inv]
-            exact (differentiable_weierstrassFactor m).comp hdiv
-          simpa [F] using (Differentiable.fun_finset_prod (𝕜 := ℂ) (f := F) (u := s) hF)
-        exact Differentiable.analyticAt (f := fun z : ℂ => ∏ q ∈ s, weierstrassFactor m
-          (z / divisorZeroIndex₀_val q)) hdiff z₀
+        simpa [divisorPartialProduct] using analyticAt_divisorPartialProduct m f s z₀
       let fac : ℂ → ℂ := fun z : ℂ => weierstrassFactor m (z / divisorZeroIndex₀_val p)
       let rest : ℂ → ℂ := fun z : ℂ => ∏ q ∈ s, weierstrassFactor m (z / divisorZeroIndex₀_val q)
       have hmul :
@@ -218,16 +184,7 @@ theorem exists_analyticAt_eq_pow_smul_of_partialProduct_contains_fiber
           fun z : ℂ => (z - z₀) ^ (divisorZeroIndex₀_fiberFinset (f := f) z₀).card • g z := by
   let F : ℂ → ℂ := fun z : ℂ => ∏ p ∈ s, weierstrassFactor m (z / divisorZeroIndex₀_val p)
   have hF_ana : AnalyticAt ℂ F z₀ := by
-    have hdiff : Differentiable ℂ F := by
-      let Φ : divisorZeroIndex₀ f (Set.univ : Set ℂ) → ℂ → ℂ :=
-        fun p z => weierstrassFactor m (z / divisorZeroIndex₀_val p)
-      have hΦ : ∀ p ∈ s, Differentiable ℂ (Φ p) := by
-        intro p hp
-        have hdiv : Differentiable ℂ (fun z : ℂ => z / divisorZeroIndex₀_val p) := by
-          simp [div_eq_mul_inv]
-        exact (differentiable_weierstrassFactor m).comp hdiv
-      simpa [F, Φ] using (Differentiable.fun_finset_prod (𝕜 := ℂ) (f := Φ) (u := s) hΦ)
-    exact Differentiable.analyticAt (f := F) hdiff z₀
+    simpa [F, divisorPartialProduct] using analyticAt_divisorPartialProduct m f s z₀
   have hOrder :
       analyticOrderAt F z₀ =
         ((divisorZeroIndex₀_fiberFinset (f := f) z₀).card : ℕ∞) := by

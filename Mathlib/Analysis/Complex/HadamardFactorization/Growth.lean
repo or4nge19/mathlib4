@@ -6,11 +6,16 @@ Authors: Matteo Cipollina
 module
 
 public import Mathlib.Analysis.Complex.HadamardFactorization.Summability
+public import Mathlib.Analysis.Complex.CartanBound
+public import Mathlib.Analysis.Complex.CartanInverseFactorBound
+public import Mathlib.Analysis.Complex.CartanMajorantBound
+public import Mathlib.Analysis.Complex.CartanProductBound
+public import Mathlib.Analysis.Complex.ExpPoly.Growth
 
 /-!
 ## Intrinsic Hadamard factorization from a logarithmic growth bound
 
-This file contains the theorem-layer argument which turns the intrinsic quotient and divisor
+This file contains the theorem-layer argument which turns the Hadamard quotient and divisor
 summability machinery from `HadamardFactorization` into the growth-form Hadamard factorization.
 -/
 
@@ -60,6 +65,20 @@ lemma norm_le_exp_mul_rpow_of_exponent_le {α E : Type*} [SeminormedAddCommGroup
   refine (hbound x).trans (Real.exp_le_exp.2 ?_)
   exact mul_le_mul_of_nonneg_left (Real.rpow_le_rpow_of_exponent_le (hr x) hρτ) hC
 
+/-- A logarithmic growth bound gives a pointwise exponential norm bound after weakening the
+exponent. -/
+lemma norm_le_exp_mul_rpow_of_log_growth {α E : Type*} [SeminormedAddCommGroup E]
+    {f : α → E} {r : α → ℝ} {C ρ τ : ℝ} (hC : 0 ≤ C)
+    (hr : ∀ x, 1 ≤ r x) (hρτ : ρ ≤ τ)
+    (hlog : ∀ x, Real.log (1 + ‖f x‖) ≤ C * (r x) ^ ρ) :
+    ∀ x, ‖f x‖ ≤ Real.exp (C * (r x) ^ τ) := by
+  intro x
+  have hpow : (r x) ^ ρ ≤ (r x) ^ τ :=
+    Real.rpow_le_rpow_of_exponent_le (hr x) hρτ
+  have hlogτ : Real.log (1 + ‖f x‖) ≤ C * (r x) ^ τ :=
+    (hlog x).trans (mul_le_mul_of_nonneg_left hpow hC)
+  exact Real.le_exp_of_log_one_add_le (norm_nonneg (f x)) hlogτ
+
 /-- Convert a pointwise exponential norm bound into a logarithmic growth bound. -/
 lemma log_growth_of_norm_le_exp_mul_rpow {α E : Type*} [SeminormedAddCommGroup E]
     {f : α → E} {r : α → ℝ} {C τ : ℝ} (hC : 0 < C) (hτ : 0 ≤ τ)
@@ -78,6 +97,14 @@ lemma log_growth_of_norm_le_exp_mul_rpow {α E : Type*} [SeminormedAddCommGroup 
   have hlog2_nonneg : 0 ≤ Real.log 2 := Real.log_nonneg (by norm_num)
   nlinarith [hlog, hX, hlog2_nonneg]
 
+/-- If `r ≤ 2 * max x 1`, then `1 + r` is bounded by a fixed multiple of `1 + x`. -/
+lemma one_add_le_three_mul_one_add_of_le_two_mul_max {x r : ℝ} (hx : 0 ≤ x)
+    (hr : r ≤ 2 * max x 1) :
+    1 + r ≤ 3 * (1 + x) := by
+  have hmax : max x 1 ≤ 1 + x := by
+    exact max_le_iff.2 ⟨by linarith, by linarith⟩
+  nlinarith
+
 /-- The Hadamard quotient inherits a finite-order exponential norm bound. -/
 theorem hadamardQuotient_norm_le_exp_rpow_of_growth {f H : ℂ → ℂ} {ρ τ : ℝ} {m : ℕ}
     (hρ : 0 ≤ ρ) (hmρ : (m : ℝ) ≤ ρ) (hτ : ρ < τ) (hτ_lt : τ < (m + 1 : ℝ))
@@ -91,7 +118,6 @@ theorem hadamardQuotient_norm_le_exp_rpow_of_growth {f H : ℂ → ℂ} {ρ τ :
         H z * z ^ analyticOrderNatAt f 0 *
           divisorCanonicalProduct m f (Set.univ : Set ℂ) z) :
     ∃ C > 0, ∀ z : ℂ, ‖H z‖ ≤ Real.exp (C * (1 + ‖z‖) ^ τ) := by
-  classical
   rcases hgrowth with ⟨Cf, hCfpos, hCf⟩
   have hsumτ :
       Summable (fun p : divisorZeroIndex₀ f (Set.univ : Set ℂ) =>
@@ -110,6 +136,10 @@ theorem hadamardQuotient_norm_le_exp_rpow_of_growth {f H : ℂ → ℂ} {ρ τ :
       have h4τ : 0 ≤ (4 : ℝ) ^ τ := by positivity
       nlinarith [hCφ, hm0, h4τ]
     simpa [Cprod] using mul_nonneg hA hS
+  have hf_boundτ : ∀ z : ℂ, ‖f z‖ ≤ Real.exp (Cf * (1 + ‖z‖) ^ τ) :=
+    norm_le_exp_mul_rpow_of_log_growth
+      (f := f) (r := fun z : ℂ => 1 + ‖z‖) (C := Cf) (ρ := ρ) (τ := τ)
+      hCfpos.le (fun z => by linarith [norm_nonneg z]) (le_of_lt hτ) hCf
   refine ⟨(Cf + Cprod + 10) * (3 : ℝ) ^ τ, by
     have h3τ : 0 < (3 : ℝ) ^ τ := by positivity
     nlinarith [hCfpos, hCprod_nonneg, h3τ], ?_⟩
@@ -188,18 +218,11 @@ theorem hadamardQuotient_norm_le_exp_rpow_of_growth {f H : ℂ → ℂ} {ρ τ :
         simpa [hden_eq, div_eq_mul_inv, mul_assoc, mul_left_comm, mul_comm] using this
       exact this.symm
     have hf_u : ‖f u‖ ≤ Real.exp (Cf * (1 + r) ^ τ) := by
-      have hlog := hCf u
-      have hbase : (1 : ℝ) ≤ 1 + ‖u‖ := by linarith [norm_nonneg u]
-      have hpow : (1 + ‖u‖) ^ ρ ≤ (1 + ‖u‖) ^ τ :=
-        Real.rpow_le_rpow_of_exponent_le hbase (le_of_lt hτ)
-      have hlog' : Real.log (1 + ‖f u‖) ≤ Cf * (1 + ‖u‖) ^ τ :=
-        hlog.trans (mul_le_mul_of_nonneg_left hpow (le_of_lt hCfpos))
-      simpa [hur] using Real.le_exp_of_log_one_add_le (norm_nonneg (f u)) hlog'
+      simpa [hur] using hf_boundτ u
     have hden_inv :
         ‖(u ^ analyticOrderNatAt f 0 *
             divisorCanonicalProduct m f (Set.univ : Set ℂ) u)⁻¹‖
           ≤ Real.exp (Cprod * (1 + r) ^ τ) := by
-      classical
       have hr1 : (1 : ℝ) ≤ r := le_trans hRle hR_le_r
       have hpow_inv_le1 : ‖(u ^ analyticOrderNatAt f 0)⁻¹‖ ≤ 1 := by
         have hinv : (‖u‖ : ℝ)⁻¹ ≤ 1 := by
@@ -222,6 +245,8 @@ theorem hadamardQuotient_norm_le_exp_rpow_of_growth {f H : ℂ → ℂ} {ρ τ :
           HasProd fac (divisorCanonicalProduct m f (Set.univ : Set ℂ) u) :=
         hloc.hasProd (by simp : u ∈ (Set.univ : Set ℂ))
       let ap : divisorZeroIndex₀ f (Set.univ : Set ℂ) → ℝ := fun p => ‖divisorZeroIndex₀_val p‖
+      haveI : DecidablePred (fun p : divisorZeroIndex₀ f (Set.univ : Set ℂ) => p ∈ small) :=
+        Classical.decPred _
       let b : divisorZeroIndex₀ f (Set.univ : Set ℂ) → ℝ :=
         fun p =>
           if hp : p ∈ small then
@@ -379,11 +404,8 @@ theorem hadamardQuotient_norm_le_exp_rpow_of_growth {f H : ℂ → ℂ} {ρ τ :
       (Complex.norm_le_of_forall_mem_frontier_norm_le (f := H) (U := U) hU hd
         hCfront (z := z) hz_cl)
   have hr_le_3 : 1 + r ≤ 3 * (1 + ‖z‖) := by
-    have hR_le1z : R ≤ 1 + ‖z‖ := by
-      have hz' : ‖z‖ ≤ 1 + ‖z‖ := by linarith
-      have h1' : (1 : ℝ) ≤ 1 + ‖z‖ := by linarith [norm_nonneg z]
-      exact max_le_iff.2 ⟨hz', h1'⟩
-    nlinarith [hr_le_2R, hR_le1z, hRle]
+    exact one_add_le_three_mul_one_add_of_le_two_mul_max (norm_nonneg z)
+      (by simpa [R] using hr_le_2R)
   have hpow : (1 + r) ^ τ ≤ (3 : ℝ) ^ τ * (1 + ‖z‖) ^ τ := by
     have hbase : 0 ≤ 1 + r := by linarith [le_of_lt hrpos]
     have := Real.rpow_le_rpow hbase hr_le_3 hτ_nonneg
@@ -402,8 +424,6 @@ theorem hadamardQuotient_norm_le_exp_rpow_of_growth {f H : ℂ → ℂ} {ρ τ :
     nlinarith [hpow]
   simpa [mul_assoc] using hball.trans hmain
 
-
---set_option maxHeartbeats 800000 in
 theorem hadamard_factorization_of_growth {f : ℂ → ℂ} {ρ : ℝ} (hρ : 0 ≤ ρ)
     (hentire : Differentiable ℂ f)
     (hnot : ∃ z : ℂ, f z ≠ 0)
@@ -415,7 +435,6 @@ theorem hadamard_factorization_of_growth {f : ℂ → ℂ} {ρ : ℝ} (hρ : 0 �
           Complex.exp (Polynomial.eval z P) *
             z ^ (analyticOrderNatAt f 0) *
             divisorCanonicalProduct (Nat.floor ρ) f (Set.univ : Set ℂ) z := by
-  classical
   set m : ℕ := Nat.floor ρ
   have h_sum :
       Summable (fun p : divisorZeroIndex₀ f (Set.univ : Set ℂ) =>
@@ -439,16 +458,19 @@ theorem hadamard_factorization_of_growth {f : ℂ → ℂ} {ρ : ℝ} (hρ : 0 �
   have hH_growth_nat :
       ∃ C > 0, ∀ z : ℂ, ‖H z‖ ≤ Real.exp (C * (1 + ‖z‖) ^ (m + 1)) := by
     rcases hH_bound_rpow with ⟨C, hCpos, hC⟩
+    have hweak :
+        ∀ z : ℂ, ‖H z‖ ≤ Real.exp (C * (1 + ‖z‖) ^ (m + 1 : ℝ)) :=
+      norm_le_exp_mul_rpow_of_exponent_le
+        (f := H) (r := fun z : ℂ => 1 + ‖z‖) hCpos.le
+        (fun z => by linarith [norm_nonneg z]) (le_of_lt hτ_lt) hC
     refine ⟨C, hCpos, ?_⟩
     intro z
-    have hbase : (1 : ℝ) ≤ 1 + ‖z‖ := by linarith [norm_nonneg z]
-    have hpow : (1 + ‖z‖) ^ τ ≤ (1 + ‖z‖) ^ (m + 1 : ℝ) :=
-      Real.rpow_le_rpow_of_exponent_le hbase (le_of_lt hτ_lt)
-    have hpow' : (1 + ‖z‖) ^ (m + 1 : ℝ) = (1 + ‖z‖) ^ (m + 1) := by
-      simpa using (Real.rpow_natCast (1 + ‖z‖) (m + 1))
-    have : C * (1 + ‖z‖) ^ τ ≤ C * (1 + ‖z‖) ^ (m + 1) := by
-      nlinarith [hpow, hpow']
-    exact (hC z).trans (Real.exp_le_exp.2 this)
+    have hcast : ((m : ℝ) + 1) = ((m + 1 : ℕ) : ℝ) := by norm_num
+    have hpow :
+        (1 + ‖z‖) ^ ((m : ℝ) + 1) = (1 + ‖z‖) ^ (m + 1) := by
+      rw [hcast]
+      exact Real.rpow_natCast (1 + ‖z‖) (m + 1)
+    simpa [hpow] using hweak z
   rcases zero_free_polynomial_growth_is_exp_poly (H := H) (n := m + 1)
       hH_entire hH_ne hH_growth_nat with
     ⟨P, hPn, hHP⟩

@@ -38,17 +38,7 @@ theorem differentiableOn_divisorPartialProduct_div_pow_sub
     DifferentiableOn ℂ (fun z : ℂ => (divisorPartialProduct m f s z) / (z - z₀) ^ k)
       ((Set.univ : Set ℂ) \ {z₀}) := by
   have hdiff_prod : DifferentiableOn ℂ (divisorPartialProduct m f s) (Set.univ : Set ℂ) := by
-    have hdiff : Differentiable ℂ (divisorPartialProduct m f s) := by
-      let Φ : divisorZeroIndex₀ f (Set.univ : Set ℂ) → ℂ → ℂ :=
-        fun p z => weierstrassFactor m (z / divisorZeroIndex₀_val p)
-      have hΦ : ∀ p ∈ s, Differentiable ℂ (Φ p) := by
-        intro p hp
-        have hdiv : Differentiable ℂ (fun z : ℂ => z / divisorZeroIndex₀_val p) := by
-          simp [div_eq_mul_inv]
-        exact (differentiable_weierstrassFactor m).comp hdiv
-      simpa [divisorPartialProduct, Φ] using
-        (Differentiable.fun_finset_prod (𝕜 := ℂ) (f := Φ) (u := s) hΦ)
-    simpa using hdiff.differentiableOn
+    exact (differentiable_divisorPartialProduct m f s).differentiableOn
   have hdiff_den : DifferentiableOn ℂ (fun z : ℂ => (z - z₀) ^ k) ((Set.univ : Set ℂ) \ {z₀}) := by
     have : Differentiable ℂ (fun z : ℂ => (z - z₀) ^ k) := by
       fun_prop

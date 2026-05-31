@@ -6,27 +6,14 @@ Authors: Matteo Cipollina
 module
 
 public import Mathlib.Analysis.Complex.Divisor
-public import Mathlib.Analysis.Complex.ValueDistribution.LogCounting.Basic
-public import Mathlib.Analysis.Complex.CartanProductBound
-public import Mathlib.MeasureTheory.Integral.CircleAverage
-public import Mathlib.Analysis.Meromorphic.TrailingCoefficient
-public import Mathlib.Analysis.SpecialFunctions.Log.Base
-public import Mathlib.Analysis.SpecialFunctions.Log.PosLog
-public import Mathlib.Analysis.SpecialFunctions.Log.Summable
-public import Mathlib.Analysis.Complex.CartanBound
-public import Mathlib.Analysis.Complex.CartanInverseFactorBound
-public import Mathlib.Analysis.Complex.CartanMajorantBound
-public import Mathlib.Analysis.Complex.ExpPoly
-public import Mathlib.Analysis.Complex.ExpPoly.Growth
-public import Mathlib.Analysis.SpecialFunctions.Exp
-public import Mathlib.Topology.Algebra.GroupWithZero
-public import Mathlib.Topology.Algebra.InfiniteSum.Order
+public import Mathlib.Analysis.Convex.Contractible
+public import Mathlib.Analysis.Meromorphic.NormalForm
 public import Mathlib.Topology.MetricSpace.Annulus
 
 
 
 /-!
-## The intrinsic Hadamard quotient (entire and zero-free)
+## The Hadamard quotient (entire and zero-free)
 
 We bundle the main "quotient step": if `f` is entire, nontrivial, and we have the summability
 hypothesis for the divisor-indexed canonical product of genus `m`, then there is an entire function
@@ -49,23 +36,33 @@ open Filter Topology Set Complex
 
 open scoped BigOperators Topology
 
-/-- The “denominator” in the Hadamard quotient construction: the product of the origin factor
-`z ^ (analyticOrderNatAt f 0)` and the canonical product built from the divisor of `f` (of genus `m`)
-on `univ`. -/
+/-- The denominator in the Hadamard quotient construction. -/
 noncomputable def hadamardDenom (m : ℕ) (f : ℂ → ℂ) (z : ℂ) : ℂ :=
   z ^ (analyticOrderNatAt f 0) * divisorCanonicalProduct m f (Set.univ : Set ℂ) z
+
+theorem differentiable_divisorCanonicalProduct_univ (m : ℕ) (f : ℂ → ℂ)
+    (h_sum : Summable (fun p : divisorZeroIndex₀ f (Set.univ : Set ℂ) =>
+      ‖divisorZeroIndex₀_val p‖⁻¹ ^ (m + 1))) :
+    Differentiable ℂ (divisorCanonicalProduct m f (Set.univ : Set ℂ)) := by
+  intro z
+  have hdiffOn :
+      DifferentiableOn ℂ
+        (divisorCanonicalProduct m f (Set.univ : Set ℂ)) (Set.univ : Set ℂ) :=
+    differentiableOn_divisorCanonicalProduct_univ (m := m) (f := f) h_sum
+  exact (hdiffOn z (by simp)).differentiableAt (by simp)
+
+theorem analyticAt_divisorCanonicalProduct_univ (m : ℕ) (f : ℂ → ℂ)
+    (h_sum : Summable (fun p : divisorZeroIndex₀ f (Set.univ : Set ℂ) =>
+      ‖divisorZeroIndex₀_val p‖⁻¹ ^ (m + 1))) (z : ℂ) :
+    AnalyticAt ℂ (divisorCanonicalProduct m f (Set.univ : Set ℂ)) z :=
+  (differentiable_divisorCanonicalProduct_univ m f h_sum).analyticAt z
 
 theorem differentiable_hadamardDenom (m : ℕ) (f : ℂ → ℂ)
     (h_sum : Summable (fun p : divisorZeroIndex₀ f (Set.univ : Set ℂ) =>
       ‖divisorZeroIndex₀_val p‖⁻¹ ^ (m + 1))) :
     Differentiable ℂ (hadamardDenom m f) := by
-  classical
   have hcprod : Differentiable ℂ (divisorCanonicalProduct m f (Set.univ : Set ℂ)) := by
-    intro z
-    have hdiffOn :
-        DifferentiableOn ℂ (divisorCanonicalProduct m f (Set.univ : Set ℂ)) (Set.univ : Set ℂ) :=
-      differentiableOn_divisorCanonicalProduct_univ (m := m) (f := f) h_sum
-    exact (hdiffOn z (by simp)).differentiableAt (by simp)
+    exact differentiable_divisorCanonicalProduct_univ m f h_sum
   simpa [hadamardDenom] using (differentiable_id.pow (analyticOrderNatAt f 0)).mul hcprod
 
 theorem hadamardDenom_ne_zero_at {m : ℕ} {f : ℂ → ℂ} (hf : Differentiable ℂ f)
@@ -74,7 +71,6 @@ theorem hadamardDenom_ne_zero_at {m : ℕ} {f : ℂ → ℂ} (hf : Differentiabl
       ‖divisorZeroIndex₀_val p‖⁻¹ ^ (m + 1)))
     {z : ℂ} (hz : f z ≠ 0) :
     hadamardDenom m f z ≠ 0 := by
-  classical
   have hf_not_top : ∀ w : ℂ, analyticOrderAt f w ≠ ⊤ :=
     analyticOrderAt_ne_top_of_exists_ne_zero (hf := hf) hnot
   have han_f : AnalyticAt ℂ f z := hf.analyticAt z
@@ -85,15 +81,7 @@ theorem hadamardDenom_ne_zero_at {m : ℕ} {f : ℂ → ℂ} (hf : Differentiabl
     have : (analyticOrderNatAt f z : ℕ∞) = 0 := by simp [hcast, this]
     exact_mod_cast this
   have han_cprod : AnalyticAt ℂ (divisorCanonicalProduct m f (Set.univ : Set ℂ)) z := by
-    have hdiffOn :
-        DifferentiableOn ℂ (divisorCanonicalProduct m f (Set.univ : Set ℂ)) (Set.univ : Set ℂ) :=
-      differentiableOn_divisorCanonicalProduct_univ (m := m) (f := f) h_sum
-    refine (Complex.analyticAt_iff_eventually_differentiableAt).2 ?_
-    refine Filter.Eventually.of_forall ?_
-    intro w
-    have : DifferentiableWithinAt ℂ (divisorCanonicalProduct m f (Set.univ : Set ℂ)) (Set.univ : Set ℂ) w :=
-      hdiffOn w (by simp)
-    exact this.differentiableAt (by simp)
+    exact analyticAt_divisorCanonicalProduct_univ m f h_sum z
   by_cases hz0 : z = 0
   · subst hz0
     have hord0 : analyticOrderNatAt f 0 = 0 := by simpa using horder_f
@@ -107,12 +95,9 @@ theorem hadamardDenom_ne_zero_at {m : ℕ} {f : ℂ → ℂ} (hf : Differentiabl
     have hcprod_ne : divisorCanonicalProduct m f (Set.univ : Set ℂ) z ≠ 0 := by
       have hcprod_entire :
           Differentiable ℂ (divisorCanonicalProduct m f (Set.univ : Set ℂ)) := by
-        intro w
-        have hdiffOn :
-            DifferentiableOn ℂ (divisorCanonicalProduct m f (Set.univ : Set ℂ)) (Set.univ : Set ℂ) :=
-          differentiableOn_divisorCanonicalProduct_univ (m := m) (f := f) h_sum
-        exact (hdiffOn w (by simp)).differentiableAt (by simp)
-      have hcprod_not_top : analyticOrderAt (divisorCanonicalProduct m f (Set.univ : Set ℂ)) z ≠ ⊤ :=
+        exact differentiable_divisorCanonicalProduct_univ m f h_sum
+      have hcprod_not_top :
+          analyticOrderAt (divisorCanonicalProduct m f (Set.univ : Set ℂ)) z ≠ ⊤ :=
         analyticOrderAt_ne_top_of_exists_ne_zero (hf := hcprod_entire)
           ⟨0, by simp [divisorCanonicalProduct_zero]⟩ z
       have hcprod_cast :
@@ -121,7 +106,9 @@ theorem hadamardDenom_ne_zero_at {m : ℕ} {f : ℂ → ℂ} (hf : Differentiabl
         Nat.cast_analyticOrderNatAt
           (f := divisorCanonicalProduct m f (Set.univ : Set ℂ)) (z₀ := z) hcprod_not_top
       have : analyticOrderAt (divisorCanonicalProduct m f (Set.univ : Set ℂ)) z = 0 := by
-        have : (analyticOrderNatAt (divisorCanonicalProduct m f (Set.univ : Set ℂ)) z : ℕ∞) = 0 := by
+        have :
+            (analyticOrderNatAt
+              (divisorCanonicalProduct m f (Set.univ : Set ℂ)) z : ℕ∞) = 0 := by
           exact_mod_cast hcprod_order
         simp [hcprod_cast] at this
         simpa using this
@@ -133,15 +120,11 @@ lemma analyticOrderNatAt_divisorCanonicalProduct_zero
     (h_sum : Summable (fun p : divisorZeroIndex₀ f (Set.univ : Set ℂ) =>
       ‖divisorZeroIndex₀_val p‖⁻¹ ^ (m + 1))) :
     analyticOrderNatAt (divisorCanonicalProduct m f (Set.univ : Set ℂ)) 0 = 0 := by
-  classical
   have hcprod_entire :
       Differentiable ℂ (divisorCanonicalProduct m f (Set.univ : Set ℂ)) := by
-    intro w
-    have hdiffOn :
-        DifferentiableOn ℂ (divisorCanonicalProduct m f (Set.univ : Set ℂ)) (Set.univ : Set ℂ) :=
-      differentiableOn_divisorCanonicalProduct_univ (m := m) (f := f) h_sum
-    exact (hdiffOn w (by simp)).differentiableAt (by simp)
-  have hcprod_not_top : analyticOrderAt (divisorCanonicalProduct m f (Set.univ : Set ℂ)) 0 ≠ ⊤ :=
+    exact differentiable_divisorCanonicalProduct_univ m f h_sum
+  have hcprod_not_top :
+      analyticOrderAt (divisorCanonicalProduct m f (Set.univ : Set ℂ)) 0 ≠ ⊤ :=
     analyticOrderAt_ne_top_of_exists_ne_zero (hf := hcprod_entire)
       ⟨0, by simp [divisorCanonicalProduct_zero]⟩ 0
   have hcprodA : AnalyticAt ℂ (divisorCanonicalProduct m f (Set.univ : Set ℂ)) 0 :=
@@ -155,7 +138,9 @@ lemma analyticOrderNatAt_divisorCanonicalProduct_zero
         analyticOrderAt (divisorCanonicalProduct m f (Set.univ : Set ℂ)) 0 :=
     Nat.cast_analyticOrderNatAt
       (f := divisorCanonicalProduct m f (Set.univ : Set ℂ)) (z₀ := (0 : ℂ)) hcprod_not_top
-  have : (analyticOrderNatAt (divisorCanonicalProduct m f (Set.univ : Set ℂ)) 0 : ℕ∞) = 0 := by
+  have :
+      (analyticOrderNatAt (divisorCanonicalProduct m f (Set.univ : Set ℂ)) 0 : ℕ∞) =
+        0 := by
     simp [hcast, this]
   exact_mod_cast this
 
@@ -164,37 +149,38 @@ theorem analyticOrderNatAt_hadamardDenom_eq
     (h_sum : Summable (fun p : divisorZeroIndex₀ f (Set.univ : Set ℂ) =>
       ‖divisorZeroIndex₀_val p‖⁻¹ ^ (m + 1))) (z : ℂ) :
     analyticOrderNatAt (hadamardDenom m f) z = analyticOrderNatAt f z := by
-  classical
   by_cases hz0 : z = 0
   · subst hz0
     have hpowA : AnalyticAt ℂ (fun z : ℂ => z ^ analyticOrderNatAt f 0) 0 := by
       simpa using (analyticAt_id.pow (analyticOrderNatAt f 0))
-    have hpow_not_top : analyticOrderAt (fun z : ℂ => z ^ analyticOrderNatAt f 0) 0 ≠ ⊤ :=
-      analyticOrderAt_ne_top_of_exists_ne_zero (hf := (differentiable_id.pow (analyticOrderNatAt f 0)))
+    have hpow_not_top :
+        analyticOrderAt (fun z : ℂ => z ^ analyticOrderNatAt f 0) 0 ≠ ⊤ :=
+      analyticOrderAt_ne_top_of_exists_ne_zero
+        (hf := (differentiable_id.pow (analyticOrderNatAt f 0)))
         ⟨1, by simp⟩ 0
     have hcprodA : AnalyticAt ℂ (divisorCanonicalProduct m f (Set.univ : Set ℂ)) 0 := by
-      have hcprod_entire :
-          Differentiable ℂ (divisorCanonicalProduct m f (Set.univ : Set ℂ)) := by
-        intro w
-        have hdiffOn :
-            DifferentiableOn ℂ (divisorCanonicalProduct m f (Set.univ : Set ℂ)) (Set.univ : Set ℂ) :=
-          differentiableOn_divisorCanonicalProduct_univ (m := m) (f := f) h_sum
-        exact (hdiffOn w (by simp)).differentiableAt (by simp)
-      exact hcprod_entire.analyticAt 0
-    have hcprod0 : analyticOrderNatAt (divisorCanonicalProduct m f (Set.univ : Set ℂ)) 0 = 0 :=
+      exact analyticAt_divisorCanonicalProduct_univ m f h_sum 0
+    have hcprod0 :
+        analyticOrderNatAt (divisorCanonicalProduct m f (Set.univ : Set ℂ)) 0 = 0 :=
       analyticOrderNatAt_divisorCanonicalProduct_zero (m := m) (f := f) h_sum
     have hid0 : analyticOrderNatAt (fun z : ℂ => z) 0 = 1 := by
       have hid_entire : Differentiable ℂ (fun z : ℂ => z) := differentiable_id
       have hdiv :
           (MeromorphicOn.divisor (fun z : ℂ => z) (Set.univ : Set ℂ)) 0 =
             (analyticOrderNatAt (fun z : ℂ => z) 0 : ℤ) := by
-        simpa using (divisor_univ_eq_analyticOrderNatAt_int (f := fun z : ℂ => z) hid_entire 0)
+        simpa using
+          (divisor_univ_eq_analyticOrderNatAt_int
+            (f := fun z : ℂ => z) hid_entire 0)
       have hdiv1 : (MeromorphicOn.divisor (fun z : ℂ => z) (Set.univ : Set ℂ)) 0 = 1 := by
-        simpa using (MeromorphicOn.divisor_sub_const_self (z₀ := (0 : ℂ)) (U := (Set.univ : Set ℂ)) (by simp))
+        simpa using
+          (MeromorphicOn.divisor_sub_const_self (z₀ := (0 : ℂ))
+            (U := (Set.univ : Set ℂ)) (by simp))
       have : (analyticOrderNatAt (fun z : ℂ => z) 0 : ℤ) = 1 := by
         simpa [hdiv] using hdiv1
       exact_mod_cast this
-    have hpow0 : analyticOrderNatAt (fun z : ℂ => z ^ analyticOrderNatAt f 0) 0 = analyticOrderNatAt f 0 := by
+    have hpow0 :
+        analyticOrderNatAt (fun z : ℂ => z ^ analyticOrderNatAt f 0) 0 =
+          analyticOrderNatAt f 0 := by
       have hidA : AnalyticAt ℂ (fun z : ℂ => z) 0 := by
         simpa [id] using (analyticAt_id : AnalyticAt ℂ (id : ℂ → ℂ) 0)
       simpa [hid0] using (analyticOrderNatAt_pow (hf := hidA) (n := analyticOrderNatAt f 0))
@@ -202,22 +188,21 @@ theorem analyticOrderNatAt_hadamardDenom_eq
         analyticOrderNatAt (hadamardDenom m f) 0 =
           analyticOrderNatAt (fun z : ℂ => z ^ analyticOrderNatAt f 0) 0 +
             analyticOrderNatAt (divisorCanonicalProduct m f (Set.univ : Set ℂ)) 0 := by
-      have hcprod_not_top' : analyticOrderAt (divisorCanonicalProduct m f (Set.univ : Set ℂ)) 0 ≠ ⊤ :=
+      have hcprod_not_top' :
+          analyticOrderAt (divisorCanonicalProduct m f (Set.univ : Set ℂ)) 0 ≠ ⊤ :=
         analyticOrderAt_ne_top_of_exists_ne_zero
-          (hf := (by
-            intro w
-            have hdiffOn :
-                DifferentiableOn ℂ (divisorCanonicalProduct m f (Set.univ : Set ℂ)) (Set.univ : Set ℂ) :=
-              differentiableOn_divisorCanonicalProduct_univ (m := m) (f := f) h_sum
-            exact (hdiffOn w (by simp)).differentiableAt (by simp)))
+          (hf := differentiable_divisorCanonicalProduct_univ m f h_sum)
           ⟨0, by simp [divisorCanonicalProduct_zero]⟩ 0
       simpa [hadamardDenom] using
-        analyticOrderNatAt_mul (hf := hpowA) (hg := hcprodA) (hf' := hpow_not_top) (hg' := hcprod_not_top')
+        analyticOrderNatAt_mul (hf := hpowA) (hg := hcprodA)
+          (hf' := hpow_not_top) (hg' := hcprod_not_top')
     simp [hmul, hpow0, hcprod0]
   · have hpowA : AnalyticAt ℂ (fun z : ℂ => z ^ analyticOrderNatAt f 0) z := by
       simpa using (analyticAt_id.pow (analyticOrderNatAt f 0))
-    have hpow_not_top : analyticOrderAt (fun z : ℂ => z ^ analyticOrderNatAt f 0) z ≠ ⊤ :=
-      analyticOrderAt_ne_top_of_exists_ne_zero (hf := (differentiable_id.pow (analyticOrderNatAt f 0)))
+    have hpow_not_top :
+        analyticOrderAt (fun z : ℂ => z ^ analyticOrderNatAt f 0) z ≠ ⊤ :=
+      analyticOrderAt_ne_top_of_exists_ne_zero
+        (hf := (differentiable_id.pow (analyticOrderNatAt f 0)))
         ⟨1, by simp⟩ z
     have hpow0 : analyticOrderNatAt (fun z : ℂ => z ^ analyticOrderNatAt f 0) z = 0 := by
       have hz' : (fun z : ℂ => z ^ analyticOrderNatAt f 0) z ≠ 0 := by
@@ -226,37 +211,30 @@ theorem analyticOrderNatAt_hadamardDenom_eq
         ((hpowA).analyticOrderAt_eq_zero).2 hz'
       have hcast : (analyticOrderNatAt (fun z : ℂ => z ^ analyticOrderNatAt f 0) z : ℕ∞) =
           analyticOrderAt (fun z : ℂ => z ^ analyticOrderNatAt f 0) z :=
-        Nat.cast_analyticOrderNatAt (f := fun z : ℂ => z ^ analyticOrderNatAt f 0) (z₀ := z) hpow_not_top
+        Nat.cast_analyticOrderNatAt
+          (f := fun z : ℂ => z ^ analyticOrderNatAt f 0) (z₀ := z) hpow_not_top
       have : (analyticOrderNatAt (fun z : ℂ => z ^ analyticOrderNatAt f 0) z : ℕ∞) = 0 := by
         simp [hcast, this]
       exact_mod_cast this
     have hcprod_eq :
-        analyticOrderNatAt (divisorCanonicalProduct m f (Set.univ : Set ℂ)) z = analyticOrderNatAt f z :=
-      analyticOrderNatAt_divisorCanonicalProduct_eq_analyticOrderNatAt (m := m) (hf := hf) (h_sum := h_sum) (z₀ := z) hz0
+        analyticOrderNatAt (divisorCanonicalProduct m f (Set.univ : Set ℂ)) z =
+          analyticOrderNatAt f z :=
+      analyticOrderNatAt_divisorCanonicalProduct_eq_analyticOrderNatAt
+        (m := m) (hf := hf) (h_sum := h_sum) (z₀ := z) hz0
     have hcprodA : AnalyticAt ℂ (divisorCanonicalProduct m f (Set.univ : Set ℂ)) z := by
-      have hcprod_entire :
-          Differentiable ℂ (divisorCanonicalProduct m f (Set.univ : Set ℂ)) := by
-        intro w
-        have hdiffOn :
-            DifferentiableOn ℂ (divisorCanonicalProduct m f (Set.univ : Set ℂ)) (Set.univ : Set ℂ) :=
-          differentiableOn_divisorCanonicalProduct_univ (m := m) (f := f) h_sum
-        exact (hdiffOn w (by simp)).differentiableAt (by simp)
-      exact hcprod_entire.analyticAt z
-    have hcprod_not_top : analyticOrderAt (divisorCanonicalProduct m f (Set.univ : Set ℂ)) z ≠ ⊤ :=
+      exact analyticAt_divisorCanonicalProduct_univ m f h_sum z
+    have hcprod_not_top :
+        analyticOrderAt (divisorCanonicalProduct m f (Set.univ : Set ℂ)) z ≠ ⊤ :=
       analyticOrderAt_ne_top_of_exists_ne_zero
-        (hf := (by
-          intro w
-          have hdiffOn :
-              DifferentiableOn ℂ (divisorCanonicalProduct m f (Set.univ : Set ℂ)) (Set.univ : Set ℂ) :=
-            differentiableOn_divisorCanonicalProduct_univ (m := m) (f := f) h_sum
-          exact (hdiffOn w (by simp)).differentiableAt (by simp)))
+        (hf := differentiable_divisorCanonicalProduct_univ m f h_sum)
         ⟨0, by simp [divisorCanonicalProduct_zero]⟩ z
     have hmul :
         analyticOrderNatAt (hadamardDenom m f) z =
           analyticOrderNatAt (fun z : ℂ => z ^ analyticOrderNatAt f 0) z +
             analyticOrderNatAt (divisorCanonicalProduct m f (Set.univ : Set ℂ)) z := by
       simpa [hadamardDenom] using
-        analyticOrderNatAt_mul (hf := hpowA) (hg := hcprodA) (hf' := hpow_not_top) (hg' := hcprod_not_top)
+        analyticOrderNatAt_mul (hf := hpowA) (hg := hcprodA)
+          (hf' := hpow_not_top) (hg' := hcprod_not_top)
     simp [hmul, hpow0, hcprod_eq]
 
 theorem divisor_hadamardDenom_eq
@@ -265,7 +243,6 @@ theorem divisor_hadamardDenom_eq
       ‖divisorZeroIndex₀_val p‖⁻¹ ^ (m + 1))) :
     MeromorphicOn.divisor (hadamardDenom m f) (Set.univ : Set ℂ) =
       MeromorphicOn.divisor f (Set.univ : Set ℂ) := by
-  classical
   ext z
   have hden_entire : Differentiable ℂ (hadamardDenom m f) :=
     differentiable_hadamardDenom (m := m) f h_sum
@@ -285,7 +262,6 @@ theorem divisor_hadamardQuotient_eq_zero
     (h_sum : Summable (fun p : divisorZeroIndex₀ f (Set.univ : Set ℂ) =>
       ‖divisorZeroIndex₀_val p‖⁻¹ ^ (m + 1))) :
     MeromorphicOn.divisor (fun z : ℂ => f z / hadamardDenom m f z) (Set.univ : Set ℂ) = 0 := by
-  classical
   have hf_mero : MeromorphicOn f (Set.univ : Set ℂ) := by
     intro z hz
     exact (hf.analyticAt z).meromorphicAt
@@ -309,11 +285,13 @@ theorem divisor_hadamardQuotient_eq_zero
       exact (meromorphicOrderAt_ne_top_iff_eventually_ne_zero (hf := hfAt)).2 hne_nhdsNE
     exact MeromorphicOn.meromorphicOrderAt_ne_top_of_isPreconnected (hf := hf_mero)
       (x := z1) (hU := isPreconnected_univ) (h₁x := by simp) (hy := by simp) hz1_ne_top
-  have hden_order_ne_top : ∀ z ∈ (Set.univ : Set ℂ), meromorphicOrderAt (hadamardDenom m f) z ≠ ⊤ := by
+  have hden_order_ne_top :
+      ∀ z ∈ (Set.univ : Set ℂ), meromorphicOrderAt (hadamardDenom m f) z ≠ ⊤ := by
     intro z hzU
     have hz1_ne_top : meromorphicOrderAt (hadamardDenom m f) z1 ≠ ⊤ := by
       have hdenAt : MeromorphicAt (hadamardDenom m f) z1 := hden_mero z1 (by simp)
-      have hcont : ContinuousAt (hadamardDenom m f) z1 := (hden_entire.differentiableAt).continuousAt
+      have hcont : ContinuousAt (hadamardDenom m f) z1 :=
+        (hden_entire.differentiableAt).continuousAt
       have hne_nhds : ∀ᶠ w in 𝓝 z1, hadamardDenom m f w ≠ 0 :=
         (hcont.ne_iff_eventually_ne continuousAt_const).1 hden1
       have hne_nhdsNE : ∀ᶠ w in 𝓝[≠] z1, hadamardDenom m f w ≠ 0 :=
@@ -322,11 +300,14 @@ theorem divisor_hadamardQuotient_eq_zero
     exact MeromorphicOn.meromorphicOrderAt_ne_top_of_isPreconnected (hf := hden_mero)
       (x := z1) (hU := isPreconnected_univ) (h₁x := by simp) (hy := by simp) hz1_ne_top
   have hinv_order_ne_top :
-      ∀ z ∈ (Set.univ : Set ℂ), meromorphicOrderAt (fun z : ℂ => (hadamardDenom m f z)⁻¹) z ≠ ⊤ := by
+      ∀ z ∈ (Set.univ : Set ℂ),
+        meromorphicOrderAt (fun z : ℂ => (hadamardDenom m f z)⁻¹) z ≠ ⊤ := by
     intro z hzU
-    have hinv_mero : MeromorphicOn (fun z : ℂ => (hadamardDenom m f z)⁻¹) (Set.univ : Set ℂ) :=
+    have hinv_mero :
+        MeromorphicOn (fun z : ℂ => (hadamardDenom m f z)⁻¹) (Set.univ : Set ℂ) :=
       hden_mero.inv
-    have hz1_ne_top : meromorphicOrderAt (fun z : ℂ => (hadamardDenom m f z)⁻¹) z1 ≠ ⊤ := by
+    have hz1_ne_top :
+        meromorphicOrderAt (fun z : ℂ => (hadamardDenom m f z)⁻¹) z1 ≠ ⊤ := by
       have hinvAt : MeromorphicAt (fun z : ℂ => (hadamardDenom m f z)⁻¹) z1 :=
         hinv_mero z1 (by simp)
       have hcont_denom : ContinuousAt (hadamardDenom m f) z1 :=
@@ -335,9 +316,11 @@ theorem divisor_hadamardQuotient_eq_zero
         hcont_denom.inv₀ hden1
       have hinv1 : (fun z : ℂ => (hadamardDenom m f z)⁻¹) z1 ≠ 0 := by
         simpa using inv_ne_zero hden1
-      have hne_nhds : ∀ᶠ w in 𝓝 z1, (fun z : ℂ => (hadamardDenom m f z)⁻¹) w ≠ 0 :=
+      have hne_nhds :
+          ∀ᶠ w in 𝓝 z1, (fun z : ℂ => (hadamardDenom m f z)⁻¹) w ≠ 0 :=
         (hcont.ne_iff_eventually_ne continuousAt_const).1 hinv1
-      have hne_nhdsNE : ∀ᶠ w in 𝓝[≠] z1, (fun z : ℂ => (hadamardDenom m f z)⁻¹) w ≠ 0 :=
+      have hne_nhdsNE :
+          ∀ᶠ w in 𝓝[≠] z1, (fun z : ℂ => (hadamardDenom m f z)⁻¹) w ≠ 0 :=
         eventually_nhdsWithin_of_eventually_nhds hne_nhds
       exact (meromorphicOrderAt_ne_top_iff_eventually_ne_zero (hf := hinvAt)).2 hne_nhdsNE
     exact MeromorphicOn.meromorphicOrderAt_ne_top_of_isPreconnected (hf := hinv_mero)
@@ -347,14 +330,16 @@ theorem divisor_hadamardQuotient_eq_zero
     divisor_hadamardDenom_eq (m := m) (hf := hf) (h_sum := h_sum)
   calc
     MeromorphicOn.divisor (fun z : ℂ => f z / hadamardDenom m f z) (Set.univ : Set ℂ)
-        = MeromorphicOn.divisor (fun z : ℂ => f z * (hadamardDenom m f z)⁻¹) (Set.univ : Set ℂ) := by
+        = MeromorphicOn.divisor
+            (fun z : ℂ => f z * (hadamardDenom m f z)⁻¹) (Set.univ : Set ℂ) := by
             simp [div_eq_mul_inv]
     _ = MeromorphicOn.divisor f (Set.univ : Set ℂ) +
           MeromorphicOn.divisor (fun z : ℂ => (hadamardDenom m f z)⁻¹) (Set.univ : Set ℂ) := by
           simpa using (MeromorphicOn.divisor_fun_mul (U := (Set.univ : Set ℂ))
             (f₁ := f) (f₂ := fun z => (hadamardDenom m f z)⁻¹) hf_mero (hden_mero.inv)
             hf_order_ne_top hinv_order_ne_top)
-    _ = MeromorphicOn.divisor f (Set.univ : Set ℂ) - MeromorphicOn.divisor (hadamardDenom m f) (Set.univ : Set ℂ) := by
+    _ = MeromorphicOn.divisor f (Set.univ : Set ℂ) -
+          MeromorphicOn.divisor (hadamardDenom m f) (Set.univ : Set ℂ) := by
           simp [sub_eq_add_neg]
     _ = 0 := by
           simp [hdiv_denom]
@@ -370,7 +355,6 @@ theorem exists_entire_nonzero_hadamardQuotient
         f z =
           H z * z ^ (analyticOrderNatAt f 0) *
             divisorCanonicalProduct m f (Set.univ : Set ℂ) z := by
-  classical
   let denom : ℂ → ℂ := hadamardDenom m f
   let q : ℂ → ℂ := fun z => f z / denom z
   have hden_entire : Differentiable ℂ denom :=
@@ -385,10 +369,15 @@ theorem exists_entire_nonzero_hadamardQuotient
     meromorphicNFOn_toMeromorphicNFOn q (Set.univ : Set ℂ)
   have hdivH : MeromorphicOn.divisor H (Set.univ : Set ℂ) = 0 := by
     have hdivq : MeromorphicOn.divisor q (Set.univ : Set ℂ) = 0 :=
-      divisor_hadamardQuotient_eq_zero (m := m) (f := f) (hf := hf) (hnot := hnot) (h_sum := h_sum)
-    simpa [H, hdivq] using (MeromorphicOn.divisor_of_toMeromorphicNFOn (f := q) (U := (Set.univ : Set ℂ)) hq_mero)
+      divisor_hadamardQuotient_eq_zero (m := m) (f := f) (hf := hf)
+        (hnot := hnot) (h_sum := h_sum)
+    simpa [H, hdivq] using
+      (MeromorphicOn.divisor_of_toMeromorphicNFOn
+        (f := q) (U := (Set.univ : Set ℂ)) hq_mero)
   have hA : AnalyticOnNhd ℂ H (Set.univ : Set ℂ) := by
-    have : (0 : Function.locallyFinsuppWithin (Set.univ : Set ℂ) ℤ) ≤ MeromorphicOn.divisor H (Set.univ : Set ℂ) := by
+    have :
+        (0 : Function.locallyFinsuppWithin (Set.univ : Set ℂ) ℤ) ≤
+          MeromorphicOn.divisor H (Set.univ : Set ℂ) := by
       simp [hdivH]
     exact (MeromorphicNFOn.divisor_nonneg_iff_analyticOnNhd (h₁f := hNF)).1 (by simp [hdivH])
   have hH_entire : Differentiable ℂ H := by
@@ -461,8 +450,7 @@ theorem exists_entire_nonzero_hadamardQuotient
 /-!
 ## Boundedness on compact annuli (away from `z₀`)
 
-This is the boundedness statement that is *actually true* for quotient functions: on any compact set
-that stays a positive distance away from `z₀`, the quotient is bounded.
+On any compact set separated from `z₀`, the quotient by `(z - z₀)^k` is bounded.
 -/
 
 theorem bddAbove_norm_divisorCanonicalProduct_div_pow_annulus
@@ -474,7 +462,6 @@ theorem bddAbove_norm_divisorCanonicalProduct_div_pow_annulus
       (norm ∘
         (fun z : ℂ => (divisorCanonicalProduct m f (Set.univ : Set ℂ) z) / (z - z₀) ^ k) ''
           (Metric.annulusIcc z₀ r₁ r₂)) := by
-  classical
   set K : Set ℂ := Metric.annulusIcc z₀ r₁ r₂
   have hK : IsCompact K := by
     have hclosed : IsClosed (Metric.ball z₀ r₁)ᶜ := Metric.isOpen_ball.isClosed_compl

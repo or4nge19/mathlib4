@@ -6,6 +6,12 @@ Authors: Matteo Cipollina
 module
 
 public import Mathlib.Analysis.Complex.HadamardFactorization
+public import Mathlib.Analysis.Complex.ValueDistribution.LogCounting.Basic
+public import Mathlib.Analysis.Meromorphic.TrailingCoefficient
+public import Mathlib.Analysis.SpecialFunctions.Log.Dyadic
+public import Mathlib.Analysis.SpecialFunctions.Log.PosLog
+public import Mathlib.Analysis.SpecialFunctions.Log.Summable
+public import Mathlib.MeasureTheory.Integral.CircleAverage
 
 /-!
 ## Divisor summability from logarithmic growth
@@ -26,9 +32,9 @@ namespace Complex.Hadamard
 /-!
 ## Intrinsic Lindelöf summability: growth ⇒ summability of divisor-indexed exponents
 
-This is the Jensen-counting step in Tao's proof of Hadamard factorization.  A growth bound for
+This is the Jensen-counting step in Hadamard factorization. A growth bound for
 `log (1 + ‖f z‖)` controls the logarithmic counting function of the divisor, and hence gives the
-summability needed for the intrinsic canonical product.
+summability needed for the divisor-indexed canonical product.
 -/
 
 open scoped Real
@@ -120,7 +126,7 @@ lemma countable_divisor_support_univ {f : ℂ → ℂ} :
     IsLindelof.of_isClosed_subset hL hclosed (by simp)
   simpa [D] using hL'.countable_of_isDiscrete hdisc
 
-lemma logCounting_two_mul_lower_bound_sum_divisor_closedBall {f : ℂ → ℂ}
+lemma log_two_mul_divisorMassClosedBall₀_le_logCounting_two_mul {f : ℂ → ℂ}
     (hf : Differentiable ℂ f) {R : ℝ} (hR : 1 ≤ R) :
     (Real.log 2) * divisorMassClosedBall₀ f R
       ≤ Function.locallyFinsuppWithin.logCounting
@@ -151,9 +157,11 @@ lemma logCounting_two_mul_lower_bound_sum_divisor_closedBall {f : ℂ → ℂ}
     have hz0 : z ≠ 0 := (Finset.mem_filter.1 hzS).2
     have hz_mem_SR : z ∈ SR := (Finset.mem_filter.1 hzS).1
     have hzR : z ∈ (Function.locallyFinsuppWithin.toClosedBall R D).support := by
-      exact (Set.Finite.mem_toFinset
-        (Function.locallyFinsuppWithin.finiteSupport (Function.locallyFinsuppWithin.toClosedBall R D)
-          (isCompact_closedBall (0 : ℂ) |R|))).1 hz_mem_SR
+      exact
+        (Set.Finite.mem_toFinset
+          (Function.locallyFinsuppWithin.finiteSupport
+            (Function.locallyFinsuppWithin.toClosedBall R D)
+            (isCompact_closedBall (0 : ℂ) |R|))).1 hz_mem_SR
     have hz_in_ballR : z ∈ Metric.closedBall (0 : ℂ) |R| := by
       exact (Function.locallyFinsuppWithin.toClosedBall R D).supportWithinDomain hzR
     have hz_norm_le_R : ‖z‖ ≤ R := by
@@ -231,9 +239,11 @@ lemma logCounting_two_mul_lower_bound_sum_divisor_closedBall {f : ℂ → ℂ}
       have hz_norm_le_R : ‖z‖ ≤ R := by
         have hz_mem_SR : z ∈ SR := (Finset.mem_filter.1 hzS).1
         have hzRsup : z ∈ (Function.locallyFinsuppWithin.toClosedBall R D).support := by
-          exact (Set.Finite.mem_toFinset
-            (Function.locallyFinsuppWithin.finiteSupport (Function.locallyFinsuppWithin.toClosedBall R D)
-              (isCompact_closedBall (0 : ℂ) |R|))).1 hz_mem_SR
+          exact
+            (Set.Finite.mem_toFinset
+              (Function.locallyFinsuppWithin.finiteSupport
+                (Function.locallyFinsuppWithin.toClosedBall R D)
+                (isCompact_closedBall (0 : ℂ) |R|))).1 hz_mem_SR
         have hz_in : z ∈ Metric.closedBall (0 : ℂ) |R| :=
           (Function.locallyFinsuppWithin.toClosedBall R D).supportWithinDomain hzRsup
         have : ‖z‖ ≤ |R| := by simpa [Metric.mem_closedBall, dist_zero_right] using hz_in
@@ -272,7 +282,7 @@ lemma logCounting_two_mul_lower_bound_sum_divisor_closedBall {f : ℂ → ℂ}
     nlinarith [hsum_le, hcenter_nonneg]
   simpa [divisorMassClosedBall₀, D, r, S, SR] using this
 
-lemma sum_divisor_closedBall_le_of_growth {f : ℂ → ℂ} {ρ : ℝ}
+lemma divisorMassClosedBall₀_le_of_growth {f : ℂ → ℂ} {ρ : ℝ}
     (hf : Differentiable ℂ f)
     (hgrowth : ∃ C > 0, ∀ z : ℂ, Real.log (1 + ‖f z‖) ≤ C * (1 + ‖z‖) ^ ρ)
     {R : ℝ} (hR : 1 ≤ R) :
@@ -288,24 +298,28 @@ lemma sum_divisor_closedBall_le_of_growth {f : ℂ → ℂ} {ρ : ℝ}
       (Real.log 2) * divisorMassClosedBall₀ f R
         ≤ Function.locallyFinsuppWithin.logCounting
             (MeromorphicOn.divisor f (Set.univ : Set ℂ)) (2 * R) :=
-    logCounting_two_mul_lower_bound_sum_divisor_closedBall (f := f) hf (R := R) hR
+    log_two_mul_divisorMassClosedBall₀_le_logCounting_two_mul (f := f) hf (R := R) hR
   have hupp :
       Function.locallyFinsuppWithin.logCounting (MeromorphicOn.divisor f (Set.univ : Set ℂ)) (2 * R)
         ≤ (Classical.choose hgrowth) * (1 + |2 * R|) ^ ρ
           + |Real.log ‖meromorphicTrailingCoeffAt f 0‖| := by
     have h2R0 : 0 < (2 * R) := by nlinarith [hR0]
-    simpa using (logCounting_divisor_univ_le_of_growth (f := f) (ρ := ρ) hf hgrowth (R := 2 * R) h2R0)
+    simpa using
+      (logCounting_divisor_univ_le_of_growth (f := f) (ρ := ρ) hf hgrowth
+        (R := 2 * R) h2R0)
   have :
       (Real.log 2) * divisorMassClosedBall₀ f R
-      ≤ (Classical.choose hgrowth) * (1 + |2 * R|) ^ ρ + |Real.log ‖meromorphicTrailingCoeffAt f 0‖| :=
+        ≤ (Classical.choose hgrowth) * (1 + |2 * R|) ^ ρ
+          + |Real.log ‖meromorphicTrailingCoeffAt f 0‖| :=
     le_trans hlow hupp
   have :
       divisorMassClosedBall₀ f R
-      ≤ ((Classical.choose hgrowth) * (1 + |2 * R|) ^ ρ + |Real.log ‖meromorphicTrailingCoeffAt f 0‖|)
-          / (Real.log 2) := by
+        ≤ ((Classical.choose hgrowth) * (1 + |2 * R|) ^ ρ
+            + |Real.log ‖meromorphicTrailingCoeffAt f 0‖|) / (Real.log 2) := by
     have hx :
         divisorMassClosedBall₀ f R * (Real.log 2)
-          ≤ (Classical.choose hgrowth) * (1 + |2 * R|) ^ ρ + |Real.log ‖meromorphicTrailingCoeffAt f 0‖| := by
+          ≤ (Classical.choose hgrowth) * (1 + |2 * R|) ^ ρ
+            + |Real.log ‖meromorphicTrailingCoeffAt f 0‖| := by
       simpa [mul_assoc, mul_left_comm, mul_comm] using this
     exact (le_div_iff₀ hlog2pos).2 hx
   simpa [divisorMassClosedBall₀] using this
@@ -334,9 +348,11 @@ lemma divisorMassClosedBall₀_mono {f : ℂ → ℂ} (hf : Differentiable ℂ f
     have hz0 : z ≠ 0 := (Finset.mem_filter.1 hz).2
     have hz_sup₁ :
         z ∈ (Function.locallyFinsuppWithin.toClosedBall R₁ D).support := by
-      exact (Set.Finite.mem_toFinset
-        (Function.locallyFinsuppWithin.finiteSupport (Function.locallyFinsuppWithin.toClosedBall R₁ D)
-          (isCompact_closedBall (0 : ℂ) |R₁|))).1 hzSR₁
+      exact
+        (Set.Finite.mem_toFinset
+          (Function.locallyFinsuppWithin.finiteSupport
+            (Function.locallyFinsuppWithin.toClosedBall R₁ D)
+            (isCompact_closedBall (0 : ℂ) |R₁|))).1 hzSR₁
     have hz_ball₁ : z ∈ Metric.closedBall (0 : ℂ) |R₁| :=
       (Function.locallyFinsuppWithin.toClosedBall R₁ D).supportWithinDomain hz_sup₁
     have hz_norm₁ : ‖z‖ ≤ R₁ := by
@@ -364,9 +380,11 @@ lemma divisorMassClosedBall₀_mono {f : ℂ → ℂ} (hf : Differentiable ℂ f
         simpa [hEq₂] using hDz_ne
       simpa [Function.mem_support] using this
     have hzSR₂ : z ∈ SR R₂ := by
-      exact (Set.Finite.mem_toFinset
-        (Function.locallyFinsuppWithin.finiteSupport (Function.locallyFinsuppWithin.toClosedBall R₂ D)
-          (isCompact_closedBall (0 : ℂ) |R₂|))).2 hz_sup₂
+      exact
+        (Set.Finite.mem_toFinset
+          (Function.locallyFinsuppWithin.finiteSupport
+            (Function.locallyFinsuppWithin.toClosedBall R₂ D)
+            (isCompact_closedBall (0 : ℂ) |R₂|))).2 hz_sup₂
     exact Finset.mem_filter.2 ⟨hzSR₂, hz0⟩
   have hterm_nonneg : ∀ z ∈ S R₂, 0 ≤ (MeromorphicOn.divisor f U z : ℝ) := by
     intro z hz
@@ -377,7 +395,8 @@ lemma divisorMassClosedBall₀_mono {f : ℂ → ℂ} (hf : Differentiable ℂ f
 
 lemma exists_r0_le_norm_divisorZeroIndex₀_val {f : ℂ → ℂ}
     (hf : Differentiable ℂ f) (hnot : ∃ z : ℂ, f z ≠ 0) :
-    ∃ r0 : ℝ, 0 < r0 ∧ ∀ p : divisorZeroIndex₀ f (Set.univ : Set ℂ), r0 ≤ ‖divisorZeroIndex₀_val p‖ := by
+    ∃ r0 : ℝ, 0 < r0 ∧
+      ∀ p : divisorZeroIndex₀ f (Set.univ : Set ℂ), r0 ≤ ‖divisorZeroIndex₀_val p‖ := by
   classical
   set U : Set ℂ := (Set.univ : Set ℂ)
   set D : Function.locallyFinsuppWithin U ℤ := MeromorphicOn.divisor f U
@@ -458,7 +477,9 @@ lemma exists_r0_le_norm_divisorZeroIndex₀_val {f : ℂ → ℂ}
       have hdiv0 : D 0 = (meromorphicOrderAt f (0 : ℂ)).untop₀ := by
         have hmon : MeromorphicOn f U := by
           intro w hw; exact (hf.analyticAt w).meromorphicAt
-        simpa [D, U] using (MeromorphicOn.divisor_apply (f := f) (U := U) (z := (0 : ℂ)) hmon (by aesop))
+        simpa [D, U] using
+          (MeromorphicOn.divisor_apply (f := f) (U := U) (z := (0 : ℂ))
+            hmon (by aesop))
       exact by
         have : (meromorphicOrderAt f (0 : ℂ)).untop₀ ≠ 0 := ne_of_gt hpos0'
         simpa [hdiv0] using this
@@ -502,28 +523,8 @@ lemma exists_r0_le_norm_divisorZeroIndex₀_val {f : ℂ → ℂ}
 
 open scoped BigOperators
 
-/-- The dyadic lower endpoint associated to `⌊log₂ x⌋` is at most `x`, for `1 ≤ x`. -/
-lemma two_pow_floor_logb_le {x : ℝ} (hx : 1 ≤ x) :
-    (2 : ℝ) ^ (⌊Real.logb 2 x⌋₊ : ℝ) ≤ x := by
-  have hx0 : 0 < x := lt_of_lt_of_le (by norm_num : (0 : ℝ) < 1) hx
-  have hlog_nonneg : 0 ≤ Real.logb 2 x :=
-    Real.logb_nonneg (b := (2 : ℝ)) (by norm_num : (1 : ℝ) < 2) hx
-  have hfloor_le : (⌊Real.logb 2 x⌋₊ : ℝ) ≤ Real.logb 2 x := by
-    simpa using (Nat.floor_le hlog_nonneg)
-  exact (Real.le_logb_iff_rpow_le (b := (2 : ℝ)) (x := (⌊Real.logb 2 x⌋₊ : ℝ)) (y := x)
-    (by norm_num : (1 : ℝ) < 2) hx0).1 hfloor_le
-
-/-- `x` lies below the next dyadic endpoint after `⌊log₂ x⌋`, for `1 ≤ x`. -/
-lemma lt_two_pow_floor_logb_add_one {x : ℝ} (hx : 1 ≤ x) :
-    x < (2 : ℝ) ^ ((⌊Real.logb 2 x⌋₊ : ℝ) + 1) := by
-  have hx0 : 0 < x := lt_of_lt_of_le (by norm_num : (0 : ℝ) < 1) hx
-  have hlt : Real.logb 2 x < (⌊Real.logb 2 x⌋₊ : ℝ) + 1 := by
-    simpa using (Nat.lt_floor_add_one (Real.logb 2 x))
-  exact (Real.logb_lt_iff_lt_rpow (b := (2 : ℝ)) (x := x)
-    (y := (⌊Real.logb 2 x⌋₊ : ℝ) + 1) (by norm_num : (1 : ℝ) < 2) hx0).1 hlt
-
 /-- The number of divisor indices in a closed ball is bounded by the divisor mass there. -/
-lemma card_shell_le_sum_divisor_closedBall
+lemma card_ball_le_divisorMassClosedBall₀
     {f : ℂ → ℂ} (hf : Differentiable ℂ f) {R : ℝ} (hR : 0 < R) :
     (Nat.card {p : divisorZeroIndex₀ f (Set.univ : Set ℂ) // ‖divisorZeroIndex₀_val p‖ ≤ R} : ℝ)
       ≤ divisorMassClosedBall₀ f R := by
@@ -654,160 +655,12 @@ lemma card_subtype_le_divisorMassClosedBall₀_of_norm_le
   have hcard_le : Fintype.card s ≤ Fintype.card Aball :=
     Fintype.card_le_of_injective _ hinj
   have hAball : (Nat.card Aball : ℝ) ≤ divisorMassClosedBall₀ f R := by
-    simpa [Aball] using card_shell_le_sum_divisor_closedBall (f := f) hf hR
+    simpa [Aball] using card_ball_le_divisorMassClosedBall₀ (f := f) hf hR
   calc
     (Fintype.card s : ℝ) ≤ (Fintype.card Aball : ℝ) := by exact_mod_cast hcard_le
     _ = (Nat.card Aball : ℝ) := by simp [Nat.card_eq_fintype_card]
     _ ≤ divisorMassClosedBall₀ f R := hAball
 
-/-- If `k = ⌊log₂ (x / r₀)⌋`, then `r₀ * 2^k` is a lower dyadic bound for `x`. -/
-lemma dyadicShell_lower_bound {r0 x : ℝ} {k : ℕ} (hr0 : 0 < r0) (hx : r0 ≤ x)
-    (hk : ⌊Real.logb 2 (x / r0)⌋₊ = k) :
-    r0 * (2 : ℝ) ^ (k : ℝ) ≤ x := by
-  have hr0ne : r0 ≠ 0 := ne_of_gt hr0
-  have hx1 : (1 : ℝ) ≤ x / r0 := by
-    have : r0 / r0 ≤ x / r0 := div_le_div_of_nonneg_right hx hr0.le
-    simpa [hr0ne] using this
-  have hle : (2 : ℝ) ^ (k : ℝ) ≤ x / r0 := by
-    have := two_pow_floor_logb_le (x := x / r0) hx1
-    simpa [hk] using this
-  have := mul_le_mul_of_nonneg_left hle hr0.le
-  have hxEq : r0 * (x / r0) = x := by
-    field_simp [hr0ne]
-  simpa [mul_assoc, hxEq] using this
-
-/-- If `k = ⌊log₂ (x / r₀)⌋`, then `x` is bounded by the next dyadic endpoint. -/
-lemma dyadicShell_upper_bound {r0 x : ℝ} {k : ℕ} (hr0 : 0 < r0) (hx : r0 ≤ x)
-    (hk : ⌊Real.logb 2 (x / r0)⌋₊ = k) :
-    x ≤ r0 * (2 : ℝ) ^ ((k : ℝ) + 1) := by
-  have hr0ne : r0 ≠ 0 := ne_of_gt hr0
-  have hx1 : (1 : ℝ) ≤ x / r0 := by
-    have : r0 / r0 ≤ x / r0 := div_le_div_of_nonneg_right hx hr0.le
-    simpa [hr0ne] using this
-  have hlt : x / r0 < (2 : ℝ) ^ ((k : ℝ) + 1) := by
-    have := lt_two_pow_floor_logb_add_one (x := x / r0) hx1
-    simpa [hk] using this
-  have := mul_lt_mul_of_pos_left hlt hr0
-  have hxEq : r0 * (x / r0) = x := by
-    field_simp [hr0ne]
-  exact le_of_lt (by simpa [mul_assoc, hxEq] using this)
-
-/-- A dyadic radius `r₀ 2^(k+1)` gives polynomial growth bounded by a geometric term. -/
-lemma one_add_abs_two_mul_dyadicRadius_rpow_le {r0 ρ : ℝ} (k : ℕ)
-    (hr0 : 0 < r0) (hρ : 0 ≤ ρ) :
-    (1 + |2 * (r0 * (2 : ℝ) ^ ((k : ℝ) + 1))|) ^ ρ
-      ≤ (1 + 4 * r0) ^ ρ * ((2 : ℝ) ^ ρ) ^ k := by
-  let Rk : ℝ := r0 * (2 : ℝ) ^ ((k : ℝ) + 1)
-  have hRk' : |2 * Rk| = 4 * r0 * (2 : ℝ) ^ (k : ℝ) := by
-    have hnonneg : 0 ≤ (2 : ℝ) * Rk := by
-      have : 0 ≤ Rk := by
-        dsimp [Rk]
-        exact mul_nonneg hr0.le (le_of_lt (Real.rpow_pos_of_pos (by norm_num) _))
-      nlinarith
-    have hmul : (2 : ℝ) * Rk = 4 * r0 * (2 : ℝ) ^ (k : ℝ) := by
-      dsimp [Rk]
-      calc
-        (2 : ℝ) * (r0 * (2 : ℝ) ^ ((k : ℝ) + 1))
-            = (2 * r0) * (2 : ℝ) ^ ((k : ℝ) + 1) := by ring
-        _ = (2 * r0) * ((2 : ℝ) ^ (k : ℝ) * (2 : ℝ) ^ (1 : ℝ)) := by
-              simp [Real.rpow_add, mul_assoc]
-        _ = (2 * r0) * ((2 : ℝ) ^ (k : ℝ) * 2) := by simp [Real.rpow_one]
-        _ = 4 * r0 * (2 : ℝ) ^ (k : ℝ) := by ring
-    calc
-      |2 * Rk| = 2 * Rk := abs_of_nonneg hnonneg
-      _ = 4 * r0 * (2 : ℝ) ^ (k : ℝ) := hmul
-  have hbase :
-      (1 + |2 * Rk|) ≤ (1 + 4 * r0) * (2 : ℝ) ^ (k : ℝ) := by
-    have h1 : (1 : ℝ) ≤ (2 : ℝ) ^ (k : ℝ) := by
-      have : (1 : ℝ) ≤ (2 : ℝ) ^ (k : ℕ) := by
-        simpa using (one_le_pow₀ (by norm_num : (1 : ℝ) ≤ (2 : ℝ)))
-      simpa [Real.rpow_natCast] using this
-    have habs :
-        1 + |2 * Rk| ≤ (2 : ℝ) ^ (k : ℝ) + (4 * r0) * (2 : ℝ) ^ (k : ℝ) := by
-      rw [hRk']
-      simpa [add_assoc, add_left_comm, add_comm, mul_assoc, mul_left_comm, mul_comm] using
-        (add_le_add_right h1 ((4 * r0) * (2 : ℝ) ^ (k : ℝ)))
-    have hfac :
-        (2 : ℝ) ^ (k : ℝ) + (4 * r0) * (2 : ℝ) ^ (k : ℝ)
-          = (1 + 4 * r0) * (2 : ℝ) ^ (k : ℝ) := by
-      ring
-    exact habs.trans (le_of_eq hfac)
-  have hRnonneg : 0 ≤ (1 + |2 * Rk|) := by linarith [abs_nonneg (2 * Rk)]
-  have :
-      (1 + |2 * Rk|) ^ ρ ≤ ((1 + 4 * r0) * (2 : ℝ) ^ (k : ℝ)) ^ ρ :=
-    Real.rpow_le_rpow hRnonneg hbase hρ
-  have hsplit :
-      ((1 + 4 * r0) * (2 : ℝ) ^ (k : ℝ)) ^ ρ
-        = (1 + 4 * r0) ^ ρ * ((2 : ℝ) ^ (k : ℝ)) ^ ρ := by
-    have h1 : 0 ≤ (1 + 4 * r0) := by nlinarith [hr0.le]
-    have h2 : 0 ≤ (2 : ℝ) ^ (k : ℝ) := le_of_lt (Real.rpow_pos_of_pos (by norm_num) _)
-    simpa using (Real.mul_rpow h1 h2 (z := ρ))
-  have hpow : ((2 : ℝ) ^ (k : ℝ)) ^ ρ = ((2 : ℝ) ^ ρ) ^ k := by
-    have h2nonneg : (0 : ℝ) ≤ 2 := by norm_num
-    calc
-      ((2 : ℝ) ^ (k : ℝ)) ^ ρ = (2 : ℝ) ^ ((k : ℝ) * ρ) := by
-        simp [Real.rpow_mul]
-      _ = ((2 : ℝ) ^ ρ) ^ (k : ℝ) := by
-        simpa [mul_comm] using (Real.rpow_mul (x := (2 : ℝ)) (y := ρ) (z := (k : ℝ)) h2nonneg)
-      _ = ((2 : ℝ) ^ ρ) ^ k := by
-        simp [Real.rpow_natCast]
-  calc
-    (1 + |2 * (r0 * (2 : ℝ) ^ ((k : ℝ) + 1))|) ^ ρ
-        = (1 + |2 * Rk|) ^ ρ := by rfl
-    _ ≤ ((1 + 4 * r0) * (2 : ℝ) ^ (k : ℝ)) ^ ρ := this
-    _ = (1 + 4 * r0) ^ ρ * ((2 : ℝ) ^ (k : ℝ)) ^ ρ := hsplit
-    _ = (1 + 4 * r0) ^ ρ * ((2 : ℝ) ^ ρ) ^ k := by
-      simpa [mul_assoc] using congrArg (fun t => (1 + 4 * r0) ^ ρ * t) hpow
-
-/-- A finite shell whose radii are bounded below contributes at most
-`card * lower_radius⁻¹ ^ τ` to the inverse-power sum. -/
-lemma tsum_inv_rpow_le_card_mul_of_lower_bound {α : Type*} [Fintype α] {a : α → ℝ}
-    {R τ : ℝ} (hR : 0 < R) (hτ : 0 < τ) (ha_nonneg : ∀ x, 0 ≤ a x)
-    (ha_lower : ∀ x, R ≤ a x) :
-    (∑' x : α, (a x)⁻¹ ^ τ) ≤ (Fintype.card α : ℝ) * (R⁻¹ ^ τ) := by
-  have hsum_le :
-      (∑ x : α, (a x)⁻¹ ^ τ) ≤ ∑ _x : α, R⁻¹ ^ τ := by
-    refine Finset.sum_le_sum ?_
-    intro x _hx
-    have hinv : (a x)⁻¹ ≤ R⁻¹ := by
-      simpa using (inv_anti₀ hR (ha_lower x))
-    exact Real.rpow_le_rpow (inv_nonneg.2 (ha_nonneg x)) hinv hτ.le
-  simpa [tsum_fintype, Finset.sum_const, nsmul_eq_mul, mul_comm] using hsum_le
-
-/-- Inverse powers of dyadic radii split into the initial radius and a geometric factor. -/
-lemma inv_dyadicRadius_rpow_eq (r0 τ : ℝ) (k : ℕ) (hr0 : 0 ≤ r0) :
-    (r0 * (2 : ℝ) ^ (k : ℝ))⁻¹ ^ τ =
-      (r0⁻¹ : ℝ) ^ τ * ((2 : ℝ) ^ (-τ)) ^ k := by
-  have h2k_nonneg : 0 ≤ (2 : ℝ) ^ (k : ℝ) :=
-    le_of_lt (Real.rpow_pos_of_pos (by norm_num : (0 : ℝ) < 2) _)
-  calc
-    (r0 * (2 : ℝ) ^ (k : ℝ))⁻¹ ^ τ =
-        (r0 * (2 : ℝ) ^ (k : ℝ)) ^ (-τ) := by
-      simpa using (Real.rpow_neg_eq_inv_rpow (r0 * (2 : ℝ) ^ (k : ℝ)) τ).symm
-    _ = r0 ^ (-τ) * (((2 : ℝ) ^ (k : ℝ)) ^ (-τ)) := by
-      simpa using (Real.mul_rpow hr0 h2k_nonneg (z := -τ))
-    _ = (r0⁻¹ : ℝ) ^ τ * ((2 : ℝ) ^ (-τ)) ^ k := by
-      have hr0' : r0 ^ (-τ) = (r0⁻¹ : ℝ) ^ τ := by
-        simp [Real.rpow_neg_eq_inv_rpow]
-      have h2' : ((2 : ℝ) ^ (k : ℝ)) ^ (-τ) = ((2 : ℝ) ^ (-τ)) ^ k := by
-        have h2nonneg : (0 : ℝ) ≤ (2 : ℝ) := by norm_num
-        calc
-          ((2 : ℝ) ^ (k : ℝ)) ^ (-τ) = (2 : ℝ) ^ ((k : ℝ) * (-τ)) := by
-            exact (Real.rpow_mul (x := (2 : ℝ)) (y := (k : ℝ)) (z := -τ)
-              h2nonneg).symm
-          _ = (2 : ℝ) ^ ((-τ) * (k : ℝ)) := by ring_nf
-          _ = ((2 : ℝ) ^ (-τ)) ^ (k : ℝ) := by
-            exact Real.rpow_mul (x := (2 : ℝ)) (y := -τ) (z := (k : ℝ)) h2nonneg
-          _ = ((2 : ℝ) ^ (-τ)) ^ k := by
-            simp [Real.rpow_natCast]
-      calc
-        r0 ^ (-τ) * (((2 : ℝ) ^ (k : ℝ)) ^ (-τ))
-            = (r0⁻¹ : ℝ) ^ τ * (((2 : ℝ) ^ (k : ℝ)) ^ (-τ)) := by
-              rw [hr0']
-        _ = (r0⁻¹ : ℝ) ^ τ * ((2 : ℝ) ^ (-τ)) ^ k := by
-              rw [h2']
-
--- The dyadic shell estimate combines counting, Cartan avoidance, and rpow arithmetic.
 theorem summable_norm_inv_rpow_divisorZeroIndex₀_of_growth {f : ℂ → ℂ} {ρ τ : ℝ}
     (hρ : 0 ≤ ρ) (hτ : ρ < τ) (hf : Differentiable ℂ f) (hnot : ∃ z : ℂ, f z ≠ 0)
     (hgrowth : ∃ C > 0, ∀ z : ℂ, Real.log (1 + ‖f z‖) ≤ C * (1 + ‖z‖) ^ ρ) :
@@ -838,7 +691,7 @@ theorem summable_norm_inv_rpow_divisorZeroIndex₀_of_growth {f : ℂ → ℂ} {
             ‖divisorZeroIndex₀_val p‖ ≤ r0 * (2 : ℝ) ^ ((k : ℝ) + 1)} := by
         intro p hp
         have hk : kfun p = k := hp
-        exact dyadicShell_upper_bound (r0 := r0) (x := ‖divisorZeroIndex₀_val p‖)
+        exact Real.dyadicShell_upper_bound (r0 := r0) (x := ‖divisorZeroIndex₀_val p‖)
           hr0pos (hr0 p) (by simpa [kfun] using hk)
       have hfin :
           ({p : divisorZeroIndex₀ f (Set.univ : Set ℂ) |
@@ -902,7 +755,7 @@ theorem summable_norm_inv_rpow_divisorZeroIndex₀_of_growth {f : ℂ → ℂ} {
               intro p hp
               have hk' : kfun p = kk := hp
               simpa [Rk] using
-                (dyadicShell_upper_bound (r0 := r0) (x := ‖divisorZeroIndex₀_val p‖)
+                (Real.dyadicShell_upper_bound (r0 := r0) (x := ‖divisorZeroIndex₀_val p‖)
                   hr0pos (hr0 p) (by simpa [kfun] using hk'))
             have hfin :
                 ({p : divisorZeroIndex₀ f (Set.univ : Set ℂ) |
@@ -917,41 +770,30 @@ theorem summable_norm_inv_rpow_divisorZeroIndex₀_of_growth {f : ℂ → ℂ} {
             intro p
             have hk' : kfun p.1 = kk := p.2
             simpa [Rk] using
-              (dyadicShell_upper_bound (r0 := r0) (x := ‖divisorZeroIndex₀_val p.1‖)
+              (Real.dyadicShell_upper_bound (r0 := r0) (x := ‖divisorZeroIndex₀_val p.1‖)
                 hr0pos (hr0 p.1) (by simpa [kfun] using hk'))
           have hk_lower : ∀ p : S kk, rk ≤ ‖divisorZeroIndex₀_val p.1‖ := by
             intro p
             have hk' : kfun p.1 = kk := p.2
             simpa [rk] using
-              (dyadicShell_lower_bound (r0 := r0) (x := ‖divisorZeroIndex₀_val p.1‖)
+              (Real.dyadicShell_lower_bound (r0 := r0) (x := ‖divisorZeroIndex₀_val p.1‖)
                 hr0pos (hr0 p.1) (by simpa [kfun] using hk'))
           have htsum_le :
               (∑' p : S kk, ‖divisorZeroIndex₀_val p.1‖⁻¹ ^ τ)
                 ≤ (Fintype.card (S kk) : ℝ) * (rk⁻¹ ^ τ) := by
-            exact tsum_inv_rpow_le_card_mul_of_lower_bound
+            exact Real.tsum_inv_rpow_le_card_mul_of_lower_bound
               (a := fun p : S kk => ‖divisorZeroIndex₀_val p.1‖)
               hrk_pos hτpos (fun _ => norm_nonneg _) hk_lower
           have hRk_ge_one : (1 : ℝ) ≤ Rk := by
-            have hpow_nat : (1 / r0) ≤ (2 : ℝ) ^ (kk + 1) := by
-              have hkk : k0 ≤ kk + 1 := by
-                simp [kk, Nat.add_assoc, Nat.add_comm]
-              exact hk0 (kk + 1) hkk
-            have hpow_rpow : (1 / r0) ≤ (2 : ℝ) ^ ((kk : ℝ) + 1) := by
-              have hcast : (2 : ℝ) ^ ((kk : ℝ) + 1) = (2 : ℝ) ^ (kk + 1) := by
-                calc
-                  (2 : ℝ) ^ ((kk : ℝ) + 1) = (2 : ℝ) ^ ((kk + 1 : ℕ) : ℝ) := by
-                    simp [Nat.cast_add, Nat.cast_one]
-                  _ = (2 : ℝ) ^ (kk + 1) := by
-                    simpa using (Real.rpow_natCast (2 : ℝ) (kk + 1))
-              simpa [hcast] using hpow_nat
-            have : (r0 * (1 / r0) : ℝ) ≤ r0 * (2 : ℝ) ^ ((kk : ℝ) + 1) :=
-              mul_le_mul_of_nonneg_left hpow_rpow hr0pos.le
-            simpa [Rk, one_div, hr0ne, mul_assoc] using this
+            have hkk : k0 ≤ kk + 1 := by
+              simp [kk, Nat.add_assoc, Nat.add_comm]
+            simpa [Rk] using
+              Real.one_le_dyadicRadius_succ_of_inv_le_two_pow hr0pos hk0 hkk
           have hmass_le_growth :
               divisorMassClosedBall₀ f Rk
                 ≤ (Cgrow * (1 + |2 * Rk|) ^ ρ + Ctrail) / (Real.log 2) := by
             simpa [Cgrow, Ctrail] using
-              (sum_divisor_closedBall_le_of_growth (f := f) (ρ := ρ) hf hgrowth
+              (divisorMassClosedBall₀_le_of_growth (f := f) (ρ := ρ) hf hgrowth
                 (R := Rk) hRk_ge_one)
           have hcard_le_mass :
               (Fintype.card (S kk) : ℝ) ≤ divisorMassClosedBall₀ f Rk := by
@@ -972,7 +814,7 @@ theorem summable_norm_inv_rpow_divisorZeroIndex₀_of_growth {f : ℂ → ℂ} {
           have hpow_bound :
               (1 + |2 * Rk|) ^ ρ ≤ (1 + 4 * r0) ^ ρ * ((2 : ℝ) ^ ρ) ^ kk := by
             simpa [Rk] using
-              one_add_abs_two_mul_dyadicRadius_rpow_le (r0 := r0) (ρ := ρ) kk hr0pos hρ
+              Real.one_add_abs_two_mul_dyadicRadius_rpow_le (r0 := r0) (ρ := ρ) kk hr0pos hρ
           have hr0Inv_nonneg : 0 ≤ (r0⁻¹ : ℝ) ^ τ := by
             exact Real.rpow_nonneg (inv_nonneg.2 hr0pos.le) _
           have hmain :
@@ -1009,7 +851,7 @@ theorem summable_norm_inv_rpow_divisorZeroIndex₀_of_growth {f : ℂ → ℂ} {
               le_trans htsum'' (le_trans (le_of_eq rfl) hsplit')
             have hrk_inv : rk⁻¹ ^ τ = (r0⁻¹ : ℝ) ^ τ * (qσ ^ kk) := by
               simpa [rk, qσ] using
-                inv_dyadicRadius_rpow_eq (r0 := r0) (τ := τ) kk hr0pos.le
+                Real.inv_dyadicRadius_rpow_eq (r0 := r0) (τ := τ) kk hr0pos.le
             have hq_fac : q = ((2 : ℝ) ^ ρ) * qσ := by
               have h2pos : (0 : ℝ) < (2 : ℝ) := by norm_num
               calc

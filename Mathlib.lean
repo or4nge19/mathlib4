@@ -2300,6 +2300,7 @@ public import Mathlib.Analysis.SpecialFunctions.JapaneseBracket
 public import Mathlib.Analysis.SpecialFunctions.Log.Base
 public import Mathlib.Analysis.SpecialFunctions.Log.Basic
 public import Mathlib.Analysis.SpecialFunctions.Log.Deriv
+public import Mathlib.Analysis.SpecialFunctions.Log.Dyadic
 public import Mathlib.Analysis.SpecialFunctions.Log.ENNRealLog
 public import Mathlib.Analysis.SpecialFunctions.Log.ENNRealLogExp
 public import Mathlib.Analysis.SpecialFunctions.Log.ERealExp
@@ -5581,6 +5582,7 @@ public import Mathlib.NumberTheory.LSeries.PrimesInAP
 public import Mathlib.NumberTheory.LSeries.RiemannZeta
 public import Mathlib.NumberTheory.LSeries.RiemannZetaConvexity
 public import Mathlib.NumberTheory.LSeries.RiemannZetaHadamard
+public import Mathlib.NumberTheory.LSeries.RiemannZetaValues
 public import Mathlib.NumberTheory.LSeries.SumCoeff
 public import Mathlib.NumberTheory.LSeries.ZetaFiniteOrder
 public import Mathlib.NumberTheory.LSeries.ZetaFunctionalEquation

@@ -43,6 +43,29 @@ noncomputable def divisorPartialProduct (m : ℕ) (f : ℂ → ℂ)
     divisorPartialProduct m f s z = ∏ p ∈ s, weierstrassFactor m (z / divisorZeroIndex₀_val p) :=
   rfl
 
+theorem differentiable_weierstrassFactor_divisorZeroIndex₀ (m : ℕ) {f : ℂ → ℂ}
+    (p : divisorZeroIndex₀ f (Set.univ : Set ℂ)) :
+    Differentiable ℂ (fun z : ℂ => weierstrassFactor m (z / divisorZeroIndex₀_val p)) := by
+  have hdiv : Differentiable ℂ (fun z : ℂ => z / divisorZeroIndex₀_val p) := by
+    simp [div_eq_mul_inv]
+  exact (differentiable_weierstrassFactor m).comp hdiv
+
+theorem differentiable_divisorPartialProduct (m : ℕ) (f : ℂ → ℂ)
+    (s : Finset (divisorZeroIndex₀ f (Set.univ : Set ℂ))) :
+    Differentiable ℂ (divisorPartialProduct m f s) := by
+  let Φ : divisorZeroIndex₀ f (Set.univ : Set ℂ) → ℂ → ℂ :=
+    fun p z => weierstrassFactor m (z / divisorZeroIndex₀_val p)
+  have hΦ : ∀ p ∈ s, Differentiable ℂ (Φ p) := by
+    intro p _hp
+    exact differentiable_weierstrassFactor_divisorZeroIndex₀ m p
+  simpa [divisorPartialProduct, Φ] using
+    (Differentiable.fun_finset_prod (𝕜 := ℂ) (f := Φ) (u := s) hΦ)
+
+theorem analyticAt_divisorPartialProduct (m : ℕ) (f : ℂ → ℂ)
+    (s : Finset (divisorZeroIndex₀ f (Set.univ : Set ℂ))) (z₀ : ℂ) :
+    AnalyticAt ℂ (divisorPartialProduct m f s) z₀ :=
+  (differentiable_divisorPartialProduct m f s).analyticAt z₀
+
 /-!
 ## Splitting finite partial products into fiber vs complement
 
@@ -65,6 +88,28 @@ noncomputable def divisorComplementPartialProduct
         else weierstrassFactor m (z / divisorZeroIndex₀_val p) := by
   classical
   simp [divisorComplementPartialProduct, mem_divisorZeroIndex₀_fiberFinset]
+
+theorem differentiable_divisorComplementPartialProduct
+    (m : ℕ) (f : ℂ → ℂ) (z₀ : ℂ)
+    (s : Finset (divisorZeroIndex₀ f (Set.univ : Set ℂ))) :
+    Differentiable ℂ (divisorComplementPartialProduct m f z₀ s) := by
+  classical
+  let Φ : divisorZeroIndex₀ f (Set.univ : Set ℂ) → ℂ → ℂ :=
+    fun p z =>
+      if divisorZeroIndex₀_val p = z₀ then (1 : ℂ)
+      else weierstrassFactor m (z / divisorZeroIndex₀_val p)
+  have hΦ : ∀ p ∈ s, Differentiable ℂ (Φ p) := by
+    intro p _hp
+    by_cases hval : divisorZeroIndex₀_val p = z₀
+    · simp [Φ, hval]
+    · simpa [Φ, hval] using differentiable_weierstrassFactor_divisorZeroIndex₀ m p
+  have hEq : (fun z : ℂ => ∏ p ∈ s, Φ p z) =
+      divisorComplementPartialProduct m f z₀ s := by
+    ext z
+    simp [Φ, divisorComplementPartialProduct_def]
+  have : Differentiable ℂ (fun z : ℂ => ∏ p ∈ s, Φ p z) := by
+    simpa using (Differentiable.fun_finset_prod (𝕜 := ℂ) (f := Φ) (u := s) hΦ)
+  simpa [hEq] using this
 
 /-!
 ## Complement canonical product (fiber factors removed)
@@ -290,26 +335,7 @@ theorem differentiableOn_divisorComplementCanonicalProduct_univ
         DifferentiableOn ℂ (divisorComplementPartialProduct m f z₀ s) (Set.univ : Set ℂ) := by
     refine Filter.Eventually.of_forall ?_
     intro s
-    have hdiff : Differentiable ℂ (divisorComplementPartialProduct m f z₀ s) := by
-      let Φ : divisorZeroIndex₀ f (Set.univ : Set ℂ) → ℂ → ℂ :=
-        fun p z =>
-          if divisorZeroIndex₀_val p = z₀ then (1 : ℂ)
-          else weierstrassFactor m (z / divisorZeroIndex₀_val p)
-      have hΦ : ∀ p ∈ s, Differentiable ℂ (Φ p) := by
-        intro p hp
-        classical
-        by_cases hval : divisorZeroIndex₀_val p = z₀
-        · simp [Φ, hval]
-        · have hdiv : Differentiable ℂ (fun z : ℂ => z / divisorZeroIndex₀_val p) := by
-            simp [div_eq_mul_inv]
-          simpa [Φ, hval] using (differentiable_weierstrassFactor m).comp hdiv
-      have hEq : (fun z : ℂ => ∏ p ∈ s, Φ p z) = divisorComplementPartialProduct m f z₀ s := by
-        ext z
-        simp [Φ, divisorComplementPartialProduct_def]
-      have : Differentiable ℂ (fun z : ℂ => ∏ p ∈ s, Φ p z) := by
-        simpa using (Differentiable.fun_finset_prod (𝕜 := ℂ) (f := Φ) (u := s) hΦ)
-      simpa [hEq] using this
-    simpa using hdiff.differentiableOn
+    exact (differentiable_divisorComplementPartialProduct m f z₀ s).differentiableOn
   haveI : (Filter.atTop : Filter (Finset (divisorZeroIndex₀ f (Set.univ : Set ℂ)))).NeBot :=
     Filter.atTop_neBot
   exact hloc.differentiableOn hF isOpen_univ
