@@ -235,8 +235,8 @@ theorem analyticOrderNatAt_prod_fiberFinset
 ## Exact multiplicity of the divisor canonical product
 
 The infinite canonical product has precisely the zero multiplicities encoded by the intrinsic
-divisor index.  The proof is supplied by the quotient/removable-singularity layer; these statements
-are the user-facing API at the level where the product is introduced.
+divisor index.  The proof is supplied by the quotient/removable-singularity layer, and the
+statements here record the multiplicity theorem at the level where the product is introduced.
 -/
 
 /-- The analytic order of the divisor-indexed canonical product at `z₀` is the number of

@@ -2,8 +2,8 @@ module
 
 
 public import Mathlib.Tactic.NormNum.RealSqrt
+public import Mathlib.Analysis.SpecialFunctions.GammaBounds
 public import Mathlib.Analysis.SpecialFunctions.Gamma.StirlingRobbins
-public import Mathlib.Analysis.SpecialFunctions.GaussianIntegral
 
 
 
@@ -101,43 +101,37 @@ lemma prod_norm_le_pow {s : ℂ} {m : ℕ} (h : ∀ k < m, (k : ℝ) + 1 < s.re)
 
 /-! ## Section 3: Stirling's approximation for factorial -/
 
-/-- Stirling's approximation (Robbins upper bound): n! ≤ √(2πn) (n/e)^n e^{1/(12n)}
+/-- Stirling's approximation with Robbins' upper error term:
+`n! ≤ √(2πn) (n/e)^n e^{1/(12n)}`.
 
 Reference: Robbins, H. "A Remark on Stirling's Formula."
-The American Mathematical Monthly 62.1 (1955): 26-29.
-
-Note: Mathlib's `Stirling.le_factorial_stirling` provides only the LOWER bound:
-  √(2πn)(n/e)^n ≤ n!
-The upper bound requires the Robbins error analysis which is not yet in Mathlib. -/
+The American Mathematical Monthly 62.1 (1955): 26-29. -/
 lemma factorial_asymptotic (n : ℕ) (hn : 0 < n) :
     (n.factorial : ℝ) ≤ Real.sqrt (2 * Real.pi * n) * (n / Real.exp 1) ^ n *
       Real.exp (1 / (12 * n)) := by
-  -- This is Robbins' sharp upper bound, proved in `Riemann/Mathlib`.
   simpa using Stirling.factorial_upper_robbins n hn
 
 /-! ## Section 4: Strip bounds for Gamma -/
 
-lemma Gamma_strip_bound_general {s : ℂ} {a : ℝ} (ha : 0 < a) (hs_lo : a ≤ s.re) (hs_hi : s.re ≤ 1) :
+lemma Gamma_strip_bound_general {s : ℂ} {a : ℝ}
+    (ha : 0 < a) (hs_lo : a ≤ s.re) (hs_hi : s.re ≤ 1) :
     ‖Complex.Gamma s‖ ≤ 1 / a + Real.sqrt Real.pi :=
-  Complex.Gammaℝ.norm_Complex_Gamma_le_of_re_ge ha hs_lo hs_hi
+  Complex.Gamma.norm_le_one_div_add_sqrt_pi_of_re_ge_of_re_le ha hs_lo hs_hi
 
-lemma Gamma_strip_bound {s : ℂ} (hs_lo : (1/2 : ℝ) ≤ s.re) (hs_hi : s.re ≤ 1) :
+lemma Gamma_strip_bound {s : ℂ} (hs_lo : (1 / 2 : ℝ) ≤ s.re) (hs_hi : s.re ≤ 1) :
     ‖Complex.Gamma s‖ ≤ 4 := by
-  have h := Gamma_strip_bound_general (by norm_num : (0:ℝ) < 1/2) hs_lo hs_hi
-  calc ‖Complex.Gamma s‖ ≤ 1 / (1/2 : ℝ) + Real.sqrt Real.pi := h
+  have h := Gamma_strip_bound_general (by norm_num : (0 : ℝ) < 1 / 2) hs_lo hs_hi
+  calc ‖Complex.Gamma s‖ ≤ 1 / (1 / 2 : ℝ) + Real.sqrt Real.pi := h
     _ = 2 + Real.sqrt Real.pi := by norm_num
     _ ≤ 4 := by linarith [sqrt_pi_lt_two]
 
 /-- DLMF 5.6.7: For Re(z) ∈ [1, 2], |Γ(z)| ≤ Γ(Re(z)) ≤ 1.
 
 The proof requires two facts:
-1. |Γ(x+iy)| ≤ Γ(x) for x ≥ 1/2 (DLMF 5.6.7)
-2. Γ(x) ≤ 1 for x ∈ [1, 2] since Γ(1) = Γ(2) = 1 and Γ achieves its minimum ≈ 0.886 at x ≈ 1.46
-
-Neither fact is currently in Mathlib. -/
+1. `|Γ(x+iy)| ≤ Γ(x)` for `x ≥ 1/2`.
+2. `Γ(x) ≤ 1` for `x ∈ [1, 2]`. -/
 lemma Gamma_bound_one_two {s : ℂ} (hs_lo : 1 ≤ s.re) (hs_hi : s.re ≤ 2) :
     ‖Complex.Gamma s‖ ≤ 1 := by
-  -- This is available in `Riemann/Mathlib` as `Binet.norm_Gamma_le_one`.
   exact Binet.norm_Gamma_le_one hs_lo hs_hi
 
 /-! ## Section 4: Iterated functional equation -/

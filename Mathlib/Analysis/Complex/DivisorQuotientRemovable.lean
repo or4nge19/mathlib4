@@ -164,6 +164,55 @@ theorem analyticAt_update_limUnder_divisorCanonicalProduct_div_pow
     exact (hdiff z hz).differentiableAt (Metric.isOpen_ball.mem_nhds hz)
   simpa [g] using Complex.analyticAt_of_differentiable_on_punctured_nhds_of_continuousAt hd hcont
 
+/-- The removable extension of
+`divisorCanonicalProduct m f univ z / (z - z₀)^k`, where `k` is the divisor fiber cardinality at
+`z₀`. -/
+noncomputable def divisorCanonicalProductQuotientExtension
+    (m : ℕ) (f : ℂ → ℂ) (z₀ : ℂ) : ℂ → ℂ :=
+  Function.update
+    (fun z : ℂ =>
+      (divisorCanonicalProduct m f (Set.univ : Set ℂ) z) /
+        (z - z₀) ^ (divisorZeroIndex₀_fiberFinset (f := f) z₀).card)
+    z₀
+    (limUnder (𝓝[≠] z₀) fun z : ℂ =>
+      (divisorCanonicalProduct m f (Set.univ : Set ℂ) z) /
+        (z - z₀) ^ (divisorZeroIndex₀_fiberFinset (f := f) z₀).card)
+
+@[simp] theorem divisorCanonicalProductQuotientExtension_apply_of_ne
+    (m : ℕ) (f : ℂ → ℂ) {z₀ z : ℂ} (hz : z ≠ z₀) :
+    divisorCanonicalProductQuotientExtension m f z₀ z =
+      (divisorCanonicalProduct m f (Set.univ : Set ℂ) z) /
+        (z - z₀) ^ (divisorZeroIndex₀_fiberFinset (f := f) z₀).card := by
+  simp [divisorCanonicalProductQuotientExtension, Function.update_of_ne hz]
+
+@[simp] theorem divisorCanonicalProductQuotientExtension_self
+    (m : ℕ) (f : ℂ → ℂ) (z₀ : ℂ) :
+    divisorCanonicalProductQuotientExtension m f z₀ z₀ =
+      limUnder (𝓝[≠] z₀) (fun z : ℂ =>
+        (divisorCanonicalProduct m f (Set.univ : Set ℂ) z) /
+          (z - z₀) ^ (divisorZeroIndex₀_fiberFinset (f := f) z₀).card) := by
+  simp [divisorCanonicalProductQuotientExtension]
+
+theorem differentiableOn_divisorCanonicalProductQuotientExtension
+    (m : ℕ) (f : ℂ → ℂ)
+    (h_sum : Summable (fun p : divisorZeroIndex₀ f (Set.univ : Set ℂ) =>
+      ‖divisorZeroIndex₀_val p‖⁻¹ ^ (m + 1)))
+    (z₀ : ℂ) : ∃ r > 0,
+      DifferentiableOn ℂ (divisorCanonicalProductQuotientExtension m f z₀) (Metric.ball z₀ r) := by
+  simpa [divisorCanonicalProductQuotientExtension] using
+    differentiableOn_update_limUnder_divisorCanonicalProduct_div_pow
+      (m := m) (f := f) (h_sum := h_sum) (z₀ := z₀)
+
+theorem analyticAt_divisorCanonicalProductQuotientExtension
+    (m : ℕ) (f : ℂ → ℂ)
+    (h_sum : Summable (fun p : divisorZeroIndex₀ f (Set.univ : Set ℂ) =>
+      ‖divisorZeroIndex₀_val p‖⁻¹ ^ (m + 1)))
+    (z₀ : ℂ) :
+    AnalyticAt ℂ (divisorCanonicalProductQuotientExtension m f z₀) z₀ := by
+  simpa [divisorCanonicalProductQuotientExtension] using
+    analyticAt_update_limUnder_divisorCanonicalProduct_div_pow
+      (m := m) (f := f) (h_sum := h_sum) (z₀ := z₀)
+
 /-!
 ## Exact multiplicity of the divisor canonical product
 
@@ -182,7 +231,7 @@ theorem analyticOrderNatAt_divisorCanonicalProduct_eq_fiber_card
   set k : ℕ := (divisorZeroIndex₀_fiberFinset (f := f) z₀).card
   let F : ℂ → ℂ := divisorCanonicalProduct m f (Set.univ : Set ℂ)
   let q0 : ℂ → ℂ := fun z => F z / (z - z₀) ^ k
-  let q : ℂ → ℂ := Function.update q0 z₀ (limUnder (𝓝[≠] z₀) q0)
+  let q : ℂ → ℂ := divisorCanonicalProductQuotientExtension m f z₀
   have hdiff_univ : DifferentiableOn ℂ F (Set.univ : Set ℂ) :=
     differentiableOn_divisorCanonicalProduct_univ (m := m) (f := f) h_sum
   have han : AnalyticAt ℂ F z₀ := by
@@ -192,9 +241,9 @@ theorem analyticOrderNatAt_divisorCanonicalProduct_eq_fiber_card
     have : DifferentiableWithinAt ℂ F (Set.univ : Set ℂ) z := hdiff_univ z (by simp)
     exact this.differentiableAt (by simp)
   have hqA : AnalyticAt ℂ q z₀ := by
-    simpa [q, q0, F, k] using
-      (analyticAt_update_limUnder_divisorCanonicalProduct_div_pow (m := m) (f := f)
-      (h_sum := h_sum) (z₀ := z₀))
+    simpa [q] using
+      analyticAt_divisorCanonicalProductQuotientExtension
+        (m := m) (f := f) (h_sum := h_sum) (z₀ := z₀)
   rcases
       exists_ball_eq_divisorCanonicalProduct_div_pow_eq (m := m) (f := f) (h_sum := h_sum)
       (z₀ := z₀)
@@ -227,12 +276,12 @@ theorem analyticOrderNatAt_divisorCanonicalProduct_eq_fiber_card
     exact (hgCont.continuousWithinAt.tendsto.congr' heq.symm)
   have hlim : limUnder (𝓝[≠] z₀) q0 = g z₀ := ht_q0.limUnder_eq
   have hq0 : q z₀ ≠ 0 := by
-    have : q z₀ = g z₀ := by simp [q, Function.update_self, hlim]
+    have : q z₀ = g z₀ := by simp [q, q0, F, k, hlim]
     exact this.symm ▸ hg0
   have heq_punct : (fun z : ℂ => F z) =ᶠ[𝓝[≠] z₀] fun z : ℂ => (z - z₀) ^ k • q z := by
     filter_upwards [hne] with z hz
     have hzpow : (z - z₀) ^ k ≠ 0 := pow_ne_zero _ (sub_ne_zero.mpr hz)
-    have hq : q z = q0 z := by simp [q, Function.update_of_ne hz]
+    have hq : q z = q0 z := by simp [q, q0, F, k, hz]
     have hmul : (z - z₀) ^ k * q0 z = F z := by
       calc
         (z - z₀) ^ k * q0 z
@@ -269,7 +318,7 @@ theorem analyticOrderNatAt_divisorCanonicalProduct_eq_fiber_card
     · subst hz0
       simpa using h_at_z0
     · have hzpow : (z - z₀) ^ k ≠ 0 := pow_ne_zero _ (sub_ne_zero.mpr hz0)
-      have hq : q z = q0 z := by simp [q, Function.update_of_ne hz0]
+      have hq : q z = q0 z := by simp [q, q0, F, k, hz0]
       have hmul : (z - z₀) ^ k * q0 z = F z := by
         calc
           (z - z₀) ^ k * q0 z

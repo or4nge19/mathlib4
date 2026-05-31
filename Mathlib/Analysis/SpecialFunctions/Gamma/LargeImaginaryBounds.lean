@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2026 Matteo Cipollina. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Matteo Cipollina
+-/
 module
 
 
@@ -8,7 +13,6 @@ public import Mathlib.Analysis.SpecialFunctions.Pow.Real
 public import Mathlib.Analysis.SpecialFunctions.Log.Basic
 public import Mathlib.Analysis.Normed.Field.Basic
 public import Mathlib.Analysis.SpecialFunctions.Trigonometric.DerivHyp
-public import Mathlib.Analysis.SpecialFunctions.GaussianIntegral
 
 
 
@@ -30,6 +34,8 @@ noncomputable section
 
 open Complex Real Set Filter Topology
 open scoped Real Topology
+
+@[expose] public section
 
 namespace Complex.Gamma.LargeIm
 
@@ -76,7 +82,7 @@ theorem norm_sin_pi_ge_exp {σ t : ℝ} (ht : 1 ≤ |t|) :
             ((Real.cos (Real.pi * σ) * Real.sinh (Real.pi * t) : ℝ) : ℂ) := by
         simp
       -- Rewrite to match `Complex.norm_add_mul_I`.
-      -- (We keep these rewrites explicit to avoid `simp` turning back into complex `sin/cos/cosh/sinh`.)
+      -- Keep these rewrites explicit to avoid changing back to complex trigonometric functions.
       rw [hmul1, hmul2]
       exact
         (Complex.norm_add_mul_I (Real.sin (Real.pi * σ) * Real.cosh (Real.pi * t))
@@ -162,8 +168,12 @@ theorem norm_sin_pi_ge_exp {σ t : ℝ} (ht : 1 ≤ |t|) :
     -- Put the pieces together.
     simpa [habs] using hsinh_u
   -- Combine the two lower bounds.
-  have := le_trans (show Real.exp (Real.pi * |t|) / 4 ≤ |Real.sinh (Real.pi * t)| from hsinh_ge) hnorm_ge
+  have := le_trans
+    (show Real.exp (Real.pi * |t|) / 4 ≤ |Real.sinh (Real.pi * t)| from hsinh_ge)
+    hnorm_ge
   -- `hnorm_ge` is about `sin(π(σ+it))` with an explicit `π` factor.
   simpa using this
 
 end Complex.Gamma.LargeIm
+
+end

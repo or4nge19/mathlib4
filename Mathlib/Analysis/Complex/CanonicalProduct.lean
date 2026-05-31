@@ -16,8 +16,8 @@ This file defines canonical products attached to a sequence `a : ℕ → ℂ`:
 
 `canonicalProduct m a z := ∏' n, weierstrassFactor m (z / a n)`.
 
-The main convergence results are thin wrappers around the locally uniform product API for scaled
-Weierstrass factors developed in `Mathlib.Analysis.Complex.WeierstrassFactor`.
+The convergence results specialize the locally uniform product API for scaled Weierstrass factors
+developed in `Mathlib.Analysis.Complex.WeierstrassFactor`.
 
 ## TODO
 
@@ -25,7 +25,7 @@ Weierstrass factors developed in `Mathlib.Analysis.Complex.WeierstrassFactor`.
   `canonicalProductExcept` API, avoiding heavy `Function.update` infinite-product proofs.
 -/
 
-public section
+@[expose] public section
 
 noncomputable section
 
@@ -36,6 +36,10 @@ namespace Complex
 /-- The canonical product `∏' n, E_m(z / a_n)` for a sequence `a`. -/
 def canonicalProduct (m : ℕ) (a : ℕ → ℂ) (z : ℂ) : ℂ :=
   ∏' n : ℕ, weierstrassFactor m (z / a n)
+
+@[simp] theorem canonicalProduct_def (m : ℕ) (a : ℕ → ℂ) (z : ℂ) :
+    canonicalProduct m a z = ∏' n : ℕ, weierstrassFactor m (z / a n) :=
+  rfl
 
 /-- The canonical product converges locally uniformly on `ℂ` under the standard summability
 hypothesis. -/

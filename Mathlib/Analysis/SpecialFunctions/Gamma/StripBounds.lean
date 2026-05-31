@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2026 Matteo Cipollina. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Matteo Cipollina
+-/
 module
 
 
@@ -7,46 +12,15 @@ public import Mathlib.Analysis.SpecialFunctions.Gamma.Deligne
 public import Mathlib.Analysis.SpecialFunctions.Stirling
 public import Mathlib.Data.Real.StarOrdered
 public import Mathlib.Analysis.SpecialFunctions.Gamma.BinetFormula
-public import Mathlib.Analysis.SpecialFunctions.GaussianIntegral
 public import Mathlib.Analysis.SpecialFunctions.GammaBounds
 
 
 
 /-!
-# Gamma Function Bounds on Vertical Strips
+# Gamma bounds in half-planes
 
-This file provides explicit bounds for the complex Gamma function `Γ(s)` and the
-Archimedean factor `H(s) = Γ_ℝ(s) = π^{-s/2} Γ(s/2)` in vertical strips.
-
-## Main definitions
-
-* `Complex.H` - The Archimedean factor `Γ_ℝ(s) = π^{-s/2} Γ(s/2)`
-* `Complex.Gammaℝ.strip` - The vertical strip `{s | σ0 ≤ Re(s) ≤ 1}`
-* `Complex.Gammaℝ.boundedHDerivOnStrip` - Uniform bound on `‖H'(s)‖` over a strip
-* `Complex.Gammaℝ.circleBound` - Explicit circle bound for H
-
-## Main results
-
-* `Complex.Gammaℝ.differentiableOn_halfplane` - H is differentiable on Re(s) > 0
-* `Complex.Gammaℝ.deriv_bound_on_circle` - Cauchy inequality for H' on circles
-* `Complex.Gammaℝ.boundedHDerivOnStrip_via_explicit_bound` - Strip derivative bound
-* `Complex.Gammaℝ.BoundedFGammaPrimeOnStrip` - Prop-level interface
-
-## Mathematical background
-
-The Euler integral `Γ(s) = ∫₀^∞ t^{s-1} e^{-t} dt` converges for `Re(s) > 0`.
-For `0 < a ≤ Re(s) ≤ 1`, we split at `t = 1`:
-
-1. **Integral on `[0,1]`**: Since `|t^{s-1}| = t^{Re(s)-1} ≤ t^{a-1}` for `t ∈ [0,1]`
-   and `e^{-t} ≤ 1`, we have `∫₀¹ |t^{s-1} e^{-t}| dt ≤ ∫₀¹ t^{a-1} dt = 1/a`.
-
-2. **Integral on `[1,∞)`**: Since `Re(s) ≤ 1`, we have `|t^{s-1}| ≤ 1` for `t ≥ 1`.
-   The tail bound uses Gamma function convexity.
-
-## References
-
-* [Deligne, "Valeurs de fonctions L et périodes d'intégrales"]
-* [NIST DLMF, Chapter 5]
+Bounds for `Complex.Gamma` and Deligne's real Gamma factor `Complex.Gammaℝ`, used
+in finite-order estimates for completed zeta functions.
 -/
 
 @[expose] public section
@@ -81,12 +55,13 @@ lemma le_exp_self (x : ℝ) : x ≤ Real.exp x :=
   le_trans (by linarith : x ≤ x + 1) (Real.add_one_le_exp x)
 
 /-- A convenient bound `1 ≤ π`. -/
-lemma one_le_pi : (1 : ℝ) ≤ Real.pi := le_trans (by norm_num : (1:ℝ) ≤ 2) Real.two_le_pi
+lemma one_le_pi : (1 : ℝ) ≤ Real.pi := le_trans (by norm_num : (1 : ℝ) ≤ 2) Real.two_le_pi
 
 /-- `√π < 2`. -/
 lemma sqrt_pi_lt_two : Real.sqrt Real.pi < 2 := by
   have hπ4 : Real.pi < 4 := Real.pi_lt_four
-  have h4 : Real.sqrt (4 : ℝ) = (2 : ℝ) := by rw [show (4 : ℝ) = 2^2 by norm_num, Real.sqrt_sq (by norm_num : (2 : ℝ) ≥ 0)]
+  have h4 : Real.sqrt (4 : ℝ) = (2 : ℝ) := by
+    rw [show (4 : ℝ) = 2 ^ 2 by norm_num, Real.sqrt_sq (by norm_num : (2 : ℝ) ≥ 0)]
   calc Real.sqrt Real.pi < Real.sqrt 4 := Real.sqrt_lt_sqrt Real.pi_pos.le hπ4
     _ = 2 := h4
 
@@ -112,7 +87,7 @@ lemma norm_bounded_on_compact_of_no_poles {K : Set ℂ}
 theorem norm_le_strip {w : ℂ} {a : ℝ}
     (ha : 0 < a) (hw_lo : a ≤ w.re) (hw_hi : w.re ≤ 1) :
     ‖Gamma w‖ ≤ 1 / a + Real.sqrt Real.pi :=
-  Complex.Gammaℝ.norm_Complex_Gamma_le_of_re_ge ha hw_lo hw_hi
+  Complex.Gamma.norm_le_one_div_add_sqrt_pi_of_re_ge_of_re_le ha hw_lo hw_hi
 
 /-- For `1/2 ≤ re w ≤ 1`, `‖Γ(w)‖ ≤ 4`. -/
 lemma norm_le_four_of_re_half_to_one {w : ℂ}

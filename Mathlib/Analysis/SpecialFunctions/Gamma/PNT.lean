@@ -7,16 +7,13 @@ module
 
 public import Mathlib.Analysis.SpecialFunctions.GammaBounds
 public import Mathlib.Analysis.SpecialFunctions.GammaProductBound
-public import Mathlib.Analysis.SpecialFunctions.GammaSlitPlaneAux
 
 
 public import Mathlib.Analysis.SpecialFunctions.Gamma.BinetKernel
 public import Mathlib.Analysis.SpecialFunctions.Gamma.BinetFormula
 public import Mathlib.Analysis.SpecialFunctions.Gamma.StirlingRobbins
 public import Mathlib.Analysis.SpecialFunctions.Gamma.GammaStirlingAux
-public import Mathlib.Analysis.SpecialFunctions.Gamma.StirlingB
 public import Mathlib.Analysis.SpecialFunctions.Gamma.StripBounds
-public import Mathlib.Analysis.SpecialFunctions.Gamma.StirlingBounds
 public import Mathlib.Analysis.SpecialFunctions.Gamma.LargeImaginaryBounds
 
 /-!

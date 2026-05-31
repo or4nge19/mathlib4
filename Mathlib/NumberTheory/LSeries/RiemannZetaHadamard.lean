@@ -5,7 +5,7 @@ Authors: Matteo Cipollina
 -/
 module
 
-public import Mathlib.Analysis.Complex.HadamardFactorization
+public import Mathlib.Analysis.Complex.HadamardFactorization.Order
 public import Mathlib.NumberTheory.LSeries.ZetaFiniteOrder
 public import Mathlib.NumberTheory.LSeries.RiemannZeta
 public import Mathlib.NumberTheory.LSeries.HurwitzZetaValues
@@ -15,11 +15,10 @@ public import Mathlib.Analysis.Real.Pi.Irrational
 /-!
 ## Intrinsic Hadamard factorization for the completed Riemann zeta function
 
-This is the zeta-facing theorem that uses the intrinsic divisor-indexed canonical product and
-`Mathlib/Analysis/Complex/HadamardFactorization.lean`.
-
-The analytic input is the growth bound proved in `ZetaFiniteOrder.lean`, and the structural input
-is the intrinsic Hadamard factorization theorem `Complex.Hadamard.hadamard_factorization_of_order`.
+This file applies the intrinsic Hadamard factorization theorem to the entire completed zeta
+function `completedRiemannZeta₀`.  The analytic input is the Tao-style order-one bound proved in
+`ZetaFiniteOrder.lean`; the product is the divisor-indexed canonical product, so multiplicities are
+those of `completedRiemannZeta₀` itself.
 -/
 
 @[expose] public section
@@ -35,9 +34,9 @@ open scoped BigOperators
 /-!
 ## Zeta specialization: intrinsic Hadamard factorization for `completedRiemannZeta₀`
 
-This is the zeta-facing corollary: we combine the sharp order-one `ε`-family bound
-`Complex.completedRiemannZeta₀_order_one` (proved in `ZetaFiniteOrder.lean`) with the intrinsic
-Hadamard factorization theorem `Complex.Hadamard.hadamard_factorization_of_order`.
+The sharp order-one estimate for Λ₀ is recorded as
+`Complex.Hadamard.EntireOfOrderAtMost`; Hadamard factorization then gives the intrinsic product
+over its divisor.
 -/
 
 /-- The completed Riemann zeta factor has value `π / 6` at `2`. -/
@@ -93,27 +92,62 @@ theorem completedRiemannZeta₀_nontrivial : ∃ z : ℂ, completedRiemannZeta�
   have : ((Real.pi : ℂ) - 3) / 6 ≠ 0 := div_ne_zero hnum hden
   simpa [completedRiemannZeta₀_two] using this
 
+/-- The entire completed zeta function `Λ₀` has order at most one. -/
+theorem completedRiemannZeta₀_entireOfOrderAtMost_one :
+    Complex.Hadamard.EntireOfOrderAtMost (1 : ℝ) completedRiemannZeta₀ := by
+  refine ⟨differentiable_completedZeta₀, ?_⟩
+  intro ε hε
+  simpa [add_comm, add_left_comm, add_assoc] using
+    (Complex.completedRiemannZeta₀_order_one ε hε)
+
 theorem completedRiemannZeta₀_hadamard_factorization_intrinsic :
     ∃ (P : Polynomial ℂ), P.degree ≤ 1 ∧ ∀ z : ℂ, completedRiemannZeta₀ z =
         Complex.exp (Polynomial.eval z P) * z ^ (analyticOrderNatAt completedRiemannZeta₀ 0) *
       Complex.Hadamard.divisorCanonicalProduct 1 completedRiemannZeta₀ (Set.univ : Set ℂ) z := by
-  have hentire : Differentiable ℂ completedRiemannZeta₀ := differentiable_completedZeta₀
-  have hρ : (0 : ℝ) ≤ (1 : ℝ) := by norm_num
-  have horder :
-      ∀ ε : ℝ, 0 < ε →
-        ∃ C > 0, ∀ z : ℂ,
-          ‖completedRiemannZeta₀ z‖ ≤ Real.exp (C * (1 + ‖z‖) ^ ((1 : ℝ) + ε)) := by
-    intro ε hε
-    simpa [add_comm, add_left_comm, add_assoc] using (Complex.completedRiemannZeta₀_order_one ε hε)
   rcases
       (Complex.Hadamard.hadamard_factorization_of_order
         (f := completedRiemannZeta₀) (ρ := (1 : ℝ))
-        hρ hentire completedRiemannZeta₀_nontrivial (by
-          intro ε hε
-          rcases horder ε hε with ⟨C, hCpos, hC⟩
-          exact ⟨C, hCpos, by
-            intro z
-            simpa [add_comm, add_left_comm, add_assoc] using (hC z)⟩)) with
+        (by norm_num) completedRiemannZeta₀_nontrivial
+        completedRiemannZeta₀_entireOfOrderAtMost_one) with
+    ⟨P, hdeg, hfac⟩
+  refine ⟨P, ?_, ?_⟩
+  · simpa using hdeg
+  · intro z
+    simpa using hfac z
+
+/-- Reindexed Hadamard factorization for Λ₀, for any type equivalent to its nonzero divisor
+indices. -/
+theorem completedRiemannZeta₀_hadamard_factorization_reindex
+    {ι : Type*}
+    (e : ι ≃ Complex.Hadamard.divisorZeroIndex₀ completedRiemannZeta₀ (Set.univ : Set ℂ)) :
+    ∃ (P : Polynomial ℂ), P.degree ≤ 1 ∧ ∀ z : ℂ, completedRiemannZeta₀ z =
+        Complex.exp (Polynomial.eval z P) * z ^ (analyticOrderNatAt completedRiemannZeta₀ 0) *
+      (∏' i : ι, Complex.weierstrassFactor 1
+        (z / Complex.Hadamard.divisorZeroIndex₀_val (e i))) := by
+  rcases
+      (Complex.Hadamard.hadamard_factorization_of_order_reindex
+        (f := completedRiemannZeta₀) (ρ := (1 : ℝ))
+        (by norm_num) completedRiemannZeta₀_nontrivial
+        completedRiemannZeta₀_entireOfOrderAtMost_one e) with
+    ⟨P, hdeg, hfac⟩
+  refine ⟨P, ?_, ?_⟩
+  · simpa using hdeg
+  · intro z
+    simpa using hfac z
+
+/-- Sequence-indexed Hadamard factorization for Λ₀, for an enumeration of its nonzero divisor
+indices by `ℕ`. -/
+theorem completedRiemannZeta₀_hadamard_factorization_sequence
+    (e : ℕ ≃ Complex.Hadamard.divisorZeroIndex₀ completedRiemannZeta₀ (Set.univ : Set ℂ)) :
+    ∃ (P : Polynomial ℂ), P.degree ≤ 1 ∧ ∀ z : ℂ, completedRiemannZeta₀ z =
+        Complex.exp (Polynomial.eval z P) * z ^ (analyticOrderNatAt completedRiemannZeta₀ 0) *
+      Complex.canonicalProduct 1
+        (fun n : ℕ => Complex.Hadamard.divisorZeroIndex₀_val (e n)) z := by
+  rcases
+      (Complex.Hadamard.hadamard_factorization_of_order_sequence
+        (f := completedRiemannZeta₀) (ρ := (1 : ℝ))
+        (by norm_num) completedRiemannZeta₀_nontrivial
+        completedRiemannZeta₀_entireOfOrderAtMost_one e) with
     ⟨P, hdeg, hfac⟩
   refine ⟨P, ?_, ?_⟩
   · simpa using hdeg

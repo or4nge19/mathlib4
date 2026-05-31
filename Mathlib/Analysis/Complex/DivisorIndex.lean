@@ -55,7 +55,6 @@ abbrev divisorZeroIndex₀_val {f : ℂ → ℂ} {U : Set ℂ} (p : divisorZeroI
 @[simp] lemma divisorZeroIndex₀_val_mem_divisor_support {f : ℂ → ℂ} {U : Set ℂ}
     (p : divisorZeroIndex₀ f U) :
     MeromorphicOn.divisor f U (divisorZeroIndex₀_val p) ≠ 0 := by
-  classical
   have hn :
       Int.toNat (MeromorphicOn.divisor f U (divisorZeroIndex₀_val p)) ≠ 0 := by
     intro h0
@@ -86,6 +85,25 @@ lemma exists_ball_inter_divisor_support_eq_singleton_of_index
 /-- The canonical product attached to the (nonzero) divisor of `f` on `U`. -/
 def divisorCanonicalProduct (m : ℕ) (f : ℂ → ℂ) (U : Set ℂ) (z : ℂ) : ℂ :=
   ∏' p : divisorZeroIndex₀ f U, weierstrassFactor m (z / divisorZeroIndex₀_val p)
+
+/-- Reindex the divisor canonical product along an equivalence. -/
+theorem divisorCanonicalProduct_eq_tprod_of_equiv
+    {ι : Type*} (m : ℕ) (f : ℂ → ℂ) (U : Set ℂ)
+    (e : ι ≃ divisorZeroIndex₀ f U) (z : ℂ) :
+    divisorCanonicalProduct m f U z =
+      ∏' i : ι, weierstrassFactor m (z / divisorZeroIndex₀_val (e i)) := by
+  simpa [divisorCanonicalProduct] using
+    (e.tprod_eq (fun p : divisorZeroIndex₀ f U =>
+      weierstrassFactor m (z / divisorZeroIndex₀_val p))).symm
+
+/-- If a sequence enumerates the nonzero divisor indices, the intrinsic divisor product is the
+corresponding canonical product. -/
+theorem divisorCanonicalProduct_eq_canonicalProduct_of_equiv
+    (m : ℕ) (f : ℂ → ℂ) (U : Set ℂ) (e : ℕ ≃ divisorZeroIndex₀ f U) (z : ℂ) :
+    divisorCanonicalProduct m f U z =
+      Complex.canonicalProduct m (fun n : ℕ => divisorZeroIndex₀_val (e n)) z := by
+  simpa [Complex.canonicalProduct_def] using
+    divisorCanonicalProduct_eq_tprod_of_equiv (m := m) (f := f) (U := U) e z
 
 @[simp] lemma divisorCanonicalProduct_zero (m : ℕ) (f : ℂ → ℂ) (U : Set ℂ) :
     divisorCanonicalProduct m f U 0 = 1 := by

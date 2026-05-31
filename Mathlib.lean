@@ -1771,7 +1771,6 @@ public import Mathlib.Analysis.Complex.CanonicalProduct
 public import Mathlib.Analysis.Complex.Cardinality
 public import Mathlib.Analysis.Complex.CartanBound
 public import Mathlib.Analysis.Complex.CartanInverseFactorBound
-public import Mathlib.Analysis.Complex.CartanGoodRadius
 public import Mathlib.Analysis.Complex.CartanMajorantBound
 public import Mathlib.Analysis.Complex.CartanProductBound
 public import Mathlib.Analysis.Complex.CauchyIntegral
@@ -1795,6 +1794,9 @@ public import Mathlib.Analysis.Complex.ExpPoly
 public import Mathlib.Analysis.Complex.ExpPoly.Growth
 public import Mathlib.Analysis.Complex.Hadamard
 public import Mathlib.Analysis.Complex.HadamardFactorization
+public import Mathlib.Analysis.Complex.HadamardFactorization.Growth
+public import Mathlib.Analysis.Complex.HadamardFactorization.Order
+public import Mathlib.Analysis.Complex.HadamardFactorization.Summability
 public import Mathlib.Analysis.Complex.HalfPlane
 public import Mathlib.Analysis.Complex.Harmonic.Analytic
 public import Mathlib.Analysis.Complex.Harmonic.Liouville
@@ -2280,14 +2282,10 @@ public import Mathlib.Analysis.SpecialFunctions.Gamma.BinetKernel
 public import Mathlib.Analysis.SpecialFunctions.Gamma.GammaStirlingAux
 public import Mathlib.Analysis.SpecialFunctions.Gamma.LargeImaginaryBounds
 public import Mathlib.Analysis.SpecialFunctions.Gamma.PNT
-public import Mathlib.Analysis.SpecialFunctions.Gamma.StirlingB
-public import Mathlib.Analysis.SpecialFunctions.Gamma.StirlingBounds
 public import Mathlib.Analysis.SpecialFunctions.Gamma.StirlingRobbins
 public import Mathlib.Analysis.SpecialFunctions.Gamma.StripBounds
 public import Mathlib.Analysis.SpecialFunctions.GammaBounds
 public import Mathlib.Analysis.SpecialFunctions.GammaProductBound
-public import Mathlib.Analysis.SpecialFunctions.GammaSlitPlaneAux
-public import Mathlib.Analysis.SpecialFunctions.GaussianIntegral
 public import Mathlib.Analysis.SpecialFunctions.CompletedXi
 public import Mathlib.Analysis.SpecialFunctions.Gaussian.FourierTransform
 public import Mathlib.Analysis.SpecialFunctions.Gaussian.GaussianIntegral

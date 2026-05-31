@@ -26,7 +26,8 @@ step of Tao’s Hadamard factorization proof:
 \max(0, \log(1/|1-t|)) \le \sqrt{2/|1-t|}.
 \]
 
-The goal is to keep the Hadamard factorization development in `Riemann/Mathlib` self-contained.
+This controls the logarithmic singularities that occur when choosing good radii in Cartan-type
+minimum-modulus arguments.
 -/
 
 @[expose] public section
@@ -50,7 +51,6 @@ private lemma neg_log_le_sqrt_two_div {x : ℝ} (hx : 0 < x) (hxle : x ≤ 1) :
   have ht : 0 ≤ -Real.log x := by
     have : Real.log x ≤ 0 := Real.log_nonpos hx0 hxle
     linarith
-
   -- A helper: for `t ≥ 0`, we have `t^2/2 ≤ exp t`.
   have hsq_div_two_le_exp : ∀ {t : ℝ}, 0 ≤ t → t ^ 2 / 2 ≤ Real.exp t := by
     intro t ht
@@ -91,13 +91,13 @@ private lemma neg_log_le_sqrt_two_div {x : ℝ} (hx : 0 < x) (hxle : x ≤ 1) :
       have : 0 ≤ Real.exp u - u := sub_nonneg.2 hu_le
       simpa [hderiv] using this
     have hg_mono : MonotoneOn g (Set.Ici (0 : ℝ)) :=
-      monotoneOn_of_deriv_nonneg (D := Set.Ici (0 : ℝ)) (hD := convex_Ici 0) hg_cont hg_diff hg'_nonneg
+      monotoneOn_of_deriv_nonneg (D := Set.Ici (0 : ℝ)) (hD := convex_Ici 0)
+        hg_cont hg_diff hg'_nonneg
     have hg0 : g 0 = 1 := by simp [g]
     have hle : g 0 ≤ g t := hg_mono (by simp) (by simpa [Set.mem_Ici] using ht) ht
     have : (1 : ℝ) ≤ Real.exp t - t ^ 2 / 2 := by simpa [g, hg0] using hle
     -- rearrange
     linarith
-
   have hmain : (-Real.log x) ^ 2 / 2 ≤ Real.exp (-Real.log x) :=
     hsq_div_two_le_exp ht
   have hexp : Real.exp (-Real.log x) = x⁻¹ := by

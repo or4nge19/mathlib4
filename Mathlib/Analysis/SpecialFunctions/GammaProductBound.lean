@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2026 Matteo Cipollina. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Matteo Cipollina
+-/
 module
 
 
@@ -44,6 +49,10 @@ For x ≥ 1/2, the bound is sharp and this is DLMF 5.6.7.
 
 open Real Complex Set Filter MeasureTheory Topology
 open scoped Topology BigOperators
+
+@[expose] public section
+
+noncomputable section
 
 namespace GammaProductBound
 
@@ -122,9 +131,9 @@ theorem norm_Gamma_le_Gamma_re'' {z : ℂ} (hz : 0 < z.re) :
     ‖Gamma z‖ ≤ Real.Gamma z.re :=
   GammaProductBound.norm_le' hz
 
-/-- For Re(z) ≥ 1/2, |Γ(z)|² ≤ |Γ(Re(z))|².
+/-- For Re(z) ≥ 1 / 2, |Γ(z)|² ≤ |Γ(Re(z))|².
 This is the precise statement of DLMF 5.6.7. -/
-theorem norm_sq_Gamma_le_norm_sq_Gamma_re {z : ℂ} (hz : 1/2 ≤ z.re) :
+theorem norm_sq_Gamma_le_norm_sq_Gamma_re {z : ℂ} (hz : 1 / 2 ≤ z.re) :
     ‖Gamma z‖ ^ 2 ≤ ‖Gamma z.re‖ ^ 2 := by
   have hz_pos : 0 < z.re := by linarith
   have h := norm_sq_Gamma_le' hz_pos
@@ -147,7 +156,8 @@ namespace Real
 
 /-- Γ is log-convex on (0, ∞), which implies convexity. -/
 theorem Gamma_logConvex : ConvexOn ℝ (Set.Ioi 0) (fun x => log (Gamma x)) := by
-  simpa [Function.comp] using (Real.convexOn_log_Gamma : ConvexOn ℝ (Set.Ioi 0) (Real.log ∘ Real.Gamma))
+  simpa [Function.comp] using
+    (Real.convexOn_log_Gamma : ConvexOn ℝ (Set.Ioi 0) (Real.log ∘ Real.Gamma))
 
 /-- Γ is convex on (0, ∞). -/
 theorem Gamma_convex : ConvexOn ℝ (Set.Ioi 0) Gamma := by
@@ -176,3 +186,5 @@ theorem Gamma_le_one_of_mem_Icc' {x : ℝ} (hlo : 1 ≤ x) (hhi : x ≤ 2) :
     _ = 1 := by ring
 
 end Real
+
+end

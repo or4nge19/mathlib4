@@ -30,8 +30,7 @@ namespace Complex.Hadamard
 /-!
 ## Partial products as a named function
 
-This is a convenience API: many later arguments about multiplicities/quotients are easier to write
-using a named partial product function rather than repeating `∏ p ∈ s, ...`.
+These finite products are the approximants to the divisor-indexed canonical product.
 -/
 
 /-- Finite partial product of Weierstrass factors indexed by a finset of divisor indices. -/
@@ -73,8 +72,8 @@ noncomputable def divisorComplementPartialProduct
 For a fixed point `z₀`, we often want to split the infinite product into a finite “fiber part”
 (`val = z₀`, accounting for the multiplicity) and an infinite “complement part” (all other indices).
 
-To keep the definition total and Mathlib-idiomatic, we implement the complement part by inserting
-the neutral element `1` on the fiber indices.
+The complement product is written as a total product by inserting the neutral element `1` on the
+fiber indices.
 -/
 
 /-- The infinite product over indices *not* in the fiber over `z₀` (the “complement” canonical

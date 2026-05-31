@@ -26,7 +26,7 @@ and the first explicit bounds on its Binet correction term.
 
 ## Main Results
 
-* `Binet.Real_log_Gamma_eq_Binet`: Binet's formula for `Real.log (Real.Gamma x)`
+* `Binet.log_Gamma_real_eq`: Binet's formula for `Real.log (Real.Gamma x)`
 * `Binet.J_norm_le_re`: `|J z| ≤ 1/(12 * re z)` for `0 < re z`
 * Robbins bounds for `n!` live in
   `Mathlib.Analysis.SpecialFunctions.Gamma.StirlingRobbins`.
@@ -37,7 +37,7 @@ and the first explicit bounds on its Binet correction term.
 * Robbins, H. "A Remark on Stirling's Formula." Amer. Math. Monthly 62 (1955): 26-29.
 * Whittaker & Watson, "A Course of Modern Analysis", Chapter 12
 
-## Implementation Notes
+## Kernel normalization
 
 We use the normalized kernel K̃(t) = K(t)/t from BinetKernel, where
 K(t) = 1/(e^t - 1) - 1/t + 1/2. This satisfies K̃(t) → 1/12 as t → 0⁺
@@ -50,9 +50,7 @@ open scoped BigOperators Nat
 /-!
 ### Small algebraic helpers
 
-These lemmas are intentionally kept outside the large proof blocks below: it makes automation
-(`simp`, `linarith`, `exact_mod_cast`) much more reliable (and avoids heartbeat timeouts caused by
-huge local contexts).
+Elementary estimates used in the real-variable part of Binet's formula.
 -/
 
 lemma one_div_cast_sub_le_two_div_cast (n : ℕ) (hn2 : 2 ≤ n) :
@@ -186,10 +184,8 @@ Be careful: a statement of the form
 
 using the *principal* complex logarithm `Complex.log` is **not valid on all of** `{z | 0 < re z}`:
 `Γ` crosses the negative real axis infinitely many times in the right half-plane, so the composite
-`Complex.log ∘ Complex.Gamma` cannot be holomorphic there.  See
-`Riemann/Mathlib/Analysis/SpecialFunctions/Gamma/GammaSlitPlane_PR_PLAN.md` for details.
-
-A principled complex formulation should instead use a holomorphic branch of `log Γ`
+`Complex.log ∘ Complex.Gamma` cannot be holomorphic there.  A complex formulation should instead use
+a holomorphic branch of `log Γ`
 (often called `logGamma`) on a suitable simply-connected domain.
 -/
 
@@ -242,7 +238,8 @@ private lemma R_sub_R_add_one {x : ℝ} (hx : 0 < x) :
   have hS := stirlingMainReal_add_one_sub (x := x) hx
   -- rearrange
   calc
-    (Real.log (Real.Gamma x) - stirlingMainReal x) - (Real.log (Real.Gamma (x + 1)) - stirlingMainReal (x + 1))
+    (Real.log (Real.Gamma x) - stirlingMainReal x)
+        - (Real.log (Real.Gamma (x + 1)) - stirlingMainReal (x + 1))
         = (stirlingMainReal (x + 1) - stirlingMainReal x) -
             (Real.log (Real.Gamma (x + 1)) - Real.log (Real.Gamma x)) := by ring
     _ = (Real.log x + (x + 1 / 2) * Real.log (1 + 1 / x) - 1) - Real.log x := by
@@ -641,7 +638,7 @@ theorem re_J_sub_re_J_add_one {x : ℝ} (hx : 0 < x) :
             ∀ u ∈ Set.Icc (0 : ℝ) 1,
               ‖F t u‖ ≤ (Real.exp (-t * x) / 2 : ℝ) := by
           intro u hu
-          -- same bound as above, but without the `ae` wrapper
+          -- Pointwise version of the estimate used under the integral.
           have hu0 : 0 ≤ u := hu.1
           have hu1 : u ≤ 1 := hu.2
           have h_abs : |(1 / 2 - u) * Real.exp (-u * t)| ≤ (1 / 2 : ℝ) := by
@@ -1689,14 +1686,10 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
       have : |(Binet.J (y : ℂ)).re - 0| < ε := by
         simpa using lt_of_le_of_lt hbound h1
       simpa [Real.dist_eq] using this
-    -- `h = R - re(J)` and both terms tend to `0` at `∞`
     have hlim : Tendsto h atTop (𝓝 0) := by
-      -- this is a small combination of limits, but can be heartbeat-heavy in a huge context
       simpa [h, sub_eq_add_neg] using hRlim.add (hJlim.neg)
-    -- use periodicity + limit to show `h x = 0`
     have hxseq : Tendsto (fun n : ℕ => h (x + n)) atTop (𝓝 0) := by
       have hxadd : Tendsto (fun n : ℕ => (x + n : ℝ)) atTop atTop := by
-        -- `x + n → ∞`
         have hnx : Tendsto (fun n : ℕ => ((n : ℝ) + x)) atTop atTop :=
           Filter.Tendsto.atTop_add tendsto_natCast_atTop_atTop tendsto_const_nhds
         simpa [add_assoc, add_comm, add_left_comm] using hnx
@@ -1707,36 +1700,24 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
       | zero => simp [h]
       | succ n ih =>
         have hxpos : 0 < x + n := by linarith [hx]
-        -- use periodicity once and the IH
-        -- `x + (n+1) = (x+n) + 1`
         have hstep : h (x + (n + 1)) = h (x + n) := by
           simpa [add_assoc, add_comm, add_left_comm] using (h_periodic (x + n) hxpos).symm
-        -- now finish by IH
         simpa [ih] using hstep
     rw [hconst] at hxseq
     have hx0' : h x = 0 := tendsto_const_nhds_iff.mp hxseq
-    -- unfold `h`
     dsimp [h] at hx0'
     linarith
-  -- Convert back to the desired Binet formula.
   have hmain : Real.log (Real.Gamma x) = stirlingMainReal x + (Binet.J (x : ℂ)).re := by
-    -- add `stirlingMainReal x` to the identity `R x = re (J x)` and cancel
     have hR' : R x + stirlingMainReal x = (Binet.J (x : ℂ)).re + stirlingMainReal x :=
       congrArg (fun r : ℝ => r + stirlingMainReal x) hR
-    -- unfold `R` and cancel on the LHS
     have hlog : Real.log (Real.Gamma x) = (Binet.J (x : ℂ)).re + stirlingMainReal x := by
-      -- avoid a big `simp` step in a large context: unfold and rewrite directly
       have hR'' := hR'
       dsimp [R] at hR''
-      -- `log Γ x - S x + S x = log Γ x`
       rw [sub_add_cancel] at hR''
       exact hR''
-    -- commute once on the RHS (avoid `simp` with `add_comm`)
     have hlog' := hlog
     rw [add_comm] at hlog'
     exact hlog'
-  -- final rearrangement
-  -- unfold the definition of the Stirling main term without a big `simp` step
   have hmain' := hmain
   dsimp [stirlingMainReal] at hmain'
   exact hmain'
@@ -1802,76 +1783,33 @@ theorem Gamma_bound_one_two' {s : ℂ} (hs_lo : 1 ≤ s.re) (hs_hi : s.re ≤ 2)
 end Stirling.GammaAux
 
 /-!
-## Compatibility / centralized API (`BinetFormula.*`)
+## Real Binet integral bounds
 
-Some downstream files historically refer to results in this file via the namespace `BinetFormula`.
-The core development lives in `namespace Binet`; we provide thin wrappers here to keep the
-namespace stable while we progressively centralize the Gamma/Stirling API inside `Riemann/Mathlib`.
+The following real-variable estimates are the Binet correction bounds used in the proof of
+Robbins' refinement of Stirling's formula.
 -/
 
 @[expose] public section
 
-namespace BinetFormula
+namespace Binet
 
 open Real Complex Set MeasureTheory Filter Topology BinetKernel
 open scoped BigOperators
 
-/-- Real-part version of the Binet integral: for `x > 0`,
-`re (J x) = ∫₀^∞ K̃(t) * exp(-t*x) dt`. -/
-theorem re_J_eq_integral_Ktilde {x : ℝ} (hx : 0 < x) :
-    (Binet.J (x : ℂ)).re = ∫ t in Set.Ioi (0 : ℝ), BinetKernel.Ktilde t * Real.exp (-t * x) := by
-  have hx' : 0 < (x : ℂ).re := by simpa using hx
-  -- unfold `J`
-  rw [Binet.J_eq_integral (z := (x : ℂ)) hx']
-  -- move `re` inside the integral
-  have hInt :
-      Integrable (fun t : ℝ => (BinetKernel.Ktilde t : ℂ) * Complex.exp (-t * (x : ℂ)))
-        (volume.restrict (Set.Ioi (0 : ℝ))) :=
-    Binet.J_well_defined (z := (x : ℂ)) hx'
-  have hre :
-      ∫ t in Set.Ioi (0 : ℝ),
-          ((BinetKernel.Ktilde t : ℂ) * Complex.exp (-t * (x : ℂ))).re
-        = (∫ t in Set.Ioi (0 : ℝ),
-              (BinetKernel.Ktilde t : ℂ) * Complex.exp (-t * (x : ℂ))).re := by
-    simpa using
-      (integral_re (μ := volume.restrict (Set.Ioi (0 : ℝ)))
-        (f := fun t : ℝ => (BinetKernel.Ktilde t : ℂ) * Complex.exp (-t * (x : ℂ))) hInt)
-  -- rewrite `re (∫ ...)` using `hre`
-  rw [← hre]
-  -- pointwise simplification to a real integrand
-  refine MeasureTheory.setIntegral_congr_fun measurableSet_Ioi ?_
-  intro t _ht
-  -- Unfold the (β-reduced) pointwise goal.
-  dsimp
-  have hexp : Complex.exp (-t * (x : ℂ)) = (Real.exp (-t * x) : ℂ) := by
-    have harg : (-t * (x : ℂ)) = ((-t * x : ℝ) : ℂ) := by
-      simp
-    calc
-      Complex.exp (-t * (x : ℂ)) = Complex.exp ((-t * x : ℝ) : ℂ) := by
-        simp [harg]
-      _ = (Real.exp (-t * x) : ℂ) := by
-        simp
-  -- Reduce the integrand to a product of real numbers coerced to `ℂ`, then take real parts.
-  -- Important: avoid rewriting `(Real.exp _ : ℂ)` back into `Complex.exp _` (`Complex.ofReal_exp` is a simp lemma).
-  rw [hexp]
-  simp [-Complex.ofReal_exp]
-
 /-- Integrability of the real Binet integrand `K̃(t) * exp(-t*x)` on `(0,∞)` for `x > 0`. -/
 theorem integrable_Ktilde_mul_exp_neg_mul {x : ℝ} (hx : 0 < x) :
     IntegrableOn (fun t : ℝ => BinetKernel.Ktilde t * Real.exp (-t * x)) (Set.Ioi 0) := by
-  -- this is exactly the helper lemma already proved in `namespace Binet`
   simpa using (Binet.integrable_Ktilde_mul_exp_real (x := x) hx)
 
 /-- **Positivity of the Binet integral (real part).**
 
 For `x > 0`, the Binet correction term satisfies `(Binet.J x).re > 0`. -/
 theorem re_J_pos {x : ℝ} (hx : 0 < x) : 0 < (Binet.J (x : ℂ)).re := by
-  -- Rewrite the real part of `J` as a real set integral.
   have hJ : (Binet.J (x : ℂ)).re =
       ∫ t in Set.Ioi (0 : ℝ), BinetKernel.Ktilde t * Real.exp (-t * x) :=
     re_J_eq_integral_Ktilde (x := x) hx
-  -- Find a small interval `(0, δ]` on which `Ktilde t ≥ 1/24`.
-  have hpos_event : ∀ᶠ t in nhdsWithin (0 : ℝ) (Set.Ioi 0), (1 / 24 : ℝ) < BinetKernel.Ktilde t := by
+  have hpos_event :
+      ∀ᶠ t in nhdsWithin (0 : ℝ) (Set.Ioi 0), (1 / 24 : ℝ) < BinetKernel.Ktilde t := by
     have h :=
       (BinetKernel.tendsto_Ktilde_zero :
         Tendsto BinetKernel.Ktilde (nhdsWithin (0 : ℝ) (Set.Ioi 0)) (nhds (1 / 12 : ℝ)))
@@ -1886,8 +1824,6 @@ theorem re_J_pos {x : ℝ} (hx : 0 < x) : 0 < (Binet.J (x : ℂ)).re := by
   rcases (Metric.mem_nhds_iff).1 (IsOpen.mem_nhds hu_open hu0) with ⟨ε, hεpos, hball⟩
   set δ : ℝ := ε / 2
   have hδpos : 0 < δ := by exact half_pos hεpos
-
-  -- Lower bound the integrand by a positive constant on `Ioc 0 δ`.
   have hK_lower : ∀ t ∈ Set.Ioc (0 : ℝ) δ, (1 / 24 : ℝ) ≤ BinetKernel.Ktilde t := by
     intro t ht
     have ht_pos : t ∈ Set.Ioi (0 : ℝ) := ht.1
@@ -1899,16 +1835,13 @@ theorem re_J_pos {x : ℝ} (hx : 0 < x) : 0 < (Binet.J (x : ℂ)).re := by
       exact hball ht_ball
     have : t ∈ {t : ℝ | (1 / 24 : ℝ) < BinetKernel.Ktilde t} := hu_sub ⟨ht_u, ht_pos⟩
     exact le_of_lt (by simpa using this)
-
   have hExp_lower : ∀ t ∈ Set.Ioc (0 : ℝ) δ, Real.exp (-δ * x) ≤ Real.exp (-t * x) := by
     intro t ht
     have hx0 : 0 ≤ x := le_of_lt hx
     have ht_le : t ≤ δ := ht.2
     have hmul : -δ * x ≤ -t * x := by
-      -- since `t ≤ δ` and `x ≥ 0`
       nlinarith [ht_le, hx0]
     exact Real.exp_le_exp.mpr hmul
-
   have hconst_le :
       ∀ t ∈ Set.Ioc (0 : ℝ) δ,
         (1 / 24 : ℝ) * Real.exp (-δ * x) ≤ BinetKernel.Ktilde t * Real.exp (-t * x) := by
@@ -1924,19 +1857,19 @@ theorem re_J_pos {x : ℝ} (hx : 0 < x) : 0 < (Binet.J (x : ℂ)).re := by
               exact mul_le_mul_of_nonneg_right h1 (Real.exp_nonneg _)
       _ ≤ (BinetKernel.Ktilde t) * Real.exp (-t * x) := by
               exact mul_le_mul_of_nonneg_left h2 hK0
-
-  -- Integrate the lower bound on `Ioc 0 δ`, then compare to the integral on `Ioi 0`.
-  have hInt_on : IntegrableOn (fun t : ℝ => BinetKernel.Ktilde t * Real.exp (-t * x)) (Set.Ioi 0) volume :=
+  have hInt_on :
+      IntegrableOn
+        (fun t : ℝ => BinetKernel.Ktilde t * Real.exp (-t * x)) (Set.Ioi 0) volume :=
     (integrable_Ktilde_mul_exp_neg_mul (x := x) hx)
-  have hInt_Ioc : IntegrableOn (fun t : ℝ => BinetKernel.Ktilde t * Real.exp (-t * x)) (Set.Ioc 0 δ) volume :=
+  have hInt_Ioc :
+      IntegrableOn
+        (fun t : ℝ => BinetKernel.Ktilde t * Real.exp (-t * x)) (Set.Ioc 0 δ) volume :=
     hInt_on.mono_set (Set.Ioc_subset_Ioi_self)
   have hμ_Ioc : (volume (Set.Ioc (0 : ℝ) δ)) ≠ (⊤ : ENNReal) := by
-    -- `volume (Ioc 0 δ) = ENNReal.ofReal δ`.
     simp [Real.volume_Ioc]
   have hlower_int :
       (1 / 24 : ℝ) * Real.exp (-δ * x) * (volume.real (Set.Ioc (0 : ℝ) δ))
         ≤ ∫ t in Set.Ioc (0 : ℝ) δ, BinetKernel.Ktilde t * Real.exp (-t * x) := by
-    -- Use the general constant lower bound lemma.
     have : ((1 / 24 : ℝ) * Real.exp (-δ * x)) * volume.real (Set.Ioc (0 : ℝ) δ)
         ≤ ∫ t in Set.Ioc (0 : ℝ) δ, BinetKernel.Ktilde t * Real.exp (-t * x) := by
       simpa [mul_comm, mul_left_comm, mul_assoc] using
@@ -1945,11 +1878,9 @@ theorem re_J_pos {x : ℝ} (hx : 0 < x) : 0 < (Binet.J (x : ℂ)).re := by
           (c := (1 / 24 : ℝ) * Real.exp (-δ * x)) (hs := measurableSet_Ioc)
           (hμs := hμ_Ioc) (hf := hconst_le) (hfint := hInt_Ioc))
     simpa [mul_assoc] using this
-
   have hIoc_le :
       ∫ t in Set.Ioc (0 : ℝ) δ, BinetKernel.Ktilde t * Real.exp (-t * x)
         ≤ ∫ t in Set.Ioi (0 : ℝ), BinetKernel.Ktilde t * Real.exp (-t * x) := by
-    -- Monotonicity in the domain for nonnegative functions.
     have hf_nonneg : 0 ≤ᵐ[volume.restrict (Set.Ioi (0 : ℝ))]
         (fun t : ℝ => BinetKernel.Ktilde t * Real.exp (-t * x)) := by
       filter_upwards [self_mem_ae_restrict measurableSet_Ioi] with t ht
@@ -1960,18 +1891,14 @@ theorem re_J_pos {x : ℝ} (hx : 0 < x) : 0 < (Binet.J (x : ℂ)).re := by
       intro t ht
       exact ht.1
     exact MeasureTheory.setIntegral_mono_set (μ := volume) (hfi := hInt_on) hf_nonneg hst
-
   have hμpos : 0 < volume.real (Set.Ioc (0 : ℝ) δ) := by
-    -- `volume.real (Ioc 0 δ) = δ` for `0 ≤ δ`.
     have hvol : volume.real (Set.Ioc (0 : ℝ) δ) = δ := by
-      simpa [sub_zero] using (Real.volume_real_Ioc_of_le (a := (0 : ℝ)) (b := δ) (by exact le_of_lt hδpos))
+      simpa [sub_zero] using
+        (Real.volume_real_Ioc_of_le (a := (0 : ℝ)) (b := δ) (by exact le_of_lt hδpos))
     simpa [hvol] using hδpos
-
   have hconst_pos : 0 < (1 / 24 : ℝ) * Real.exp (-δ * x) := by
     have : (0 : ℝ) < (1 / 24 : ℝ) := by norm_num
     exact mul_pos this (Real.exp_pos _)
-
-  -- Combine bounds: integral over Ioi 0 is ≥ integral over Ioc 0 δ ≥ positive constant.
   have hpos :
       0 < ∫ t in Set.Ioi (0 : ℝ), BinetKernel.Ktilde t * Real.exp (-t * x) := by
     have : 0 < (1 / 24 : ℝ) * Real.exp (-δ * x) * volume.real (Set.Ioc (0 : ℝ) δ) := by
@@ -1980,13 +1907,9 @@ theorem re_J_pos {x : ℝ} (hx : 0 < x) : 0 < (Binet.J (x : ℂ)).re := by
           ≤ ∫ t in Set.Ioi (0 : ℝ), BinetKernel.Ktilde t * Real.exp (-t * x) :=
       le_trans hlower_int hIoc_le
     exact lt_of_lt_of_le this h1
-
-  -- Conclude.
   simpa [hJ] using hpos
 
-/-- **Upper bound for the Binet integral (real part).**
-
-For `x > 0`, we have `(Binet.J x).re ≤ 1/(12x)`. -/
+/-- Upper bound for the real Binet integral. -/
 theorem re_J_le_one_div_twelve {x : ℝ} (hx : 0 < x) :
     (Binet.J (x : ℂ)).re ≤ 1 / (12 * x) := by
   have hJ : (Binet.J (x : ℂ)).re =
@@ -2004,7 +1927,7 @@ theorem re_J_le_one_div_twelve {x : ℝ} (hx : 0 < x) :
       exact Binet.Ktilde_mul_exp_le (x := x) t ht
   -- compute the RHS integral explicitly
   have hint : (∫ t in Set.Ioi (0 : ℝ), (12 : ℝ)⁻¹ * Real.exp (-(t * x))) = x⁻¹ * (12 : ℝ)⁻¹ := by
-    -- normalize the exponent as `-(t * x)` to match simp-normal forms downstream
+    -- Normalize the exponent as `-(t * x)`.
     have hbase : ∫ t in Set.Ioi (0 : ℝ), Real.exp (-(t * x)) = 1 / x := by
       simpa [mul_assoc, mul_comm, mul_left_comm] using (Binet.integral_exp_neg_mul_Ioi (x := x) hx)
     calc
@@ -2036,47 +1959,33 @@ theorem re_J_le_one_div_twelve {x : ℝ} (hx : 0 < x) :
         = ∫ t in Set.Ioi (0 : ℝ), BinetKernel.Ktilde t * Real.exp (-t * x) := hJ
     _ ≤ 1 / (12 * x) := hmono''
 
-/-- Compatibility alias: historical name for the (non-strict) upper bound on `re (J x)`. -/
+/-- Strict upper bound for the real Binet integral. -/
 theorem re_J_lt_one_div_twelve {x : ℝ} (hx : 0 < x) :
     (Binet.J (x : ℂ)).re < 1 / (12 * x) := by
   -- Rewrite `re (J x)` as a real set integral.
   have hJ : (Binet.J (x : ℂ)).re =
       ∫ t in Set.Ioi (0 : ℝ), BinetKernel.Ktilde t * Real.exp (-t * x) :=
     re_J_eq_integral_Ktilde (x := x) hx
-
-  -- Set up integrands.
   let f : ℝ → ℝ := fun t => BinetKernel.Ktilde t * Real.exp (-t * x)
   let g : ℝ → ℝ := fun t => (1 / 12 : ℝ) * Real.exp (-t * x)
   let h : ℝ → ℝ := fun t => g t - f t
-
   have hf_int : IntegrableOn f (Set.Ioi (0 : ℝ)) volume := by
     simpa [f] using (integrable_Ktilde_mul_exp_neg_mul (x := x) hx)
   have hg_int : IntegrableOn g (Set.Ioi (0 : ℝ)) volume := by
-    -- helper lemma in `namespace Binet`
     simpa [g] using (Binet.integrable_const_mul_exp (x := x) hx)
-
-  -- The gap integrand is nonnegative on `(0,∞)`.
   have hh_nonneg : 0 ≤ᵐ[volume.restrict (Set.Ioi (0 : ℝ))] h := by
-    -- reduce to an `ae` statement on `volume` using `ae_restrict_iff'`
     have : ∀ᵐ t ∂volume, t ∈ Set.Ioi (0 : ℝ) → 0 ≤ h t := by
       refine MeasureTheory.ae_of_all _ ?_
       intro t ht
       have hK : BinetKernel.Ktilde t ≤ (1 / 12 : ℝ) := BinetKernel.Ktilde_le (le_of_lt ht)
       have hE : 0 ≤ Real.exp (-t * x) := Real.exp_nonneg _
       dsimp [h, f, g]
-      -- `0 ≤ a - b` follows from `b ≤ a`.
       refine sub_nonneg.2 ?_
       exact mul_le_mul_of_nonneg_right hK hE
     exact (MeasureTheory.ae_restrict_iff' (μ := volume) (s := Set.Ioi (0 : ℝ)) measurableSet_Ioi).2 this
-
   have hh_int : IntegrableOn h (Set.Ioi (0 : ℝ)) volume := by
-    -- `h = g - f`
     simpa [h] using (hg_int.sub hf_int)
-
-  -- The gap integrand is *strictly* positive everywhere on `(0,∞)`, hence its support on `(0,∞)`
-  -- has positive measure, hence its integral is positive.
   have hμ_support : (0 : ENNReal) < volume (Function.support h ∩ Set.Ioi (0 : ℝ)) := by
-    -- `Ioc 0 1 ⊆ support h ∩ Ioi 0`
     have hsub : Set.Ioc (0 : ℝ) 1 ⊆ Function.support h ∩ Set.Ioi (0 : ℝ) := by
       intro t ht
       have ht0 : 0 < t := ht.1
@@ -2084,10 +1993,8 @@ theorem re_J_lt_one_div_twelve {x : ℝ} (hx : 0 < x) :
       have hK : BinetKernel.Ktilde t < (1 / 12 : ℝ) := BinetKernel.Ktilde_lt ht0
       have hE : 0 < Real.exp (-t * x) := Real.exp_pos _
       have : h t ≠ 0 := by
-        -- show `h t > 0`
         have : 0 < h t := by
           dsimp [h, f, g]
-          -- `0 < a - b` follows from `b < a`
           have hlt : BinetKernel.Ktilde t * Real.exp (-t * x) < (1 / 12 : ℝ) * Real.exp (-t * x) := by
             exact mul_lt_mul_of_pos_right hK hE
           exact sub_pos.2 hlt
@@ -2095,32 +2002,23 @@ theorem re_J_lt_one_div_twelve {x : ℝ} (hx : 0 < x) :
       have ht_support : t ∈ Function.support h := by
         simp [Function.mem_support, this]
       exact ⟨ht_support, htI⟩
-    -- the volume of `Ioc 0 1` is positive
     have hvol_pos : (0 : ENNReal) < volume (Set.Ioc (0 : ℝ) 1) := by simp
     exact lt_of_lt_of_le hvol_pos (measure_mono hsub)
-
   have hh_pos : 0 < ∫ t in Set.Ioi (0 : ℝ), h t := by
     have := (MeasureTheory.setIntegral_pos_iff_support_of_nonneg_ae (μ := volume)
       (s := Set.Ioi (0 : ℝ)) (f := h) hh_nonneg hh_int).2 hμ_support
     simpa using this
-
-  -- Convert positivity of the gap integral into strict inequality of integrals.
   have hsub_eq :
       (∫ t in Set.Ioi (0 : ℝ), h t) =
         (∫ t in Set.Ioi (0 : ℝ), g t) - (∫ t in Set.Ioi (0 : ℝ), f t) := by
-    -- use `integral_sub` under the restricted measure
     simpa [h, sub_eq_add_neg] using
       (MeasureTheory.integral_sub (μ := volume.restrict (Set.Ioi (0 : ℝ))) (hf := hg_int) (hg := hf_int))
-
   have hlt_fg : (∫ t in Set.Ioi (0 : ℝ), f t) < (∫ t in Set.Ioi (0 : ℝ), g t) := by
     have : 0 < (∫ t in Set.Ioi (0 : ℝ), g t) - (∫ t in Set.Ioi (0 : ℝ), f t) := by
       simpa [hsub_eq] using hh_pos
     exact (sub_pos.mp this)
-
-  -- Compute the RHS integral.
   have hg_val : (∫ t in Set.Ioi (0 : ℝ), g t) = 1 / (12 * x) := by
     have hbase : ∫ t in Set.Ioi (0 : ℝ), Real.exp (-(t * x)) = 1 / x := by
-      -- normalize as `-(t * x)` to avoid simp-normalization issues
       simpa [mul_assoc, mul_comm, mul_left_comm] using (Binet.integral_exp_neg_mul_Ioi (x := x) hx)
     calc
       (∫ t in Set.Ioi (0 : ℝ), g t)
@@ -2128,23 +2026,11 @@ theorem re_J_lt_one_div_twelve {x : ℝ} (hx : 0 < x) :
               simp [g, MeasureTheory.integral_const_mul, mul_comm]
       _ = (1 / 12 : ℝ) * (1 / x) := by simp [hbase]
       _ = 1 / (12 * x) := by ring
-
-  -- Finish.
-  -- `re (J x) = ∫ f` and `∫ f < ∫ g = 1/(12x)`.
   have : (Binet.J (x : ℂ)).re < 1 / (12 * x) := by
-    -- rewrite `re (J x)` to `∫ f`
     have : (∫ t in Set.Ioi (0 : ℝ), f t) < 1 / (12 * x) := by
-      -- use the computed value of `∫ g`
       have : (∫ t in Set.Ioi (0 : ℝ), f t) < (∫ t in Set.Ioi (0 : ℝ), g t) := hlt_fg
       exact lt_of_lt_of_eq this hg_val
     simpa [hJ, f] using this
   exact this
 
-/-- Compatibility wrapper: real Binet formula for `log Γ(x)` on `x > 0`. -/
-theorem Real_log_Gamma_eq_Binet {x : ℝ} (hx : 0 < x) :
-    Real.log (Real.Gamma x) =
-      (x - 1 / 2) * Real.log x - x + Real.log (2 * Real.pi) / 2 + (Binet.J x).re := by
-  -- This is the `Binet`-namespace statement (currently proved elsewhere in the development).
-  simpa using (Binet.log_Gamma_real_eq (x := x) hx)
-
-end BinetFormula
+end Binet

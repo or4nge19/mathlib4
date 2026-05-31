@@ -25,17 +25,8 @@ These bounds are derived from Binet's formula and the bounds on the Binet integr
 * `Stirling.log_factorial_theta`: log(n!) = n log n - n + log(2πn)/2 + θ/(12n)
 * `Stirling.factorial_asymptotic`: n! ~ √(2πn)(n/e)^n
 
-## Dependencies
-
-This file builds on:
-- `BinetKernel.lean`: The kernel K̃(t) with bounds 0 ≤ K̃(t) ≤ 1/12
-- `BinetFormula.lean`: The Binet integral J(z) with bound |J(z)| ≤ 1/(12·Re(z))
-
-## Strategy
-
-1. Apply Binet's formula to `Γ n` and use `Γ(n + 1) = n * Γ n`.
-2. Use the bounds `0 ≤ J n ≤ 1 / (12 * n)`.
-3. For the lower bound, use the refined kernel estimate behind Robbins' correction term.
+The proof applies Binet's formula to `Γ n`, uses `Γ(n + 1) = n * Γ n`, and bounds the Binet
+correction term by the kernel estimates from `BinetFormula`.
 
 ## References
 
@@ -81,13 +72,15 @@ theorem log_factorial_theta {n : ℕ} (hn : 0 < n) :
   let x : ℝ := n
   have hx : 0 < x := Nat.cast_pos.mpr hn
   -- Binet formula for log Gamma(x)
-  have h_binet : Real.log (Real.Gamma x) = (x - 1/2) * Real.log x - x + Real.log (2 * Real.pi) / 2 + (Binet.J x).re := by
-    exact BinetFormula.Real_log_Gamma_eq_Binet hx
+  have h_binet :
+      Real.log (Real.Gamma x) =
+        (x - 1/2) * Real.log x - x + Real.log (2 * Real.pi) / 2 + (Binet.J x).re := by
+    exact Binet.log_Gamma_real_eq hx
   -- Bounds on J(x)
   have h_J_bounds : 0 < (Binet.J x).re ∧ (Binet.J x).re < 1 / (12 * x) := by
     constructor
-    · exact BinetFormula.re_J_pos hx
-    · exact BinetFormula.re_J_lt_one_div_twelve hx
+    · exact Binet.re_J_pos hx
+    · exact Binet.re_J_lt_one_div_twelve hx
   rcases h_J_bounds with ⟨hJ_pos, hJ_ub⟩
   let θ := 12 * x * (Binet.J x).re
   use θ
@@ -183,7 +176,7 @@ lemma J_lower_bound (n : ℕ) :
   -- rewrite the real part of `J` using the `x` notation
   have hJ : (Binet.J (n + 1 : ℂ)).re =
       ∫ t in Ioi (0 : ℝ), BinetKernel.Ktilde t * Real.exp (-t * x) := by
-    simpa [x] using (BinetFormula.re_J_eq_integral_Ktilde (x := x) hx)
+    simpa [x] using (Binet.re_J_eq_integral_Ktilde (x := x) hx)
   rw [hJ]
   -- We use the bound K̃(t) ≥ (1/12) * e^{-t/12}
   have h_bound : ∀ t ∈ Ioi 0, (1/12) * Real.exp (-t/12) ≤ BinetKernel.Ktilde t := by
@@ -227,7 +220,7 @@ lemma J_lower_bound (n : ℕ) :
         _ = (1 / 12 : ℝ) * Real.exp (-t / 12) * Real.exp (-t * x) := by simp [mul_assoc]
     -- apply monotonicity under `ae` on the restricted measure
     refine MeasureTheory.setIntegral_mono_ae_restrict h_left_int
-      (BinetFormula.integrable_Ktilde_mul_exp_neg_mul hx) ?_
+      (Binet.integrable_Ktilde_mul_exp_neg_mul hx) ?_
     filter_upwards [self_mem_ae_restrict (measurableSet_Ioi)] with t ht
     gcongr
     exact h_bound t ht
@@ -294,8 +287,10 @@ theorem factorial_lower_robbins (n : ℕ) (hn : 0 < n) :
       rw [← Real.log_mul (Nat.cast_ne_zero.mpr (ne_of_gt hn)) (Real.Gamma_pos_of_pos (Nat.cast_pos.mpr hn)).ne']
       rw [← Real.Gamma_add_one (Nat.cast_ne_zero.mpr (ne_of_gt hn))]
       rw [Real.Gamma_nat_eq_factorial]
-    have h_binet : Real.log (Real.Gamma n) = (n - 1/2) * Real.log n - n + Real.log (2 * Real.pi) / 2 + (Binet.J n).re := by
-      exact BinetFormula.Real_log_Gamma_eq_Binet hn_pos
+    have h_binet :
+        Real.log (Real.Gamma n) =
+          (n - 1/2) * Real.log n - n + Real.log (2 * Real.pi) / 2 + (Binet.J n).re := by
+      exact Binet.log_Gamma_real_eq hn_pos
     rw [h_fact, h_binet]
     have h2pi_pos : (0 : ℝ) < 2 * Real.pi := by nlinarith [Real.pi_pos]
     rw [Real.log_mul h2pi_pos.ne' (Nat.cast_pos.mpr hn).ne']
