@@ -683,14 +683,11 @@ theorem re_J_sub_re_J_add_one {x : ℝ} (hx : 0 < x) :
           refine MeasureTheory.ae_of_all _ ?_
           intro u hu
           exact h_point u hu
-        -- integrate the inequality
         have hconst :
             (∫ u : ℝ, (Real.exp (-t * x) / 2 : ℝ) ∂(volume.restrict (Set.Icc (0 : ℝ) 1)))
               = Real.exp (-t * x) / 2 := by
-          -- integral of a constant over a set of measure 1
           simp
         have hF_integrable : Integrable (fun u : ℝ => F t u) (volume.restrict (Set.Icc (0 : ℝ) 1)) := by
-          -- F is continuous, hence integrable on a compact set
           apply Continuous.integrableOn_Icc
           unfold F
           fun_prop
@@ -704,39 +701,31 @@ theorem re_J_sub_re_J_add_one {x : ℝ} (hx : 0 < x) :
           simp_rw [Real.norm_eq_abs] at hmono
           exact hmono
         have := MeasureTheory.integral_mono_ae habs_integrable hconst_integrable hmono'
-        -- rewrite RHS
         simpa [hconst] using this
-      -- show integrability via `Integrable.mono'`
       have hdom : Integrable (fun t : ℝ => (Real.exp (-t * x) / 2 : ℝ))
           (volume.restrict (Set.Ioi (0 : ℝ))) := by
-        -- integrable on `(0,∞)` since `x>0`
         have hx' : 0 < x := hx
         have : IntegrableOn (fun t : ℝ => Real.exp (-t * x)) (Set.Ioi 0) := by
-          -- `integrableOn_exp_mul_Ioi` with parameter `-x < 0`
           have h := integrableOn_exp_mul_Ioi (a := -x) (c := (0:ℝ)) (by linarith : (-x : ℝ) < 0)
           simp only [mul_comm] at h
           grind
-        -- scale by 1/2
         have h2 : IntegrableOn (fun t => Real.exp (-t * x) / 2) (Set.Ioi 0) := by
           simp only [div_eq_mul_inv]
           exact this.mul_const (2⁻¹)
         exact h2.integrable
       refine (MeasureTheory.Integrable.mono' (μ := volume.restrict (Set.Ioi (0 : ℝ))) (hg := hdom)
         ?_ ?_)
-      · -- measurability
-        have hmeas' :
+      · have hmeas' :
             AEStronglyMeasurable
               (fun t : ℝ =>
                 ∫ u : ℝ, ‖(Function.uncurry F) (t, u)‖ ∂(volume.restrict (Set.Icc (0 : ℝ) 1)))
               (volume.restrict (Set.Ioi (0 : ℝ))) := by
-          -- integrals of measurable functions are a.e. strongly measurable
           have hF_meas' : AEStronglyMeasurable (fun p : ℝ × ℝ => ‖Function.uncurry F p‖)
               ((volume.restrict (Set.Ioi (0 : ℝ))).prod (volume.restrict (Set.Icc (0 : ℝ) 1))) := by
             exact AEStronglyMeasurable.norm hmeas
           exact AEStronglyMeasurable.integral_prod_right' hF_meas'
         exact hmeas'
-      · -- bound: need ‖∫ ... ‖ ≤ bound, use that integral of norms ≤ bound
-        filter_upwards [hbound] with t ht
+      · filter_upwards [hbound] with t ht
         calc ‖∫ u : ℝ, ‖Function.uncurry F (t, u)‖ ∂volume.restrict (Icc 0 1)‖
             = ∫ u : ℝ, ‖Function.uncurry F (t, u)‖ ∂volume.restrict (Icc 0 1) := by
               apply Real.norm_of_nonneg
@@ -744,22 +733,18 @@ theorem re_J_sub_re_J_add_one {x : ℝ} (hx : 0 < x) :
               intro u
               exact norm_nonneg _
           _ ≤ rexp (-t * x) / 2 := ht
-  -- Apply Fubini swap.
   have hswap :
       ∫ t in Set.Ioi (0 : ℝ),
           Real.exp (-t * x) * (∫ u in Set.Icc (0 : ℝ) 1, (1 / 2 - u) * Real.exp (-u * t))
         =
         ∫ u in Set.Icc (0 : ℝ) 1,
           ∫ t in Set.Ioi (0 : ℝ), Real.exp (-t * x) * ((1 / 2 - u) * Real.exp (-u * t)) := by
-    -- Start from the raw Fubini swap `∫t∫u F = ∫u∫t F`, then rewrite the LHS by pulling out
-    -- the `t`-dependent constant factor `exp (-t*x)` from the inner `u`-integral.
     have hswap0 :
         (∫ t in Set.Ioi (0 : ℝ), ∫ u in Set.Icc (0 : ℝ) 1, F t u) =
           ∫ u in Set.Icc (0 : ℝ) 1, ∫ t in Set.Ioi (0 : ℝ), F t u := by
       simpa [Function.uncurry] using
       (MeasureTheory.integral_integral_swap (μ := volume.restrict (Set.Ioi (0 : ℝ)))
         (ν := volume.restrict (Set.Icc (0 : ℝ) 1)) (f := fun t u => F t u) hF_int)
-    -- Rewrite the LHS into the desired factored form.
     have hLHS :
         (∫ t in Set.Ioi (0 : ℝ), ∫ u in Set.Icc (0 : ℝ) 1, F t u) =
           ∫ t in Set.Ioi (0 : ℝ),
@@ -768,15 +753,11 @@ theorem re_J_sub_re_J_add_one {x : ℝ} (hx : 0 < x) :
       refine (MeasureTheory.ae_restrict_iff' (μ := volume) (s := Set.Ioi (0 : ℝ)) measurableSet_Ioi).2 ?_
       refine MeasureTheory.ae_of_all _ ?_
       intro t ht
-      -- pointwise: factor out the constant `exp (-t*x)` from the inner integral
       have :
           (∫ u in Set.Icc (0 : ℝ) 1, F t u) =
             Real.exp (-t * x) * ∫ u in Set.Icc (0 : ℝ) 1, (1 / 2 - u) * Real.exp (-u * t) := by
-        -- unfold `F` and use `integral_const_mul`
-        -- keep the `exp (-t*x)` factor syntactically on the left so `integral_const_mul` can fire
         simp [F, MeasureTheory.integral_const_mul]
       simp [this]
-    -- Combine.
     have hswap1 :
         (∫ t in Set.Ioi (0 : ℝ),
             Real.exp (-t * x) * (∫ u in Set.Icc (0 : ℝ) 1, (1 / 2 - u) * Real.exp (-u * t))) =
@@ -790,7 +771,6 @@ theorem re_J_sub_re_J_add_one {x : ℝ} (hx : 0 < x) :
         _ = ∫ u in Set.Icc (0 : ℝ) 1, ∫ t in Set.Ioi (0 : ℝ), F t u := hswap0
     simpa [F] using hswap1
   rw [hswap]
-  -- evaluate the inner integral in `t`
   have hx0 : x ≠ 0 := ne_of_gt hx
   have h_inner :
       ∀ u ∈ Set.Icc (0 : ℝ) 1,
@@ -799,15 +779,12 @@ theorem re_J_sub_re_J_add_one {x : ℝ} (hx : 0 < x) :
     intro u hu
     have hu0 : 0 ≤ u := hu.1
     have hxu : 0 < x + u := by linarith [hx, hu0]
-    -- Pull out the constant factor `(1/2 - u)`
     have hmul :
         (∫ t in Set.Ioi (0 : ℝ), Real.exp (-t * x) * ((1 / 2 - u) * Real.exp (-u * t))) =
           (1 / 2 - u) * ∫ t in Set.Ioi (0 : ℝ), Real.exp (-(t * (x + u))) := by
-      -- rewrite `exp (-t*x) * exp (-u*t)` as `exp (-(t*(x+u)))`
       have hrew : (fun t : ℝ => Real.exp (-t * x) * ((1 / 2 - u) * Real.exp (-u * t))) =
           fun t : ℝ => (1 / 2 - u) * Real.exp (-(t * (x + u))) := by
         funext t
-        -- rearrange to isolate `exp (-t*x) * exp (-u*t)`
         have hexp :
             Real.exp (-t * x) * Real.exp (-u * t) = Real.exp ((-t * x) + (-u * t)) := by
           simpa using (Real.exp_add (-t * x) (-u * t)).symm
@@ -820,7 +797,6 @@ theorem re_J_sub_re_J_add_one {x : ℝ} (hx : 0 < x) :
                   simp; grind
           _ = (1 / 2 - u) * Real.exp (-(t * (x + u))) := by
                   simp; grind
-      -- rewrite the integrand using `hrew`, then pull out the constant factor `(1/2 - u)`
       have hrew_int :
           (∫ t in Set.Ioi (0 : ℝ), Real.exp (-t * x) * ((1 / 2 - u) * Real.exp (-u * t))) =
             ∫ t in Set.Ioi (0 : ℝ), (1 / 2 - u) * Real.exp (-(t * (x + u))) := by
@@ -830,10 +806,8 @@ theorem re_J_sub_re_J_add_one {x : ℝ} (hx : 0 < x) :
             = ∫ t in Set.Ioi (0 : ℝ), (1 / 2 - u) * Real.exp (-(t * (x + u))) := hrew_int
         _ = (1 / 2 - u) * ∫ t in Set.Ioi (0 : ℝ), Real.exp (-(t * (x + u))) := by
             simp [MeasureTheory.integral_const_mul]
-    -- compute ∫ exp (-(t*(x+u))) dt = 1/(x+u)
     have hbase : (∫ t in Set.Ioi (0 : ℝ), Real.exp (-(t * (x + u)))) = 1 / (x + u) := by
       simpa [mul_assoc, mul_comm, mul_left_comm] using (integral_exp_neg_mul_Ioi (x := x + u) hxu)
-    -- combine
     calc
       (∫ t in Set.Ioi (0 : ℝ), Real.exp (-t * x) * ((1 / 2 - u) * Real.exp (-u * t)))
           = (1 / 2 - u) * ∫ t in Set.Ioi (0 : ℝ), Real.exp (-(t * (x + u))) := hmul
@@ -846,8 +820,6 @@ theorem re_J_sub_re_J_add_one {x : ℝ} (hx : 0 < x) :
     intro u hu
     exact h_inner u hu
   rw [h_inner_int]
-  -- Evaluate the remaining `u`-integral on `[0,1]`.
-  -- First, rewrite the integrand as `(x+1/2)/(x+u) - 1`.
   have hrew_u :
       ∀ u ∈ Set.Icc (0 : ℝ) 1,
         (1 / 2 - u) * (1 / (x + u)) = (x + 1 / 2) * (1 / (x + u)) - 1 := by
@@ -865,13 +837,9 @@ theorem re_J_sub_re_J_add_one {x : ℝ} (hx : 0 < x) :
     intro u hu
     simpa using hrew_u u hu
   rw [hrew_u_int]
-  -- Substitute and compute.
-  -- The remaining computation is an elementary integral.
   have hxpos : 0 < x := hx
-  -- Convert the set integral `∫_{u∈[0,1]} 1/(x+u)` to an interval integral and use `integral_inv`.
   have h_shift :
       (∫ u in Set.Icc (0 : ℝ) 1, (1 / (x + u) : ℝ)) = Real.log (1 + 1 / x) := by
-    -- `∫_{0..1} 1/(x+u) du = ∫_{x..x+1} 1/u du = log ((x+1)/x) = log(1+1/x)`.
     have hIcc :
         (∫ u in Set.Icc (0 : ℝ) 1, (1 / (x + u) : ℝ)) = ∫ u in (0 : ℝ)..1, (1 / (x + u) : ℝ) := by
       have hIccIoc :
@@ -889,14 +857,11 @@ theorem re_J_sub_re_J_add_one {x : ℝ} (hx : 0 < x) :
             (by norm_num : (0 : ℝ) ≤ 1)).symm
       exact hIccIoc.trans hIoc
     rw [hIcc]
-    -- shift by `x`
     have hshift' :
         (∫ u in (0 : ℝ)..1, (1 / (x + u) : ℝ)) = ∫ u in x..(x + 1), (1 / u : ℝ) := by
-      -- `intervalIntegral.integral_comp_add_left`
       simp
     rw [hshift']
     have hx0' : (0 : ℝ) ∉ Set.uIcc x (x + 1) := by
-      -- since `x>0`, the whole segment is positive
       intro hxmem
       have hxle : x ≤ x + 1 := by linarith
       have hxmem' : (0 : ℝ) ∈ Set.Icc x (x + 1) := by
@@ -905,19 +870,13 @@ theorem re_J_sub_re_J_add_one {x : ℝ} (hx : 0 < x) :
       linarith [hxpos, hx_le0]
     have hinv : (∫ u in x..(x + 1), (u : ℝ)⁻¹) = Real.log ((x + 1) / x) := by
       simpa [one_div] using (integral_inv (a := x) (b := x + 1) hx0')
-    -- convert `1/u` to `u⁻¹` and simplify the log
     have hdiv : (x + 1) / x = 1 + 1 / x := by
       field_simp [hx0]
     simpa [one_div, hdiv] using hinv
-  -- Finally assemble the algebra.
-  -- We have: (x+1/2)*∫ 1/(x+u) - ∫ 1 = (x+1/2)*log(1+1/x) - 1.
   have hI1 : (∫ u in Set.Icc (0 : ℝ) 1, (1 : ℝ)) = 1 := by simp
-  -- finish
   have hx0 : x ≠ 0 := ne_of_gt hxpos
-  -- an `Integrable` witness to use `integral_add` (bounded on a finite-measure set)
   have hInt_inv :
       Integrable (fun u : ℝ => (x + u)⁻¹) (volume.restrict (Set.Icc (0 : ℝ) 1)) := by
-    -- bound by the constant `‖x⁻¹‖` since `x + u ≥ x > 0` on `[0,1]`
     refine (MeasureTheory.Integrable.mono' (μ := volume.restrict (Set.Icc (0 : ℝ) 1))
       (hg := MeasureTheory.integrable_const (c := ‖(x⁻¹ : ℝ)‖)) ?_ ?_)
     · exact (Measurable.inv ((measurable_const.add measurable_id))).aestronglyMeasurable
@@ -930,7 +889,6 @@ theorem re_J_sub_re_J_add_one {x : ℝ} (hx : 0 < x) :
       have hxupos : 0 < x + u := lt_of_lt_of_le hxpos' hxle
       have : (x + u)⁻¹ ≤ x⁻¹ := by
         simpa [one_div] using one_div_le_one_div_of_le hxpos' hxle
-      -- both sides are nonnegative, so norms are abs values and can be dropped
       have hnorm1 : ‖(x + u)⁻¹‖ = (x + u)⁻¹ := by
         simp [Real.norm_eq_abs, abs_of_pos hxupos]
       have hnorm2 : ‖(x⁻¹ : ℝ)‖ = x⁻¹ := by
@@ -951,17 +909,13 @@ theorem re_J_sub_re_J_add_one {x : ℝ} (hx : 0 < x) :
   have hmul_shift :
       (∫ u in Set.Icc (0 : ℝ) 1, (x + (1 / 2 : ℝ)) * (x + u)⁻¹)
         = (x + (1 / 2 : ℝ)) * Real.log (1 + 1 / x) := by
-    -- pull out the constant `(x+1/2)` and use `h_shift`
     calc
       (∫ u in Set.Icc (0 : ℝ) 1, (x + (1 / 2 : ℝ)) * (x + u)⁻¹)
           = (x + (1 / 2 : ℝ)) * ∫ u in Set.Icc (0 : ℝ) 1, (x + u)⁻¹ := by
               simp [MeasureTheory.integral_const_mul]
       _ = (x + (1 / 2 : ℝ)) * Real.log (1 + 1 / x) := by
               simpa [one_div] using congrArg (fun z => (x + (1 / 2 : ℝ)) * z) h_shift
-  -- put it together
   have hconst : (∫ u in Set.Icc (0 : ℝ) 1, (-1 : ℝ)) = -1 := by simp
-  -- The goal is `∫ (x + 1/2) * (1/(x+u)) - 1 = -1 + (x + 1/2) * log (x⁻¹ + 1)`.
-  -- First rewrite to `∫ (-1) + (x + 1/2) * (x+u)⁻¹`.
   have hrew_goal :
       (∫ u in Set.Icc (0 : ℝ) 1, (x + (1 / 2 : ℝ)) * (1 / (x + u)) - 1) =
         ∫ u in Set.Icc (0 : ℝ) 1, (-1 : ℝ) + (x + (1 / 2 : ℝ)) * (x + u)⁻¹ := by
@@ -975,40 +929,154 @@ theorem re_J_sub_re_J_add_one {x : ℝ} (hx : 0 < x) :
             rw [hadd, hconst, hmul_shift]
     _ = (x + (1 / 2 : ℝ)) * Real.log (1 + 1 / x) - 1 := by ring
 
-set_option maxHeartbeats 0 in
--- This proof chains several long convexity, asymptotic, and integral-comparison arguments.
+/-- The correction difference `R x - re (J x)` is invariant under `x ↦ x + 1`. -/
+private lemma R_sub_re_J_add_one {x : ℝ} (hx : 0 < x) :
+    R x - (Binet.J (x : ℂ)).re =
+      R (x + 1) - (Binet.J ((x + 1 : ℝ) : ℂ)).re := by
+  have hRrec := R_sub_R_add_one (x := x) hx
+  have hJrec := re_J_sub_re_J_add_one (x := x) hx
+  have hdiff :
+      R x - R (x + 1) =
+        (Binet.J (x : ℂ)).re - (Binet.J ((x : ℂ) + 1)).re := by
+    calc
+      R x - R (x + 1)
+          = (x + 1 / 2) * Real.log (1 + 1 / x) - 1 := hRrec
+      _ = (Binet.J (x : ℂ)).re - (Binet.J ((x : ℂ) + 1)).re := by
+          simpa using hJrec.symm
+  have :
+      R x - (Binet.J (x : ℂ)).re =
+        R (x + 1) - (Binet.J ((x : ℂ) + 1)).re := by
+    linarith [hdiff]
+  simpa using this
+
+/-- The real part of the Binet correction tends to zero on the positive real axis. -/
+theorem tendsto_re_J_atTop_zero :
+    Tendsto (fun y : ℝ => (Binet.J (y : ℂ)).re) atTop (𝓝 0) := by
+  rw [Metric.tendsto_atTop]
+  intro ε hε
+  refine ⟨(1 / (12 * ε) : ℝ) + 1, ?_⟩
+  intro y hy
+  have hy_pos : 0 < y := by
+    have : 0 < (1 / (12 * ε) : ℝ) := by positivity
+    have : 0 < (1 / (12 * ε) : ℝ) + 1 := by linarith
+    exact this.trans_le hy
+  have hbound : |(Binet.J (y : ℂ)).re| ≤ 1 / (12 * y) := by
+    exact le_trans (Complex.abs_re_le_norm (Binet.J (y : ℂ))) (J_norm_le_real (x := y) hy_pos)
+  have h1 : 1 / (12 * y) < ε := by
+    have hy' : 0 < 12 * y := by positivity
+    have hy_gt : (1 / (12 * ε) : ℝ) < y := by linarith
+    have hpos : 0 < (12 * ε : ℝ) := by positivity
+    have hmul :
+        (12 * ε : ℝ) * (1 / (12 * ε) : ℝ) < (12 * ε : ℝ) * y :=
+      mul_lt_mul_of_pos_left hy_gt hpos
+    have hleft : (12 * ε : ℝ) * (1 / (12 * ε) : ℝ) = 1 := by field_simp
+    rw [hleft] at hmul
+    have hbig : (1 : ℝ) < ε * (12 * y) := by
+      simpa [mul_assoc, mul_left_comm, mul_comm] using hmul
+    exact (div_lt_iff₀ hy').2 (by simpa [mul_assoc] using hbig)
+  have : |(Binet.J (y : ℂ)).re - 0| < ε := by
+    simpa using lt_of_le_of_lt hbound h1
+  simpa [Real.dist_eq] using this
+
+private lemma stirlingMainReal_floor_lower_step {y : ℝ} {n : ℕ}
+    (hn_pos : 0 < (n : ℝ)) (hy1 : 0 ≤ y - (1 / 2 : ℝ))
+    (ha_nonneg : 0 ≤ y - (n : ℝ)) (ha_le : y - (n : ℝ) ≤ 1)
+    (hlogy_ub : Real.log y ≤ Real.log (n : ℝ) + (y - (n : ℝ)) / (n : ℝ))
+    (hlognm1 : Real.log ((n - 1 : ℕ) : ℝ) ≥
+      Real.log (n : ℝ) - (2 : ℝ) / (n : ℝ)) :
+    stirlingMainReal (n : ℝ) +
+        (y - (n : ℝ)) * Real.log ((n - 1 : ℕ) : ℝ) - stirlingMainReal y ≥
+      - (3 / (n : ℝ)) := by
+  unfold stirlingMainReal
+  have hlogy_mul :
+      (y - (1 / 2 : ℝ)) * Real.log y ≤
+        (y - (1 / 2 : ℝ)) *
+          (Real.log (n : ℝ) + (y - (n : ℝ)) / (n : ℝ)) :=
+    mul_le_mul_of_nonneg_left hlogy_ub hy1
+  have hlognm1_mul :
+      (y - (n : ℝ)) * (Real.log (n : ℝ) - (2 : ℝ) / (n : ℝ)) ≤
+        (y - (n : ℝ)) * Real.log ((n - 1 : ℕ) : ℝ) :=
+    mul_le_mul_of_nonneg_left hlognm1 ha_nonneg
+  set a : ℝ := y - (n : ℝ) with ha
+  have ha0 : 0 ≤ a := by simpa [a] using ha_nonneg
+  have ha1 : a ≤ 1 := by simpa [a] using ha_le
+  have hn0 : (n : ℝ) ≠ 0 := ne_of_gt hn_pos
+  have hy_a : y = (n : ℝ) + a := by
+    dsimp [a]
+    ring
+  have hrew0 :
+      ((n - 1 / 2) * Real.log (n : ℝ) - (n : ℝ) + Real.log (2 * π) / 2
+          + (y - (n : ℝ)) * Real.log ((n - 1 : ℕ) : ℝ)
+          - ((y - 1 / 2) * Real.log y - y + Real.log (2 * π) / 2)) =
+        ((n - 1 / 2) * Real.log (n : ℝ) - (n : ℝ)
+          + a * Real.log ((n - 1 : ℕ) : ℝ)
+          + (-((y - 1 / 2) * Real.log y)) + y) := by
+    ring
+  have h1 :
+      a * (Real.log (n : ℝ) - (2 : ℝ) / (n : ℝ)) ≤
+        a * Real.log ((n - 1 : ℕ) : ℝ) := by
+    simpa [a] using hlognm1_mul
+  have h2 :
+      -((y - 1 / 2) * (Real.log (n : ℝ) + a / (n : ℝ))) ≤
+        -((y - 1 / 2) * Real.log y) := by
+    simpa [a] using neg_le_neg hlogy_mul
+  have hmain_lower :
+      ((n - 1 / 2) * Real.log (n : ℝ) - (n : ℝ)
+          + a * Real.log ((n - 1 : ℕ) : ℝ)
+          + (-((y - 1 / 2) * Real.log y)) + y) ≥
+        ((n - 1 / 2) * Real.log (n : ℝ) - (n : ℝ)
+          + a * (Real.log (n : ℝ) - (2 : ℝ) / (n : ℝ))
+          + (-((y - 1 / 2) * (Real.log (n : ℝ) + a / (n : ℝ)))) + y) := by
+    linarith [h1, h2]
+  have hsimp :
+      ((n - 1 / 2) * Real.log (n : ℝ) - (n : ℝ)
+          + a * (Real.log (n : ℝ) - (2 : ℝ) / (n : ℝ))
+          + (-((y - 1 / 2) * (Real.log (n : ℝ) + a / (n : ℝ)))) + y) =
+        a * (1 / 2 - a) / (n : ℝ) - 2 * a / (n : ℝ) := by
+    rw [hy_a]
+    field_simp [hn0]
+    ring
+  have hfinal : a * (1 / 2 - a) / (n : ℝ) - 2 * a / (n : ℝ) ≥
+      - (3 / (n : ℝ)) := by
+    have hnum : (-3 : ℝ) ≤ a * (1 / 2 - a) - 2 * a := by
+      nlinarith [ha0, ha1]
+    have hdiv :
+        (-3 : ℝ) / (n : ℝ) ≤ (a * (1 / 2 - a) - 2 * a) / (n : ℝ) :=
+      div_le_div_of_nonneg_right hnum (le_of_lt hn_pos)
+    have hrew :
+        a * (1 / 2 - a) / (n : ℝ) - 2 * a / (n : ℝ) =
+          (a * (1 / 2 - a) - 2 * a) / (n : ℝ) := by
+      field_simp [hn0]
+    calc
+      - (3 / (n : ℝ)) = (-3 : ℝ) / (n : ℝ) := by simp [neg_div]
+      _ ≤ (a * (1 / 2 - a) - 2 * a) / (n : ℝ) := hdiv
+      _ = a * (1 / 2 - a) / (n : ℝ) - 2 * a / (n : ℝ) := hrew.symm
+  calc
+    ((n - 1 / 2) * Real.log (n : ℝ) - (n : ℝ) + Real.log (2 * π) / 2
+        + (y - (n : ℝ)) * Real.log ((n - 1 : ℕ) : ℝ)
+        - ((y - 1 / 2) * Real.log y - y + Real.log (2 * π) / 2))
+        = ((n - 1 / 2) * Real.log (n : ℝ) - (n : ℝ)
+            + a * Real.log ((n - 1 : ℕ) : ℝ)
+            + (-((y - 1 / 2) * Real.log y)) + y) := hrew0
+    _ ≥ ((n - 1 / 2) * Real.log (n : ℝ) - (n : ℝ)
+            + a * (Real.log (n : ℝ) - (2 : ℝ) / (n : ℝ))
+            + (-((y - 1 / 2) * (Real.log (n : ℝ) + a / (n : ℝ)))) + y) :=
+          hmain_lower
+    _ = a * (1 / 2 - a) / (n : ℝ) - 2 * a / (n : ℝ) := hsimp
+    _ ≥ - (3 / (n : ℝ)) := hfinal
+
 /-- Binet's formula for real arguments. -/
 theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
     Real.log (Real.Gamma x) =
       (x - 1/2) * Real.log x - x + Real.log (2 * Real.pi) / 2 + (J x).re := by
-  -- Reduce to an equality of the correction terms `R(x) = re (J x)`.
   have hR : R x = (Binet.J (x : ℂ)).re := by
-    -- Let `h(x) := R(x) - re(J x)`. We show `h` is 1-periodic and tends to 0 at ∞.
     let h : ℝ → ℝ := fun y => R y - (Binet.J (y : ℂ)).re
     have h_periodic : ∀ y, 0 < y → h y = h (y + 1) := by
       intro y hy
-      have hy1 : 0 < y + 1 := by linarith
-      have hRrec := R_sub_R_add_one (x := y) hy
-      have hJrec := re_J_sub_re_J_add_one (x := y) hy
-      -- cancel the common (nonlinear) RHS, then do a purely additive rearrangement
-      have hdiff : R y - R (y + 1) = (Binet.J (y : ℂ)).re - (Binet.J ((y : ℂ) + 1)).re := by
-        -- both differences equal the same expression
-        calc
-          R y - R (y + 1)
-              = (y + 1 / 2) * Real.log (1 + 1 / y) - 1 := hRrec
-          _ = (Binet.J (y : ℂ)).re - (Binet.J ((y : ℂ) + 1)).re := by
-              simpa using hJrec.symm
       dsimp [h]
-      have heq :
-          R y - (Binet.J (y : ℂ)).re = R (y + 1) - (Binet.J ((y : ℂ) + 1)).re := by
-        linarith [hdiff]
-      -- `simp` rewrites `((y + 1 : ℝ) : ℂ)` as `(y : ℂ) + 1`
-      simpa using heq
-    -- show `R y → 0` as y → ∞ (via Stirling for factorials + convexity bounds)
+      exact R_sub_re_J_add_one hy
     have hRlim : Tendsto R atTop (𝓝 0) := by
-      -- First: `R n → 0` along naturals.
       have hnat : Tendsto (fun n : ℕ => R (n : ℝ)) atTop (𝓝 0) := by
-        -- Use Stirling's formula for factorials: `R(n) = log(stirlingSeq n) - log π/2` for `n ≥ 1`.
         have hst : Tendsto Stirling.stirlingSeq atTop (𝓝 (Real.sqrt Real.pi)) :=
           Stirling.tendsto_stirlingSeq_sqrt_pi
         have hlogst : Tendsto (fun n : ℕ => Real.log (Stirling.stirlingSeq n))
@@ -1020,26 +1088,21 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
             exact ne_of_gt this)).tendsto.comp hst
         have hπ : Real.log (Real.sqrt Real.pi) = Real.log Real.pi / 2 := by
           simpa using (Real.log_sqrt (x := Real.pi) (by exact le_of_lt Real.pi_pos))
-        -- `R n = log(stirlingSeq n) - log π/2` eventually (for `n ≥ 1`).
         have hR_eq :
             (fun n : ℕ => R (n : ℝ)) =ᶠ[atTop]
               fun n : ℕ => Real.log (Stirling.stirlingSeq n) - Real.log Real.pi / 2 := by
           filter_upwards [eventually_gt_atTop 0] with n hn
           have hn0 : (n : ℝ) ≠ 0 := by
             exact_mod_cast (Nat.ne_of_gt hn)
-          -- rewrite `R n` in terms of `n!`
           have hGamma_n :
               Real.Gamma (n : ℝ) = ((n - 1)! : ℝ) := by
-            -- `Real.Gamma_nat_eq_factorial` is `Γ(n+1) = n!`; rewrite `n` as `(n-1)+1`.
             have hn' : 0 < n := hn
             have hn_succ : (n - 1).succ = n := Nat.succ_pred_eq_of_pos hn'
             have hcast : ((n - 1 : ℕ) : ℝ) + 1 = n := by
               have := congrArg (fun k : ℕ => (k : ℝ)) hn_succ
               simpa [Nat.cast_succ] using this
             have hGamma := Real.Gamma_nat_eq_factorial (n - 1)
-            -- `hGamma : Real.Gamma ((n-1)+1) = (n-1)!`
             simpa [hcast, Nat.cast_add, Nat.cast_one, add_assoc] using hGamma
-          -- use `n! = n * (n-1)!` to express `log (Gamma n)`
           have hlogGamma :
               Real.log (Real.Gamma (n : ℝ)) = Real.log (n ! : ℝ) - Real.log (n : ℝ) := by
             have hn_fact_ne : ((n ! : ℕ) : ℝ) ≠ 0 := by
@@ -1047,60 +1110,29 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
             have hpred_fact_ne : (((n - 1)! : ℕ) : ℝ) ≠ 0 := by
               exact_mod_cast (Nat.factorial_ne_zero (n - 1))
             have hn_ne : (n : ℝ) ≠ 0 := by exact_mod_cast (Nat.ne_of_gt hn)
-            -- `n! = n * (n-1)!`
             have hfac : (n ! : ℝ) = (n : ℝ) * ((n - 1)! : ℝ) := by
-              -- use `Nat.factorial_succ` on `n-1`
               have hn_succ : (n - 1).succ = n := Nat.succ_pred_eq_of_pos hn
-              -- `n! = (n-1)! * n`
-              -- easier: `Nat.factorial_succ` gives `n! = n * (n-1)!` when rewritten appropriately
               have : (n ! : ℝ) = (n : ℝ) * ((n - 1)! : ℝ) := by
-                -- in ℕ: n! = n * (n-1)!
                 have hn_pos : 0 < n := hn
                 have hn' : (n - 1 + 1) = n := Nat.sub_add_cancel (Nat.succ_le_of_lt hn_pos)
-                -- factorial_succ: (n-1+1)! = (n-1+1) * (n-1)!
                 have hnat : ((n - 1 + 1) ! : ℕ) = (n - 1 + 1) * (n - 1)! := Nat.factorial_succ (n - 1)
-                -- cast
                 have := congrArg (fun k : ℕ => (k : ℝ)) hnat
-                -- simplify
                 simpa [hn', Nat.cast_mul, Nat.cast_add, Nat.cast_one, mul_assoc, mul_comm, mul_left_comm] using this
               exact this
-            -- Now: log((n-1)!) = log(n!) - log n
-            -- Start from `log (n!) = log n + log((n-1)!)`
             have hlog_mul : Real.log (n ! : ℝ) = Real.log (n : ℝ) + Real.log ((n - 1)! : ℝ) := by
-              -- `Real.log_mul` for nonzero factors
               have h : Real.log ((n : ℝ) * ((n - 1)! : ℝ)) =
                   Real.log (n : ℝ) + Real.log ((n - 1)! : ℝ) := by
                 simpa using Real.log_mul (x := (n : ℝ)) (y := ((n - 1)! : ℝ)) hn_ne hpred_fact_ne
               simpa [hfac, mul_comm, add_comm, add_left_comm, add_assoc] using h
             have : Real.log ((n - 1)! : ℝ) = Real.log (n ! : ℝ) - Real.log (n : ℝ) := by
               linarith
-            -- substitute Gamma n = (n-1)! and simplify
             simp [hGamma_n, this]
-          -- compute `R n` and rewrite to `log(stirlingSeq n) - log π / 2`
-          -- Use `Stirling.log_stirlingSeq_formula` and algebra.
           have hn' : n ≠ 0 := Nat.ne_of_gt hn
           have hlogst_formula := Stirling.log_stirlingSeq_formula n
-          -- rearrange to show the desired identity
-          -- We work under the assumption `n ≥ 1` to simplify logs.
-          -- `simp` uses the formula for `log(stirlingSeq n)` and then cancels.
-          -- Final identity: `R n = log(stirlingSeq n) - log π / 2`.
-          -- (This is a pure algebraic identity for `n ≥ 1`.)
-          -- We'll just finish by `ring_nf` after rewriting.
-          -- NOTE: use `Real.log_mul` and `Real.log_div` on the positive cast of `n`.
-          -- Start from `hlogGamma`.
-          -- Here we use the established identity `R(n) = log(n!) - ((n+1/2)log n - n + log(2π)/2)`.
           unfold R stirlingMainReal at *
-          -- At this stage, it's easiest to let `simp` handle the standard expansions.
-          -- (The equality is stable under rewriting away `Gamma` using `hlogGamma`.)
-          -- We rely on `hlogst_formula` and standard log algebra.
-          -- Provide a direct simp rewrite:
           have hn_pos_real : (0 : ℝ) < (n : ℝ) := by exact_mod_cast hn
-          -- Compute `R n` using the library formula for `log(stirlingSeq n)`.
           have hlog_pi2 : Real.log (Real.pi * 2) = Real.log Real.pi + Real.log 2 := by
-            -- both factors are positive
             simpa [mul_comm] using Real.log_mul (Real.pi_pos.ne') (by norm_num : (2 : ℝ) ≠ 0)
-          -- Reduce the goal to the explicit `log(stirlingSeq n)` formula, then finish by algebra.
-          -- (Keeping `log(stirlingSeq n)` as a single atom avoids brittle rewrites of the denominator.)
           have hlogst_formula' :
               Real.log (Stirling.stirlingSeq n) =
                 Real.log (n ! : ℝ) - (1 / 2 : ℝ) * (Real.log 2 + Real.log (n : ℝ))
@@ -1111,47 +1143,33 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
             have hlog_2n : Real.log (2 * (n : ℝ)) = Real.log 2 + Real.log (n : ℝ) := by
               simpa using Real.log_mul h2_ne hn_ne
             have hlog_div : Real.log ((n : ℝ) / Real.exp 1) = Real.log (n : ℝ) - 1 := by
-              -- `log (n / exp 1) = log n - log (exp 1) = log n - 1`
               simpa [Real.log_exp, sub_eq_add_neg] using
                 (Real.log_div hn_ne (Real.exp_pos 1).ne')
-            -- start from the library formula and rewrite the two logs above
             have h0 := Stirling.log_stirlingSeq_formula n
-            -- `ring_nf`/`linarith` finishes the scalar algebra
-            -- (we keep it additive so `linarith` can close after rewriting the logs)
-            -- NB: `simp` also unfolds `stirlingSeq`.
             have h0' :
                 Real.log (Stirling.stirlingSeq n) =
                   Real.log (n ! : ℝ) - (1 / 2 : ℝ) * Real.log (2 * (n : ℝ))
                     - (n : ℝ) * Real.log ((n : ℝ) / Real.exp 1) := by
               simpa [Stirling.stirlingSeq, sub_eq_add_neg, one_div, mul_assoc, mul_left_comm, mul_comm,
                 add_assoc, add_left_comm, add_comm] using h0
-            -- rewrite and finish
-            -- (use `ring_nf` since there are many nested `sub`s)
             calc
               Real.log (Stirling.stirlingSeq n)
                   = Real.log (n ! : ℝ) - (1 / 2 : ℝ) * Real.log (2 * (n : ℝ))
                       - (n : ℝ) * Real.log ((n : ℝ) / Real.exp 1) := h0'
               _ = Real.log (n ! : ℝ) - (1 / 2 : ℝ) * (Real.log 2 + Real.log (n : ℝ))
                     - (n : ℝ) * (Real.log (n : ℝ) - 1) := by
-                  -- rewrite the two logs and simplify the arithmetic
                   simp [hlog_2n, hlog_div]
-          -- Now the goal is pure ring arithmetic.
           simp [hlogGamma, hlogst_formula', hlog_pi2, sub_eq_add_neg,
             mul_add, add_mul, mul_comm]
           ring_nf
-        -- Conclude `R(n) → 0`.
-        -- rewrite `R` using the eventual identity `hR_eq`
         have h_tendsto :
             Tendsto (fun n : ℕ => Real.log (Stirling.stirlingSeq n) - Real.log Real.pi / 2) atTop (𝓝 0) :=
           by simpa [hπ, sub_eq_add_neg, add_assoc] using hlogst.sub_const (Real.log Real.pi / 2)
         exact (tendsto_congr' hR_eq).2 h_tendsto
-      -- Now extend from integers to all real `x → ∞` using convexity of `log Γ`.
       rw [Metric.tendsto_atTop]
       intro ε hε
-      -- Get a bound on `R n` for large naturals.
       have hnat' := (Metric.tendsto_atTop).1 hnat (ε / 2) (by positivity)
       rcases hnat' with ⟨N1, hN1⟩
-      -- Also ensure `3/n < ε/2` for large `n`.
       have h_inv : Tendsto (fun n : ℕ => (3 : ℝ) / (n : ℝ)) atTop (𝓝 0) := by
         have : Tendsto (fun n : ℕ => ((n : ℝ))⁻¹) atTop (𝓝 (0 : ℝ)) :=
           tendsto_inv_atTop_zero.comp tendsto_natCast_atTop_atTop
@@ -1176,71 +1194,56 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
         exact this.trans_le (by exact_mod_cast hn2)
       have hn1_pos : 0 < (n - 1 : ℕ) := by
         exact Nat.sub_pos_of_lt (Nat.lt_of_lt_of_le (by norm_num : 1 < 2) hn2)
-      -- Estimate `R y` using convexity of `log Γ` on `(0,∞)` between `n` and `n+1`.
-      -- Set `a := y - n`, with `0 ≤ a < 1`.
       have ha0 : 0 ≤ y - n := sub_nonneg.2 hn_le
       have ha1 : y - n < 1 := by
         have : y < (n : ℝ) + 1 := hy_lt
         linarith
       have ha_le : y - n ≤ 1 := le_of_lt ha1
-      -- Upper bound: `log Γ(y) ≤ log Γ(n) + (y-n)*log n`
       have hf := Real.convexOn_log_Gamma
       have h_upper :
           Real.log (Real.Gamma y) ≤
             Real.log (Real.Gamma (n : ℝ)) + (y - n) * Real.log (n : ℝ) := by
         by_cases hy_eq : y = (n : ℝ)
         · have hy_sub : y - n = 0 := by linarith [hy_eq]
-          -- then both sides coincide
           simp [hy_eq]
         · have hn_mem : (n : ℝ) ∈ Set.Ioi (0 : ℝ) := hn_pos
           have hy_mem : y ∈ Set.Ioi (0 : ℝ) := lt_of_lt_of_le hn_pos hn_le
           have hn1_mem : (n : ℝ) + 1 ∈ Set.Ioi (0 : ℝ) := by
-            -- i.e. `0 < (n:ℝ)+1`
-            have : (0 : ℝ) < (n : ℝ) + 1 := by linarith [hn_pos]
-            simpa using this
-          have hn1_ne : (n : ℝ) + 1 ≠ (n : ℝ) := by linarith
+            change (0 : ℝ) < (n : ℝ) + 1
+            exact Nat.cast_add_one_pos n
+          have hn1_ne : (n : ℝ) + 1 ≠ (n : ℝ) := by norm_num
           have hsec :=
             ConvexOn.secant_mono (f := fun z : ℝ => Real.log (Real.Gamma z)) hf
               hn_mem hy_mem hn1_mem hy_eq hn1_ne (le_of_lt hy_lt)
-          -- unpack the inequality
-          -- (f y - f n)/(y-n) ≤ f(n+1)-f(n)
           have hdiff :
               (Real.log (Real.Gamma y) - Real.log (Real.Gamma (n : ℝ))) / (y - n) ≤
                 Real.log (Real.Gamma ((n : ℝ) + 1)) - Real.log (Real.Gamma (n : ℝ)) := by
             simpa using hsec
           have hy_n_pos : 0 < y - n := sub_pos.2 (lt_of_le_of_ne hn_le (Ne.symm hy_eq))
           have := (div_le_iff₀ hy_n_pos).1 hdiff
-          -- simplify `Gamma(n+1) - Gamma(n)` via functional equation
           have hstep :
               Real.log (Real.Gamma ((n : ℝ) + 1)) - Real.log (Real.Gamma (n : ℝ)) = Real.log (n : ℝ) := by
             have hn_ne : (n : ℝ) ≠ 0 := ne_of_gt hn_pos
             have hΓ : Real.Gamma ((n : ℝ) + 1) = (n : ℝ) * Real.Gamma (n : ℝ) := Real.Gamma_add_one (s := (n : ℝ)) hn_ne
             have hΓn_ne : Real.Gamma (n : ℝ) ≠ 0 := (Real.Gamma_pos_of_pos hn_pos).ne'
-            -- take logs
             calc
               Real.log (Real.Gamma ((n : ℝ) + 1)) - Real.log (Real.Gamma (n : ℝ))
                   = (Real.log (n : ℝ) + Real.log (Real.Gamma (n : ℝ))) - Real.log (Real.Gamma (n : ℝ)) := by
                       simp [hΓ, Real.log_mul hn_ne hΓn_ne]
               _ = Real.log (n : ℝ) := by ring
-          -- conclude (avoid `linarith` on a goal with products)
           have hmul :
               Real.log (Real.Gamma y) - Real.log (Real.Gamma (n : ℝ)) ≤
                 Real.log (n : ℝ) * (y - n) := by
             simpa [hstep] using this
-          -- move terms to the RHS
           have := add_le_add_left hmul (Real.log (Real.Gamma (n : ℝ)))
-          -- clean up
-          -- `ring_nf` handles the purely algebraic rearrangement
           simpa [sub_eq_add_neg, add_assoc, add_left_comm, add_comm, mul_assoc, mul_left_comm, mul_comm] using this
-      -- Lower bound: `log Γ(y) ≥ log Γ(n) + (y-n)*log(n-1)` (requires `n ≥ 2`).
       have h_lower :
           Real.log (Real.Gamma y) ≥
             Real.log (Real.Gamma (n : ℝ)) + (y - n) * Real.log ((n - 1 : ℕ) : ℝ) := by
         by_cases hy_eq : y = (n : ℝ)
         · have hy_sub : y - n = 0 := by linarith [hy_eq]
           simp [hy_eq]
-        · -- use monotonicity of secant slopes for the convex function `log Γ`
-          have hn_1_mem : ((n - 1 : ℕ) : ℝ) ∈ Set.Ioi (0 : ℝ) := by
+        · have hn_1_mem : ((n - 1 : ℕ) : ℝ) ∈ Set.Ioi (0 : ℝ) := by
             have : (0 : ℝ) < (n - 1 : ℕ) := by exact_mod_cast hn1_pos
             simpa using this
           have hn_mem : (n : ℝ) ∈ Set.Ioi (0 : ℝ) := hn_pos
@@ -1262,7 +1265,6 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
             simpa [sub_eq_add_neg, add_assoc, add_left_comm, add_comm] using hsec
           have hy_n_pos : 0 < y - n := sub_pos.2 (lt_of_le_of_ne hn_le (Ne.symm hy_eq))
           have hy_gt_n : (n : ℝ) < y := lt_of_le_of_ne hn_le (Ne.symm hy_eq)
-          -- compute the left slope: it is `log (n-1)`
           have hleft :
               (Real.log (Real.Gamma ((n - 1 : ℕ) : ℝ)) - Real.log (Real.Gamma (n : ℝ))) /
                     (((n - 1 : ℕ) : ℝ) - (n : ℝ)) =
@@ -1271,7 +1273,6 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
             have hΓ :
                 Real.Gamma (n : ℝ) =
                   ((n - 1 : ℕ) : ℝ) * Real.Gamma ((n - 1 : ℕ) : ℝ) := by
-              -- rewrite `n` as `(n-1)+1` and use `Gamma_add_one`
               have hnat : (n - 1 : ℕ) + 1 = n := Nat.sub_add_cancel (Nat.succ_le_of_lt hn_nat_pos)
               have hcast : (n : ℝ) = ((n - 1 : ℕ) : ℝ) + 1 := by
                 exact_mod_cast hnat.symm
@@ -1282,7 +1283,6 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
             have hlog :
                 Real.log (Real.Gamma (n : ℝ)) =
                   Real.log ((n - 1 : ℕ) : ℝ) + Real.log (Real.Gamma ((n - 1 : ℕ) : ℝ)) := by
-              -- take logs in `hΓ`
               simp [hΓ, Real.log_mul hn1_ne0 hΓn1_ne]
             have hnum :
                 Real.log (Real.Gamma ((n - 1 : ℕ) : ℝ)) - Real.log (Real.Gamma (n : ℝ)) =
@@ -1292,22 +1292,15 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
               have hnat : (n - 1 : ℕ) + 1 = n := Nat.sub_add_cancel (Nat.succ_le_of_lt hn_nat_pos)
               have hcast : ((n - 1 : ℕ) : ℝ) + 1 = (n : ℝ) := by exact_mod_cast hnat
               linarith
-            -- divide by `-1`
             simp [hnum, hden]
           have hmul := (le_div_iff₀ hy_n_pos).1 (by simpa [hleft] using hdiff)
-          -- rearrange to the desired lower bound
           have := add_le_add_left hmul (Real.log (Real.Gamma (n : ℝ)))
           simpa [sub_eq_add_neg, add_assoc, add_left_comm, add_comm, mul_assoc, mul_left_comm, mul_comm] using this
-      -- Now bound `R y` using `h_upper` / `h_lower` and elementary log inequalities.
       have hn0' : (n : ℝ) ≠ 0 := ne_of_gt hn_pos
       have hR_upper : R y ≤ R (n : ℝ) + 1 / (n : ℝ) := by
-        -- Start from the convexity bound on `log Γ`.
-        -- It suffices to show that the Stirling main term is “almost” affine on `[n, n+1]`.
         have hy_pos : 0 < y := lt_of_lt_of_le hn_pos hn_le
         have hy_ne : y ≠ 0 := ne_of_gt hy_pos
         have hn_ne : (n : ℝ) ≠ 0 := ne_of_gt hn_pos
-
-        -- A convenient lower bound: `(y-n)/y ≤ log(y/n) = log y - log n`.
         have hlog_ge :
             (y - (n : ℝ)) / y ≤ Real.log y - Real.log (n : ℝ) := by
           have hx_pos : 0 < y / (n : ℝ) := div_pos hy_pos hn_pos
@@ -1317,31 +1310,21 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
             field_simp [hy_ne, hn_ne]
           have hR : Real.log (y / (n : ℝ)) = Real.log y - Real.log (n : ℝ) := by
             simpa using (Real.log_div (x := y) (y := (n : ℝ)) hy_ne hn_ne)
-          -- Avoid `simp` turning `a - b ≤ c` into `a ≤ c + b`.
           have h0' : (y - (n : ℝ)) / y ≤ Real.log y - Real.log (n : ℝ) := by
-            -- rewrite both sides explicitly
             have h0'' : (y - (n : ℝ)) / y ≤ Real.log (y / (n : ℝ)) := by
-              -- rewrite the LHS of `h0` *without* triggering simp-normalization
               have htmp := h0
-              -- turn `1 - (y/n)⁻¹` into `(y-n)/y`
               rw [hL] at htmp
               exact htmp
-            -- now rewrite the RHS
             simpa [hR] using h0''
           exact h0'
-
-        -- Define the Stirling main-term linearization error:
-        -- `Δ := stirlingMainReal n + (y-n) log n - stirlingMainReal y`.
         have hΔ :
             stirlingMainReal (n : ℝ) + (y - (n : ℝ)) * Real.log (n : ℝ) - stirlingMainReal y ≤
               1 / (n : ℝ) := by
           have hΔ_eq :
               stirlingMainReal (n : ℝ) + (y - (n : ℝ)) * Real.log (n : ℝ) - stirlingMainReal y =
                 (y - (n : ℝ)) - (y - (1 / 2 : ℝ)) * (Real.log y - Real.log (n : ℝ)) := by
-            -- purely algebraic; `Real.log` is treated as an atom
             unfold stirlingMainReal
             ring
-          -- use `hlog_ge` to bound the negative term
           have hy1 : 0 ≤ y - (1 / 2 : ℝ) := by linarith [hy]
           have hΔ_le :
               (y - (n : ℝ)) - (y - (1 / 2 : ℝ)) * (Real.log y - Real.log (n : ℝ)) ≤
@@ -1358,7 +1341,6 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
             have h2n_pos : 0 < 2 * (n : ℝ) := by nlinarith [hn_pos]
             have hstep1 :
                 (y - (n : ℝ)) / (2 * y) ≤ 1 / (2 * y) := by
-              -- since `y - n ≤ 1`
               refine div_le_div_of_nonneg_right ?_ (le_of_lt h2y_pos)
               linarith [ha_le]
             have hstep2 :
@@ -1373,32 +1355,25 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
                 field_simp [hn0]
               have : (1 / (n : ℝ)) / 2 ≤ (1 / (n : ℝ)) :=
                 div_le_self hnonneg (by norm_num : (1 : ℝ) ≤ 2)
-              -- rewrite the goal to match `this`
               rw [hrew]
               exact this
             exact le_trans hstep1 (le_trans hstep2 hstep3)
-          -- assemble
           calc
             stirlingMainReal (n : ℝ) + (y - (n : ℝ)) * Real.log (n : ℝ) - stirlingMainReal y
                 = (y - (n : ℝ)) - (y - (1 / 2 : ℝ)) * (Real.log y - Real.log (n : ℝ)) := hΔ_eq
             _ ≤ (y - (n : ℝ)) - (y - (1 / 2 : ℝ)) * ((y - (n : ℝ)) / y) := hΔ_le
             _ = (y - (n : ℝ)) / (2 * y) := hΔ_simp
             _ ≤ 1 / (n : ℝ) := hΔ_bound
-
-        -- Finish: `R y ≤ R n + Δ` by the convexity upper bound on `log Γ`.
-        -- Rearrange with `linarith`.
         have : Real.log (Real.Gamma y) - stirlingMainReal y ≤
             (Real.log (Real.Gamma (n : ℝ)) - stirlingMainReal (n : ℝ)) + 1 / (n : ℝ) :=
           by linarith [h_upper, hΔ]
-        -- avoid commutativity lemmas in `simp` (can loop); this is just unfolding `R`
         simpa [R, sub_eq_add_neg, add_assoc] using this
       have hR_lower : R y ≥ R (n : ℝ) - 3 / (n : ℝ) := by
-        -- Coarse lower bound: use the convex lower bound on `log Γ` and very rough log estimates.
+        -- Coarse  bound: use the convex lower bound on `log Γ` and very rough log estimates.
         have hy_pos : 0 < y := lt_of_lt_of_le hn_pos hn_le
         have hy_ne : y ≠ 0 := ne_of_gt hy_pos
         have hn_ne : (n : ℝ) ≠ 0 := ne_of_gt hn_pos
         have hn2' : (2 : ℝ) ≤ (n : ℝ) := by exact_mod_cast hn2
-
         -- Upper bound for `log y` via `log (y/n) ≤ y/n - 1`.
         have hlogy_ub : Real.log y ≤ Real.log (n : ℝ) + (y - (n : ℝ)) / (n : ℝ) := by
           have hx_pos : 0 < y / (n : ℝ) := div_pos hy_pos hn_pos
@@ -1411,13 +1386,11 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
           have : Real.log y - Real.log (n : ℝ) ≤ (y - (n : ℝ)) / (n : ℝ) := by
             simpa [hlog_div, hrhs] using hlog
           linarith
-
         -- Lower bound for `log(n-1)` in terms of `log n`.
         have hlognm1 : Real.log ((n - 1 : ℕ) : ℝ) ≥ Real.log (n : ℝ) - (2 : ℝ) / (n : ℝ) := by
           have hn_nat_pos : 0 < n := lt_of_lt_of_le (by norm_num : (0 : ℕ) < 2) hn2
           have hn1_pos_real : 0 < ((n - 1 : ℕ) : ℝ) := by exact_mod_cast hn1_pos
           have hn1_ne0 : ((n - 1 : ℕ) : ℝ) ≠ 0 := ne_of_gt hn1_pos_real
-          -- first: `log(n-1) ≥ log n - 1/(n-1)` via `log (n/(n-1)) ≤ n/(n-1)-1`
           have hlognm1' : Real.log ((n - 1 : ℕ) : ℝ) ≥ Real.log (n : ℝ) - 1 / ((n - 1 : ℕ) : ℝ) := by
             have hx_pos : 0 < (n : ℝ) / ((n - 1 : ℕ) : ℝ) := div_pos hn_pos hn1_pos_real
             have hlog : Real.log ((n : ℝ) / ((n - 1 : ℕ) : ℝ)) ≤ (n : ℝ) / ((n - 1 : ℕ) : ℝ) - 1 :=
@@ -1428,47 +1401,31 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
               simpa using (Real.log_div (x := (n : ℝ)) (y := ((n - 1 : ℕ) : ℝ)) hn_ne hn1_ne0)
             have hrhs : (n : ℝ) / ((n - 1 : ℕ) : ℝ) - 1 = 1 / ((n - 1 : ℕ) : ℝ) := by
               field_simp [hn1_ne0]
-              -- reduce to `n = (n-1)+1`
               have hnat : (n - 1 : ℕ) + 1 = n := Nat.sub_add_cancel (Nat.succ_le_of_lt hn_nat_pos)
-              -- rewrite the casted identity as `((n:ℝ) - ((n-1):ℝ)) = 1`
               have hcast : ((n : ℝ) : ℝ) = ((n - 1 : ℕ) : ℝ) + 1 := by
                 exact_mod_cast hnat.symm
-              -- turn it into the subtraction form needed by `field_simp`
               linarith [hcast]
             have : Real.log (n : ℝ) - Real.log ((n - 1 : ℕ) : ℝ) ≤ 1 / ((n - 1 : ℕ) : ℝ) := by
-              -- avoid `simp` timeouts by rewriting explicitly
               have htmp := hlog
-              -- rewrite `log (n/(n-1))`
               rw [hlog'] at htmp
-              -- rewrite the RHS
               rw [hrhs] at htmp
               exact htmp
-            -- rearrange without `linarith` (avoids `isDefEq` timeout)
             have h1 :
                 Real.log (n : ℝ) ≤ Real.log ((n - 1 : ℕ) : ℝ) + 1 / ((n - 1 : ℕ) : ℝ) := by
               have h1' : Real.log (n : ℝ) ≤ 1 / ((n - 1 : ℕ) : ℝ) + Real.log ((n - 1 : ℕ) : ℝ) :=
                 (sub_le_iff_le_add).1 this
-              -- avoid `simp` timeouts: rewrite the RHS once by commutativity
               have h1'' := h1'
-              -- `1/(n-1) + log(n-1)` → `log(n-1) + 1/(n-1)`
               rw [add_comm] at h1''
               exact h1''
-            -- `a ≤ b + c` ↔ `a - c ≤ b`
             exact (sub_le_iff_le_add).2 h1
-          -- second: `1/(n-1) ≤ 2/n` since `2 ≤ n`
           have hfrac : (1 : ℝ) / ((n - 1 : ℕ) : ℝ) ≤ (2 : ℝ) / (n : ℝ) :=
             one_div_cast_sub_le_two_div_cast n hn2
-          -- combine
           have hcomp :
               Real.log (n : ℝ) - (2 : ℝ) / (n : ℝ) ≤ Real.log (n : ℝ) - 1 / ((n - 1 : ℕ) : ℝ) := by
             exact sub_le_sub_left hfrac (Real.log (n : ℝ))
           exact le_trans hcomp hlognm1'
-
-        -- Now compare `R y` to `R n` using the lower convexity bound and the above log estimates.
-        -- Expand the Stirling main term and cancel the constants.
         have hy_le' : y ≤ (n : ℝ) + 1 := le_of_lt hy_lt
         have hy1 : 0 ≤ y - (1 / 2 : ℝ) := by
-          -- `y ≥ N+1` and `N ≥ 2` (since `N := max (max N1 N2) 2`), hence `1/2 ≤ y`.
           have hN2_nat : (2 : ℕ) ≤ N := le_max_right (max N1 N2) 2
           have hN2 : (2 : ℝ) ≤ (N : ℝ) := by
             have h : ((2 : ℕ) : ℝ) ≤ (N : ℝ) := (Nat.cast_le (α := ℝ)).2 hN2_nat
@@ -1477,14 +1434,9 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
             have h3' : (2 : ℝ) + 1 ≤ (N : ℝ) + 1 := add_le_add_left hN2 1
             have h3 : (3 : ℝ) ≤ (N : ℝ) + 1 := by
               have h21 : (2 : ℝ) + 1 = 3 := by norm_num
-              -- rewrite the LHS of `h3'` using `h21`
               have h3'' := h3'
-              -- `2+1 ≤ N+1` → `3 ≤ N+1`
-              -- (no `simp`, just rewriting)
-              -- rewrite `2+1` to `3` on the left-hand side
               rw [h21] at h3''
               exact h3''
-            -- avoid `simp`/`simpa` here: `hy : y ≥ N+1` is definitionally `(N+1 ≤ y)`
             have hy' : (N : ℝ) + 1 ≤ y := hy
             exact le_trans h3 hy'
           have : (1 / 2 : ℝ) ≤ y := by
@@ -1492,17 +1444,13 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
             exact le_trans hhalf hy3
           exact sub_nonneg.2 this
         have ha_nonneg : 0 ≤ y - (n : ℝ) := ha0
-        -- `log Γ y ≥ log Γ n + (y-n) log(n-1)`
         have hlogGamma_lb : Real.log (Real.Gamma y) ≥ Real.log (Real.Gamma (n : ℝ)) + (y - (n : ℝ)) * Real.log ((n - 1 : ℕ) : ℝ) := by
           exact h_lower
-        -- reduce to a bound on Stirling terms
         have hmain :
             stirlingMainReal (n : ℝ) +
                 (y - (n : ℝ)) * Real.log ((n - 1 : ℕ) : ℝ) - stirlingMainReal y ≥
               - (3 / (n : ℝ)) := by
-            -- Expand and use bounds on `log y` and `log(n-1)`.
             unfold stirlingMainReal
-            -- Replace `log y` by an upper bound, and `log(n-1)` by a lower bound.
             have hlogy_mul :
                 (y - (1 / 2 : ℝ)) * Real.log y ≤
                   (y - (1 / 2 : ℝ)) * (Real.log (n : ℝ) + (y - (n : ℝ)) / (n : ℝ)) := by
@@ -1510,12 +1458,8 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
             have hlognm1_mul :
                 (y - (n : ℝ)) * Real.log ((n - 1 : ℕ) : ℝ) ≥
                   (y - (n : ℝ)) * (Real.log (n : ℝ) - (2 : ℝ) / (n : ℝ)) := by
-              -- `hlognm1 : Real.log (n : ℝ) - 2/n ≤ Real.log (n-1)`
-              -- multiply by `y-n ≥ 0`
               have h := mul_le_mul_of_nonneg_left hlognm1 ha_nonneg
               exact h
-            -- Now cancel the log terms explicitly, reducing to a polynomial inequality in
-            -- `a := y - n` and `n`.
             set a : ℝ := y - (n : ℝ) with ha
             have ha0 : 0 ≤ a := by simpa [a] using ha_nonneg
             have ha1 : a ≤ 1 := by simpa [a] using ha_le
@@ -1523,9 +1467,6 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
             have hy_a : y = (n : ℝ) + a := by
               dsimp [a]
               ring
-
-            -- Rewrite the LHS in a form where the constant `log(2π)/2` cancels and
-            -- the `log y` term appears as `-( (y - 1/2) * log y)`.
             have hrew0 :
                 ( (n - 1 / 2) * Real.log (n : ℝ) - (n : ℝ) + Real.log (2 * π) / 2
                   + (y - (n : ℝ)) * Real.log ((n - 1 : ℕ) : ℝ)
@@ -1534,8 +1475,6 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
                     + a * Real.log ((n - 1 : ℕ) : ℝ)
                     + (-( (y - 1 / 2) * Real.log y)) + y) := by
               ring
-
-            -- Use the log bounds to get a lower bound on the full expression.
             have h1 :
                 a * (Real.log (n : ℝ) - (2 : ℝ) / (n : ℝ)) ≤ a * Real.log ((n - 1 : ℕ) : ℝ) := by
               have : a * Real.log ((n - 1 : ℕ) : ℝ) ≥ a * (Real.log (n : ℝ) - (2 : ℝ) / (n : ℝ)) := by
@@ -1545,7 +1484,6 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
                 -((y - 1 / 2) * (Real.log (n : ℝ) + a / (n : ℝ))) ≤ -((y - 1 / 2) * Real.log y) := by
               have := neg_le_neg hlogy_mul
               simpa [a] using this
-
             have hmain_lower :
                 ( (n - 1 / 2) * Real.log (n : ℝ) - (n : ℝ)
                   + a * Real.log ((n - 1 : ℕ) : ℝ)
@@ -1554,9 +1492,7 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
                 ( (n - 1 / 2) * Real.log (n : ℝ) - (n : ℝ)
                   + a * (Real.log (n : ℝ) - (2 : ℝ) / (n : ℝ))
                   + (-( (y - 1 / 2) * (Real.log (n : ℝ) + a / (n : ℝ)))) + y) := by
-              -- linear in the two bounded terms
               linarith [h1, h2]
-
             have hsimp :
                 ( (n - 1 / 2) * Real.log (n : ℝ) - (n : ℝ)
                   + a * (Real.log (n : ℝ) - (2 : ℝ) / (n : ℝ))
@@ -1566,7 +1502,6 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
               rw [hy_a]
               field_simp [hn0]
               ring
-
             have hfinal : a * (1 / 2 - a) / (n : ℝ) - 2 * a / (n : ℝ) ≥ - (3 / (n : ℝ)) := by
               have hnum : a * (1 / 2 - a) - 2 * a ≥ (-3 : ℝ) := by
                 nlinarith [ha0, ha1]
@@ -1581,8 +1516,6 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
                     = (a * (1 / 2 - a) - 2 * a) / (n : ℝ) := hrew
                 _ ≥ (-3 : ℝ) / (n : ℝ) := hdiv
                 _ = - (3 / (n : ℝ)) := by simp [neg_div]
-
-            -- Put it all together.
             calc
               ( (n - 1 / 2) * Real.log (n : ℝ) - (n : ℝ) + Real.log (2 * π) / 2
                 + (y - (n : ℝ)) * Real.log ((n - 1 : ℕ) : ℝ)
@@ -1597,47 +1530,35 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
                     + (-( (y - 1 / 2) * (Real.log (n : ℝ) + a / (n : ℝ)))) + y) := hmain_lower
               _ = a * (1 / 2 - a) / (n : ℝ) - 2 * a / (n : ℝ) := hsimp
               _ ≥ - (3 / (n : ℝ)) := hfinal
-
-        -- Put it together for `R`.
         have : Real.log (Real.Gamma y) - stirlingMainReal y ≥
             (Real.log (Real.Gamma (n : ℝ)) - stirlingMainReal (n : ℝ)) - 3 / (n : ℝ) := by
-          -- use the `log Γ` lower bound and `hmain`
           linarith [hlogGamma_lb, hmain]
         simpa [R] using this
       have hR_abs : |R y| ≤ |R (n : ℝ)| + 3 / (n : ℝ) := by
-        -- lower
         have hlower : -(|R (n : ℝ)| + 3 / (n : ℝ)) ≤ R y := by
-          -- `R y ≥ R n - 3/n` and `- |R n| ≤ R n`
           have h1 : R (n : ℝ) - 3 / (n : ℝ) ≤ R y := hR_lower
           have h2 : -|R (n : ℝ)| - 3 / (n : ℝ) ≤ R (n : ℝ) - 3 / (n : ℝ) :=
             sub_le_sub_right (neg_abs_le (R (n : ℝ))) (3 / (n : ℝ))
           have h3 : -|R (n : ℝ)| - 3 / (n : ℝ) ≤ R y := le_trans h2 h1
           have hneg : -(|R (n : ℝ)| + 3 / (n : ℝ)) = -|R (n : ℝ)| - 3 / (n : ℝ) := by ring
           simpa [hneg] using h3
-        -- upper
         have hupper : R y ≤ |R (n : ℝ)| + 3 / (n : ℝ) := by
           have hn_pos' : 0 < (n : ℝ) := hn_pos
           have hRn : R (n : ℝ) ≤ |R (n : ℝ)| := le_abs_self _
           have hdiv : (1 : ℝ) / (n : ℝ) ≤ (3 : ℝ) / (n : ℝ) :=
             div_le_div_of_nonneg_right (by norm_num : (1 : ℝ) ≤ 3) (le_of_lt hn_pos')
-          -- `R y ≤ R n + 1/n ≤ |R n| + 3/n`
           have hstep : R (n : ℝ) + (1 : ℝ) / (n : ℝ) ≤ |R (n : ℝ)| + (3 : ℝ) / (n : ℝ) := by
             exact add_le_add hRn hdiv
           exact le_trans hR_upper hstep
         exact abs_le.2 ⟨hlower, hupper⟩
-      -- finish ε-control
       have hRn_small : |R (n : ℝ)| < ε / 2 := by
         have hN1_le_N : N1 ≤ N := by
-          -- `N1 ≤ max N1 N2 ≤ max (max N1 N2) 2 = N`
           exact le_trans (le_max_left N1 N2) (le_max_left (max N1 N2) 2)
         have hn_ge1 : N1 ≤ n := le_trans hN1_le_N hn_ge
-        -- `hN1` is about `dist (R ↑n) 0`; rewrite it as an `abs` statement.
         have hdist : dist (R (n : ℝ)) 0 < ε / 2 := hN1 n hn_ge1
-        -- `dist a 0 = |a|`
         simpa [Real.dist_eq] using hdist
       have h3n_small : 3 / (n : ℝ) < ε / 2 := by
         have hN2_le_N : N2 ≤ N := by
-          -- `N2 ≤ max N1 N2 ≤ max (max N1 N2) 2 = N`
           exact le_trans (le_max_right N1 N2) (le_max_left (max N1 N2) 2)
         have hn_ge2 : N2 ≤ n := le_trans hN2_le_N hn_ge
         have hdist : dist ((3 : ℝ) / (n : ℝ)) 0 < ε / 2 := hN2 n hn_ge2
@@ -1648,44 +1569,8 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
           simpa [add_halves] using this
         exact lt_of_le_of_lt hR_abs hsum
       simpa [Real.dist_eq, abs_sub_comm] using this
-    -- show `re (J y)` tends to 0 as `y → ∞` using `‖J y‖ ≤ 1/(12y)`
-    have hJlim : Tendsto (fun y : ℝ => (Binet.J (y : ℂ)).re) atTop (𝓝 0) := by
-      rw [Metric.tendsto_atTop]
-      intro ε hε
-      -- choose a strict threshold so we can get a strict inequality `1/(12*y) < ε`
-      refine ⟨(1 / (12 * ε) : ℝ) + 1, ?_⟩
-      intro y hy
-      have hy_pos : 0 < y := by
-        have : 0 < (1 / (12 * ε) : ℝ) := by positivity
-        have : 0 < (1 / (12 * ε) : ℝ) + 1 := by linarith
-        exact this.trans_le hy
-      have hbound : |(Binet.J (y : ℂ)).re| ≤ 1 / (12 * y) := by
-        have := Complex.abs_re_le_norm (Binet.J (y : ℂ))
-        have hnorm := J_norm_le_real (x := y) hy_pos
-        -- combine
-        exact le_trans this hnorm
-      have h1 : 1 / (12 * y) < ε := by
-        have hy' : 0 < 12 * y := by positivity
-        -- from `y ≥ 1/(12*ε) + 1` we get `y > 1/(12*ε)`
-        have hy_gt : (1 / (12 * ε) : ℝ) < y := by linarith
-        -- multiply by `12*ε > 0`
-        have hpos : 0 < (12 * ε : ℝ) := by positivity
-        have : (12 * ε : ℝ) * (1 / (12 * ε) : ℝ) < (12 * ε : ℝ) * y := by
-          exact mul_lt_mul_of_pos_left hy_gt hpos
-        -- simplify the left side to `1`
-        have hleft : (12 * ε : ℝ) * (1 / (12 * ε) : ℝ) = 1 := by field_simp
-        rw [hleft] at this
-        -- rewrite and invert
-        have hbig : (1 : ℝ) < ε * (12 * y) := by
-          -- `ε * (12*y) = (12*ε) * y`
-          simpa [mul_assoc, mul_left_comm, mul_comm] using this
-        have hy'' : 0 < 12 * y := by positivity
-        have : (1 : ℝ) / (12 * y) < ε := (div_lt_iff₀ hy'').2 (by
-          simpa [mul_assoc] using hbig)
-        simpa using this
-      have : |(Binet.J (y : ℂ)).re - 0| < ε := by
-        simpa using lt_of_le_of_lt hbound h1
-      simpa [Real.dist_eq] using this
+    have hJlim : Tendsto (fun y : ℝ => (Binet.J (y : ℂ)).re) atTop (𝓝 0) :=
+      tendsto_re_J_atTop_zero
     have hlim : Tendsto h atTop (𝓝 0) := by
       simpa [h, sub_eq_add_neg] using hRlim.add (hJlim.neg)
     have hxseq : Tendsto (fun n : ℕ => h (x + n)) atTop (𝓝 0) := by
@@ -1770,17 +1655,6 @@ theorem norm_Gamma_le_one {z : ℂ} (hlo : 1 ≤ z.re) (hhi : z.re ≤ 2) :
     _ ≤ 1 := Gamma_le_one_of_mem_Icc hlo hhi
 
 end Binet
-
-/-! ## Section 6: Connection to Stirling.GammaAux -/
-
-namespace Stirling.GammaAux
-
-/-- The Gamma bound on [1, 2], proved via convexity. -/
-theorem Gamma_bound_one_two' {s : ℂ} (hs_lo : 1 ≤ s.re) (hs_hi : s.re ≤ 2) :
-    ‖Complex.Gamma s‖ ≤ 1 :=
-  Binet.norm_Gamma_le_one hs_lo hs_hi
-
-end Stirling.GammaAux
 
 /-!
 ## Real Binet integral bounds
@@ -1915,7 +1789,6 @@ theorem re_J_le_one_div_twelve {x : ℝ} (hx : 0 < x) :
   have hJ : (Binet.J (x : ℂ)).re =
       ∫ t in Set.Ioi (0 : ℝ), BinetKernel.Ktilde t * Real.exp (-t * x) :=
     re_J_eq_integral_Ktilde (x := x) hx
-  -- compare the integrand with `(1/12) * exp(-t*x)`
   have hmono :
       (∫ t in Set.Ioi (0 : ℝ), BinetKernel.Ktilde t * Real.exp (-t * x))
         ≤ ∫ t in Set.Ioi (0 : ℝ), (1 / 12 : ℝ) * Real.exp (-t * x) := by
@@ -1925,35 +1798,28 @@ theorem re_J_le_one_div_twelve {x : ℝ} (hx : 0 < x) :
     · exact measurableSet_Ioi
     · intro t ht
       exact Binet.Ktilde_mul_exp_le (x := x) t ht
-  -- compute the RHS integral explicitly
   have hint : (∫ t in Set.Ioi (0 : ℝ), (12 : ℝ)⁻¹ * Real.exp (-(t * x))) = x⁻¹ * (12 : ℝ)⁻¹ := by
-    -- Normalize the exponent as `-(t * x)`.
     have hbase : ∫ t in Set.Ioi (0 : ℝ), Real.exp (-(t * x)) = 1 / x := by
       simpa [mul_assoc, mul_comm, mul_left_comm] using (Binet.integral_exp_neg_mul_Ioi (x := x) hx)
     calc
       (∫ t in Set.Ioi (0 : ℝ), (12 : ℝ)⁻¹ * Real.exp (-(t * x)))
           = (12 : ℝ)⁻¹ * ∫ t in Set.Ioi (0 : ℝ), Real.exp (-(t * x)) := by
-              -- pull out the constant and normalize the exponent
               simp [MeasureTheory.integral_const_mul, mul_comm]
       _ = (12 : ℝ)⁻¹ * (1 / x) := by simp [hbase]
       _ = x⁻¹ * (12 : ℝ)⁻¹ := by ring
-  -- finish
   have hmono' :
       (∫ t in Set.Ioi (0 : ℝ), BinetKernel.Ktilde t * Real.exp (-t * x)) ≤ x⁻¹ * (12 : ℝ)⁻¹ := by
-    -- normalize the RHS integrand to match `hint`
     have hmono0 :
         (∫ t in Set.Ioi (0 : ℝ), BinetKernel.Ktilde t * Real.exp (-t * x)) ≤
           ∫ t in Set.Ioi (0 : ℝ), (12 : ℝ)⁻¹ * Real.exp (-(t * x)) := by
       simpa [mul_assoc, mul_comm, mul_left_comm] using hmono
     exact le_trans hmono0 (le_of_eq hint)
-  -- turn `x⁻¹ * 12⁻¹` into `1 / (12 * x)` in the final statement
   have : x⁻¹ * (12 : ℝ)⁻¹ = 1 / (12 * x) := by
     ring
   have hmono'' :
       (∫ t in Set.Ioi (0 : ℝ), BinetKernel.Ktilde t * Real.exp (-t * x)) ≤ 1 / (12 * x) := by
     rw [this] at hmono'
     exact hmono'
-  -- conclude
   calc
     (Binet.J (x : ℂ)).re
         = ∫ t in Set.Ioi (0 : ℝ), BinetKernel.Ktilde t * Real.exp (-t * x) := hJ
@@ -1962,7 +1828,6 @@ theorem re_J_le_one_div_twelve {x : ℝ} (hx : 0 < x) :
 /-- Strict upper bound for the real Binet integral. -/
 theorem re_J_lt_one_div_twelve {x : ℝ} (hx : 0 < x) :
     (Binet.J (x : ℂ)).re < 1 / (12 * x) := by
-  -- Rewrite `re (J x)` as a real set integral.
   have hJ : (Binet.J (x : ℂ)).re =
       ∫ t in Set.Ioi (0 : ℝ), BinetKernel.Ktilde t * Real.exp (-t * x) :=
     re_J_eq_integral_Ktilde (x := x) hx

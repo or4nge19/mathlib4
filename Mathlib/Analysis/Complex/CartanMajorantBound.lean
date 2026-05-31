@@ -26,6 +26,172 @@ namespace Complex.Hadamard
 open scoped BigOperators
 open Filter Finset Real Topology
 
+lemma summable_of_eq_zero_not_mem_finset {α : Type*} (s : Finset α) (u : α → ℝ)
+    (hu : ∀ a, a ∉ s → u a = 0) :
+    Summable u := by
+  classical
+  refine summable_of_hasFiniteSupport ?_
+  refine (Finset.finite_toSet s).subset ?_
+  intro a ha
+  by_contra hs
+  exact ha (by simp [hu a hs])
+
+lemma summable_ite_mem_finset {α : Type*} [DecidableEq α] (s : Finset α) (u : α → ℝ) :
+    Summable (fun a => if a ∈ s then u a else 0) :=
+  summable_of_eq_zero_not_mem_finset s _ (by intro a ha; simp [ha])
+
+lemma tsum_ite_mem_finset {α : Type*} [DecidableEq α] (s : Finset α) (u : α → ℝ) :
+    (∑' a, if a ∈ s then u a else 0) = ∑ a ∈ s, u a := by
+  simpa using
+    (tsum_eq_sum (s := s) (f := fun a => if a ∈ s then u a else 0)
+      (by intro a ha; simp [ha]))
+
+lemma tsum_add_four {α : Type*} (u₁ u₂ u₃ u₄ : α → ℝ)
+    (h₁ : Summable u₁) (h₂ : Summable u₂) (h₃ : Summable u₃) (h₄ : Summable u₄) :
+    tsum (fun a => ((u₁ a + u₂ a) + u₃ a) + u₄ a)
+      = tsum u₁ + tsum u₂ + tsum u₃ + tsum u₄ := by
+  have h12 :
+      tsum (fun a => u₁ a + u₂ a) = tsum u₁ + tsum u₂ :=
+    Summable.tsum_add h₁ h₂
+  have h34 :
+      tsum (fun a => u₃ a + u₄ a) = tsum u₃ + tsum u₄ :=
+    Summable.tsum_add h₃ h₄
+  calc
+    tsum (fun a => ((u₁ a + u₂ a) + u₃ a) + u₄ a)
+        = tsum (fun a => (u₁ a + u₂ a) + (u₃ a + u₄ a)) := by
+            simp [add_comm, add_left_comm]
+    _ = tsum (fun a => u₁ a + u₂ a) + tsum (fun a => u₃ a + u₄ a) :=
+        Summable.tsum_add (h₁.add h₂) (h₃.add h₄)
+    _ = tsum u₁ + tsum u₂ + tsum u₃ + tsum u₄ := by
+        rw [h12, h34]
+        ring
+
+lemma rpow_div_norm_divisorZeroIndex₀_eq
+    {f : ℂ → ℂ} {r τ : ℝ} (hr : 0 ≤ r)
+    (p : divisorZeroIndex₀ f (Set.univ : Set ℂ)) :
+    (r / ‖divisorZeroIndex₀_val p‖) ^ τ =
+      (r ^ τ) * ((‖divisorZeroIndex₀_val p‖⁻¹ : ℝ) ^ τ) := by
+  have hp : 0 ≤ (‖divisorZeroIndex₀_val p‖⁻¹ : ℝ) := by positivity
+  simpa [div_eq_mul_inv, mul_assoc, mul_left_comm, mul_comm] using
+    (Real.mul_rpow (x := r) (y := (‖divisorZeroIndex₀_val p‖⁻¹ : ℝ)) (z := τ) hr hp)
+
+lemma tsum_rpow_div_norm_divisorZeroIndex₀_eq
+    {f : ℂ → ℂ} {r τ : ℝ} (hr : 0 ≤ r) :
+    (∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ),
+        (r / ‖divisorZeroIndex₀_val p‖) ^ τ)
+      = (r ^ τ) * ∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ),
+          ‖divisorZeroIndex₀_val p‖⁻¹ ^ τ := by
+  calc
+    (∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ),
+        (r / ‖divisorZeroIndex₀_val p‖) ^ τ)
+        = ∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ),
+            (r ^ τ) * (‖divisorZeroIndex₀_val p‖⁻¹ : ℝ) ^ τ := by
+            refine tsum_congr ?_
+            intro p
+            exact rpow_div_norm_divisorZeroIndex₀_eq (f := f) (τ := τ) hr p
+    _ = (r ^ τ) * ∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ),
+          ‖divisorZeroIndex₀_val p‖⁻¹ ^ τ := by
+        simp [tsum_mul_left]
+
+lemma tsum_two_mul_rpow_div_norm_divisorZeroIndex₀_le
+    {f : ℂ → ℂ} {r τ : ℝ} (hr : 0 ≤ r) (hτ_nonneg : 0 ≤ τ) :
+    (∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ),
+        (2 : ℝ) * (r / ‖divisorZeroIndex₀_val p‖) ^ τ)
+      ≤ (2 : ℝ) * ((∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ),
+          ‖divisorZeroIndex₀_val p‖⁻¹ ^ τ) + 1) * (1 + r) ^ τ := by
+  set Sτ : ℝ :=
+    ∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ), ‖divisorZeroIndex₀_val p‖⁻¹ ^ τ
+  have htsum :
+      (∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ),
+          (2 : ℝ) * (r / ‖divisorZeroIndex₀_val p‖) ^ τ)
+        = (2 : ℝ) * (r ^ τ) * Sτ := by
+    calc
+      (∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ),
+          (2 : ℝ) * (r / ‖divisorZeroIndex₀_val p‖) ^ τ)
+          = (2 : ℝ) * ∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ),
+              (r / ‖divisorZeroIndex₀_val p‖) ^ τ := by
+              simp [tsum_mul_left]
+      _ = (2 : ℝ) * ((r ^ τ) * Sτ) := by
+              rw [tsum_rpow_div_norm_divisorZeroIndex₀_eq (f := f) (τ := τ) hr]
+      _ = (2 : ℝ) * (r ^ τ) * Sτ := by ring
+  have hSτ_nonneg : 0 ≤ Sτ :=
+    tsum_nonneg (fun _ => Real.rpow_nonneg (inv_nonneg.2 (norm_nonneg _)) _)
+  have h1r : r ^ τ ≤ (1 + r) ^ τ :=
+    Real.rpow_le_rpow (by positivity) (by linarith) hτ_nonneg
+  have hS : Sτ ≤ Sτ + 1 := by linarith
+  have hle : (r ^ τ) * Sτ ≤ (1 + r) ^ τ * (Sτ + 1) :=
+    mul_le_mul h1r hS (by linarith) (by positivity)
+  rw [htsum]
+  have : (2 : ℝ) * (r ^ τ) * Sτ ≤ (2 : ℝ) * (Sτ + 1) * (1 + r) ^ τ := by
+    nlinarith [hle]
+  simpa [Sτ, mul_assoc, mul_left_comm, mul_comm] using this
+
+lemma sum_rpow_div_norm_divisorZeroIndex₀_le
+    {f : ℂ → ℂ} {r τ : ℝ} (small : Finset (divisorZeroIndex₀ f (Set.univ : Set ℂ)))
+    (hr : 0 ≤ r) (hτ_nonneg : 0 ≤ τ)
+    (hsumτ :
+      Summable (fun p : divisorZeroIndex₀ f (Set.univ : Set ℂ) =>
+        ‖divisorZeroIndex₀_val p‖⁻¹ ^ τ)) :
+    (∑ p ∈ small, (r / ‖divisorZeroIndex₀_val p‖) ^ τ)
+      ≤ ((∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ),
+          ‖divisorZeroIndex₀_val p‖⁻¹ ^ τ) + 1) * (1 + r) ^ τ := by
+  set Sτ : ℝ :=
+    ∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ), ‖divisorZeroIndex₀_val p‖⁻¹ ^ τ
+  have hsum_inv :
+      (∑ p ∈ small, (‖divisorZeroIndex₀_val p‖⁻¹ : ℝ) ^ τ) ≤ Sτ := by
+    have hnn : ∀ p : divisorZeroIndex₀ f (Set.univ : Set ℂ),
+        0 ≤ (‖divisorZeroIndex₀_val p‖⁻¹ : ℝ) ^ τ := by
+      intro p
+      positivity
+    simpa [Sτ] using
+      (Summable.sum_le_tsum (s := small)
+        (f := fun p : divisorZeroIndex₀ f (Set.univ : Set ℂ) =>
+          (‖divisorZeroIndex₀_val p‖⁻¹ : ℝ) ^ τ)
+        (fun p _ => hnn p) hsumτ)
+  have hsum_eq :
+      ∑ p ∈ small, (r / ‖divisorZeroIndex₀_val p‖) ^ τ =
+        (r ^ τ) * ∑ p ∈ small, (‖divisorZeroIndex₀_val p‖⁻¹ : ℝ) ^ τ := by
+    simp [rpow_div_norm_divisorZeroIndex₀_eq (f := f) (τ := τ) hr, Finset.mul_sum]
+  have h1r : r ^ τ ≤ (1 + r) ^ τ :=
+    Real.rpow_le_rpow (by positivity) (by linarith) hτ_nonneg
+  have hS : (∑ p ∈ small, (‖divisorZeroIndex₀_val p‖⁻¹ : ℝ) ^ τ) ≤ Sτ + 1 := by
+    linarith [hsum_inv]
+  have hle :
+      (r ^ τ) * (∑ p ∈ small, (‖divisorZeroIndex₀_val p‖⁻¹ : ℝ) ^ τ)
+        ≤ (1 + r) ^ τ * (Sτ + 1) :=
+    mul_le_mul h1r hS (by positivity) (by positivity)
+  simpa [Sτ, hsum_eq, mul_assoc, mul_left_comm, mul_comm] using hle
+
+lemma add_four_le_add_two_mul_of_le {x₁ x₂ x₃ x₄ A B C : ℝ}
+    (h₁ : x₁ ≤ A) (h₂ : x₂ ≤ B) (h₃ : x₃ ≤ B) (h₄ : x₄ ≤ C) :
+    x₁ + x₂ + x₃ + x₄ ≤ A + 2 * B + C := by
+  nlinarith
+
+lemma cartan_majorant_four_term_bound
+    {xφ x0 xm xt Cφ m q Y T : ℝ}
+    (hφ : xφ ≤ Cφ * q * Y * T)
+    (h0 : x0 ≤ m * q * Y * T)
+    (hm : xm ≤ m * q * Y * T)
+    (ht : xt ≤ (2 : ℝ) * Y * T) :
+    xφ + x0 + xm + xt ≤ (Cφ + (2 : ℝ) * m) * q * Y * T + (2 : ℝ) * Y * T := by
+  have h :=
+    add_four_le_add_two_mul_of_le hφ h0 hm ht
+  have hring :
+      Cφ * (q * (Y * T)) + 2 * (m * (q * (Y * T))) + 2 * (Y * T)
+        = (Cφ + (2 : ℝ) * m) * (q * (Y * T)) + (2 : ℝ) * (Y * T) := by
+    ring
+  simpa [mul_assoc, hring] using h
+
+lemma cartan_majorant_add_two_factor (A Y T : ℝ) :
+    A * Y * T + (2 : ℝ) * Y * T = ((A + 2) * Y) * T := by
+  ring
+
+lemma cartan_majorant_pad_two_to_three {A S T : ℝ} (hS : 0 ≤ S + 1) (hT : 0 ≤ T) :
+    ((A + 2) * (S + 1)) * T ≤ ((A + 3) * (S + 1)) * T := by
+  have h : (A + 2) * (S + 1) ≤ (A + 3) * (S + 1) := by
+    nlinarith
+  exact mul_le_mul_of_nonneg_right h hT
+
 lemma cartan_majorant_nonneg
     {f : ℂ → ℂ} {m : ℕ} {τ r : ℝ} (hr : 0 ≤ r)
     (small : Finset (divisorZeroIndex₀ f (Set.univ : Set ℂ))) :
@@ -91,13 +257,9 @@ lemma cartan_majorant_summable
       funext p
       by_cases hp : p ∈ small <;> simp [b, b₁, b₂, hp]
     have hb₁ : Summable b₁ := by
-      refine summable_of_hasFiniteSupport ?_
-      refine (Finset.finite_toSet small).subset ?_
-      intro p hp
-      by_contra hps
-      have hps' : p ∉ small := by simpa using hps
-      have : b₁ p = 0 := by simp [b₁, hps']
-      exact hp (by simp [this])
+      simpa [b₁] using
+        summable_ite_mem_finset small
+          (fun p => CartanBound.φ (r / ap p) + (m : ℝ) * (1 + (r / ap p) ^ τ))
     have hb₂ : Summable b₂ := by
       have hconst :
           Summable (fun p =>
@@ -114,9 +276,7 @@ lemma cartan_majorant_summable
       · have : 0 ≤ (2 : ℝ) * (r ^ τ) * (‖divisorZeroIndex₀_val p‖⁻¹ ^ τ) := by positivity
         simpa [b₂, hp] using this
       · have hrpow : (r / ap p) ^ τ = (r ^ τ) * (‖divisorZeroIndex₀_val p‖⁻¹ ^ τ) := by
-          have ha0 : 0 ≤ (‖divisorZeroIndex₀_val p‖⁻¹ : ℝ) := by positivity
-          simpa [ap, div_eq_mul_inv, mul_assoc, mul_left_comm, mul_comm] using
-            (Real.mul_rpow (x := r) (y := (‖divisorZeroIndex₀_val p‖⁻¹ : ℝ)) (z := τ) hr ha0)
+          simpa [ap] using rpow_div_norm_divisorZeroIndex₀_eq (f := f) (τ := τ) hr p
         simp [b₂, hp, hrpow, mul_assoc, mul_left_comm, mul_comm]
     simpa [hb_decomp] using hb₁.add hb₂
   refine hb.congr ?_
@@ -278,38 +438,19 @@ theorem cartan_sum_majorant_le
       · simp [b, bφ, b0, bmτ, bt, hp]
     have hmaj_summ : Summable (fun p => bφ p + b0 p + bmτ p + bt p) := by
       have hbφ_summ : Summable bφ := by
-        refine summable_of_hasFiniteSupport ?_
-        refine (Finset.finite_toSet small).subset ?_
-        intro p hp
-        by_contra hps
-        have hps' : p ∉ small := by simpa using hps
-        have : bφ p = 0 := by simp [bφ, hps']
-        exact hp (by simp [this])
+        simpa [bφ] using summable_ite_mem_finset small (fun p => CartanBound.φ (r / ap p))
       have hb0_summ : Summable b0 := by
-        refine summable_of_hasFiniteSupport ?_
-        refine (Finset.finite_toSet small).subset ?_
-        intro p hp
-        by_contra hps
-        have hps' : p ∉ small := by simpa using hps
-        have : b0 p = 0 := by simp [b0, hps']
-        exact hp (by simp [this])
+        simpa [b0] using summable_ite_mem_finset small (fun _ => (m : ℝ))
       have hbmτ_summ : Summable bmτ := by
-        refine summable_of_hasFiniteSupport ?_
-        refine (Finset.finite_toSet small).subset ?_
-        intro p hp
-        by_contra hps
-        have hps' : p ∉ small := by simpa using hps
-        have : bmτ p = 0 := by simp [bmτ, hps']
-        exact hp (by simp [this])
+        simpa [bmτ] using summable_ite_mem_finset small (fun p => (m : ℝ) * (r / ap p) ^ τ)
       have hbt_summ : Summable bt := by
         have hconst : Summable (fun p =>
             (2 : ℝ) * (r ^ τ) * (‖divisorZeroIndex₀_val p‖⁻¹ ^ τ)) :=
           hsumτ.mul_left ((2 : ℝ) * (r ^ τ))
         refine hconst.congr ?_
         intro p
-        have hr0 : 0 ≤ r := hr
-        have ha0 : 0 ≤ (‖divisorZeroIndex₀_val p‖⁻¹ : ℝ) := by positivity
-        simp [bt, ap, div_eq_mul_inv, Real.mul_rpow hr0 ha0, mul_assoc, mul_left_comm, mul_comm]
+        simp [bt, ap, rpow_div_norm_divisorZeroIndex₀_eq (f := f) (τ := τ) hr p,
+          mul_assoc, mul_left_comm, mul_comm]
       have h' : Summable (fun p => bφ p + b0 p + (bmτ p + bt p)) :=
         (hbφ_summ.add hb0_summ).add (hbmτ_summ.add hbt_summ)
       simpa [add_assoc] using h'
@@ -321,15 +462,13 @@ theorem cartan_sum_majorant_le
         (∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ), bφ p)
           = ∑ p ∈ small, CartanBound.φ (r / ap p) := by
       classical
-      simpa [bφ] using
-        (tsum_eq_sum (s := small) (f := fun p => bφ p) (by intro p hp; simp [bφ, hp]))
+      simpa [bφ] using tsum_ite_mem_finset small (fun p => CartanBound.φ (r / ap p))
     have htsum_b0 :
         (∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ), b0 p)
           = (m : ℝ) * (small.card : ℝ) := by
       classical
       have : (∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ), b0 p) = ∑ p ∈ small, (m : ℝ) := by
-        simpa [b0] using
-          (tsum_eq_sum (s := small) (f := fun p => b0 p) (by intro p hp; simp [b0, hp]))
+        simpa [b0] using tsum_ite_mem_finset small (fun _ => (m : ℝ))
       simp [this, Finset.sum_const, nsmul_eq_mul, mul_comm]
     have htsum_bmτ :
         (∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ), bmτ p)
@@ -338,75 +477,17 @@ theorem cartan_sum_majorant_le
       have :
           (∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ), bmτ p)
             = ∑ p ∈ small, (m : ℝ) * (r / ap p) ^ τ := by
-        simpa [bmτ] using
-          (tsum_eq_sum (s := small) (f := fun p => bmτ p) (by intro p hp; simp [bmτ, hp]))
+        simpa [bmτ] using tsum_ite_mem_finset small (fun p => (m : ℝ) * (r / ap p) ^ τ)
       simp [this, Finset.mul_sum]
     have htsum_bt :
         (∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ), bt p)
           ≤ (2 : ℝ) * (Sτ + 1) * (1 + r) ^ τ := by
-      have hbt_eq :
-          (∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ), bt p) = (2 : ℝ) * (r ^ τ) * Sτ := by
-        have hpow :
-            ∀ p : divisorZeroIndex₀ f (Set.univ : Set ℂ),
-              (r / ap p) ^ τ = (r ^ τ) * (‖divisorZeroIndex₀_val p‖⁻¹ : ℝ) ^ τ := by
-          intro p
-          have ha0 : 0 ≤ (‖divisorZeroIndex₀_val p‖⁻¹ : ℝ) := by positivity
-          simpa [ap, div_eq_mul_inv, mul_assoc, mul_left_comm, mul_comm] using
-            (Real.mul_rpow (x := r) (y := (‖divisorZeroIndex₀_val p‖⁻¹ : ℝ)) (z := τ) hr ha0)
-        calc
-          (∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ), bt p)
-              = (2 : ℝ) * ∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ), (r / ap p) ^ τ := by
-                simpa [bt, mul_assoc] using
-                  (tsum_mul_left (a := (2 : ℝ))
-                    (f := fun p : divisorZeroIndex₀ f (Set.univ : Set ℂ) => (r / ap p) ^ τ))
-          _ = (2 : ℝ) * ∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ),
-                (r ^ τ) * (‖divisorZeroIndex₀_val p‖⁻¹ : ℝ) ^ τ := by
-                refine congrArg (fun t => (2 : ℝ) * t) ?_
-                refine tsum_congr ?_
-                intro p
-                simp [hpow p]
-          _ = (2 : ℝ) * ((r ^ τ) * ∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ),
-                (‖divisorZeroIndex₀_val p‖⁻¹ : ℝ) ^ τ) := by
-                simp [tsum_mul_left]
-          _ = (2 : ℝ) * (r ^ τ) * Sτ := by
-                simp [Sτ, mul_assoc]
-      have h1r : r ^ τ ≤ (1 + r) ^ τ :=
-        Real.rpow_le_rpow (by positivity) (by linarith) hτ_nonneg
-      have hS : Sτ ≤ Sτ + 1 := by linarith
-      have hle : (r ^ τ) * Sτ ≤ (1 + r) ^ τ * (Sτ + 1) :=
-        mul_le_mul h1r hS (by linarith) (by positivity)
-      have : (2 : ℝ) * (r ^ τ) * Sτ ≤ (2 : ℝ) * (Sτ + 1) * (1 + r) ^ τ := by
-        nlinarith [hle]
-      exact (le_trans (le_of_eq hbt_eq) this)
+      simpa [bt, ap, Sτ] using
+        tsum_two_mul_rpow_div_norm_divisorZeroIndex₀_le (f := f) (τ := τ) hr hτ_nonneg
     have hsum_small_rpow_le :
         (∑ p ∈ small, (r / ap p) ^ τ) ≤ (Sτ + 1) * (1 + r) ^ τ := by
-      have hsum_inv : (∑ p ∈ small, (‖divisorZeroIndex₀_val p‖⁻¹ : ℝ) ^ τ) ≤ Sτ := by
-        have hnn : ∀ p : divisorZeroIndex₀ f (Set.univ : Set ℂ),
-            0 ≤ (‖divisorZeroIndex₀_val p‖⁻¹ : ℝ) ^ τ := by
-          intro p; positivity
-        simpa [Sτ] using
-          (Summable.sum_le_tsum (s := small)
-            (f := fun p : divisorZeroIndex₀ f (Set.univ : Set ℂ) =>
-              (‖divisorZeroIndex₀_val p‖⁻¹ : ℝ) ^ τ)
-            (fun p _ => hnn p) hsumτ)
-      have hrpow : ∀ p, (r / ap p) ^ τ = (r ^ τ) * (‖divisorZeroIndex₀_val p‖⁻¹ : ℝ) ^ τ := by
-        intro p
-        have ha0 : 0 ≤ (‖divisorZeroIndex₀_val p‖⁻¹ : ℝ) := by positivity
-        simpa [ap, div_eq_mul_inv, mul_assoc, mul_left_comm, mul_comm] using
-          (Real.mul_rpow (x := r) (y := (‖divisorZeroIndex₀_val p‖⁻¹ : ℝ))
-            (z := τ) hr ha0)
-      have : ∑ p ∈ small, (r / ap p) ^ τ =
-          (r ^ τ) * ∑ p ∈ small, (‖divisorZeroIndex₀_val p‖⁻¹ : ℝ) ^ τ := by
-        classical
-        simp [hrpow, Finset.mul_sum]
-      have h1r : r ^ τ ≤ (1 + r) ^ τ :=
-        Real.rpow_le_rpow (by positivity) (by linarith) hτ_nonneg
-      have hS : (∑ p ∈ small, (‖divisorZeroIndex₀_val p‖⁻¹ : ℝ) ^ τ) ≤ Sτ + 1 := by
-        linarith [hsum_inv]
-      have hle : (r ^ τ) * (∑ p ∈ small, (‖divisorZeroIndex₀_val p‖⁻¹ : ℝ) ^ τ) ≤
-          (1 + r) ^ τ * (Sτ + 1) :=
-        mul_le_mul h1r hS (by positivity) (by positivity)
-      simpa [this, mul_assoc, mul_left_comm, mul_comm] using hle
+      simpa [ap, Sτ] using
+        sum_rpow_div_norm_divisorZeroIndex₀_le (f := f) (τ := τ) small hr hτ_nonneg hsumτ
     have hm0 : 0 ≤ (m : ℝ) := by exact_mod_cast (Nat.zero_le m)
     have hCφ : 0 ≤ CartanBound.Cφ := le_of_lt CartanBound.Cφ_pos
     have hS : 0 ≤ Sτ + 1 := by linarith [hSτ_nonneg]
@@ -450,29 +531,11 @@ theorem cartan_sum_majorant_le
             = (∑' p, bφ p) + (∑' p, b0 p) + (∑' p, bmτ p) + (∑' p, bt p) := by
         classical
         have hbφ_summ : Summable bφ := by
-          refine summable_of_hasFiniteSupport ?_
-          refine (Finset.finite_toSet small).subset ?_
-          intro p hp
-          by_contra hps
-          have hps' : p ∉ small := by simpa using hps
-          have : bφ p = 0 := by simp [bφ, hps']
-          exact hp (by simp [this])
+          simpa [bφ] using summable_ite_mem_finset small (fun p => CartanBound.φ (r / ap p))
         have hb0_summ : Summable b0 := by
-          refine summable_of_hasFiniteSupport ?_
-          refine (Finset.finite_toSet small).subset ?_
-          intro p hp
-          by_contra hps
-          have hps' : p ∉ small := by simpa using hps
-          have : b0 p = 0 := by simp [b0, hps']
-          exact hp (by simp [this])
+          simpa [b0] using summable_ite_mem_finset small (fun _ => (m : ℝ))
         have hbmτ_summ : Summable bmτ := by
-          refine summable_of_hasFiniteSupport ?_
-          refine (Finset.finite_toSet small).subset ?_
-          intro p hp
-          by_contra hps
-          have hps' : p ∉ small := by simpa using hps
-          have : bmτ p = 0 := by simp [bmτ, hps']
-          exact hp (by simp [this])
+          simpa [bmτ] using summable_ite_mem_finset small (fun p => (m : ℝ) * (r / ap p) ^ τ)
         have hbt_summ : Summable bt := by
           have hconst :
               Summable
@@ -481,34 +544,9 @@ theorem cartan_sum_majorant_le
             hsumτ.mul_left ((2 : ℝ) * (r ^ τ))
           refine hconst.congr ?_
           intro p
-          have ha0 : 0 ≤ (‖divisorZeroIndex₀_val p‖⁻¹ : ℝ) := by positivity
-          have hrpow :
-              (r / ap p) ^ τ = (r ^ τ) * ((‖divisorZeroIndex₀_val p‖⁻¹ : ℝ) ^ τ) := by
-            simpa [ap, div_eq_mul_inv, mul_assoc, mul_left_comm, mul_comm] using
-              (Real.mul_rpow (x := r) (y := (‖divisorZeroIndex₀_val p‖⁻¹ : ℝ))
-                (z := τ) hr ha0)
-          simp [bt, hrpow, mul_assoc, mul_left_comm, mul_comm]
-        have hφ0 :
-            (∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ), (bφ p + b0 p))
-              = (∑' p, bφ p) + (∑' p, b0 p) :=
-          (Summable.tsum_add hbφ_summ hb0_summ)
-        have hmτt :
-            (∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ), (bmτ p + bt p))
-              = (∑' p, bmτ p) + (∑' p, bt p) :=
-          (Summable.tsum_add hbmτ_summ hbt_summ)
-        calc
-          (∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ),
-              (bφ p + b0 p + bmτ p + bt p))
-              = ∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ),
-                  ((bφ p + b0 p) + (bmτ p + bt p)) := by
-                  simp [add_left_comm, add_comm]
-          _ = (∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ), (bφ p + b0 p))
-                + (∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ), (bmτ p + bt p)) :=
-              Summable.tsum_add (hbφ_summ.add hb0_summ) (hbmτ_summ.add hbt_summ)
-          _ = ((∑' p, bφ p) + (∑' p, b0 p)) + ((∑' p, bmτ p) + (∑' p, bt p)) := by
-              simp [hφ0, hmτt]
-          _ = (∑' p, bφ p) + (∑' p, b0 p) + (∑' p, bmτ p) + (∑' p, bt p) := by
-              ring
+          simp [bt, ap, rpow_div_norm_divisorZeroIndex₀_eq (f := f) (τ := τ) hr p,
+            mul_assoc, mul_left_comm, mul_comm]
+        exact tsum_add_four bφ b0 bmτ bt hbφ_summ hb0_summ hbmτ_summ hbt_summ
       have hcard_le'' :
           (small.card : ℝ) ≤ (4 : ℝ) ^ τ * (Sτ + 1) * (1 + r) ^ τ := by
         simpa [mul_assoc, mul_left_comm, mul_comm] using hcard_le'
@@ -531,75 +569,41 @@ theorem cartan_sum_majorant_le
               + (2 : ℝ) * (Sτ + 1) * (1 + r) ^ τ := by
         rw [hsplit]
         set Y : ℝ := Sτ + 1 with hY
+        set T : ℝ := (1 + r) ^ τ with hT
         have hφ_leY :
             (∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ), bφ p)
-              ≤ CartanBound.Cφ * (4 : ℝ) ^ τ * Y * (1 + r) ^ τ := by
-          simpa [hY, mul_assoc] using hφ_le'
+              ≤ CartanBound.Cφ * (4 : ℝ) ^ τ * Y * T := by
+          simpa [hY, hT, mul_assoc] using hφ_le'
         have hb0_leY :
             (∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ), b0 p)
-              ≤ (m : ℝ) * (4 : ℝ) ^ τ * Y * (1 + r) ^ τ := by
-          simpa [hY, mul_assoc] using hb0_le'
+              ≤ (m : ℝ) * (4 : ℝ) ^ τ * Y * T := by
+          simpa [hY, hT, mul_assoc] using hb0_le'
         have hbmτ_leY :
             (∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ), bmτ p)
-              ≤ (m : ℝ) * (4 : ℝ) ^ τ * Y * (1 + r) ^ τ := by
-          simpa [hY, mul_assoc] using hbmτ_le
-        have h12 :
-            (∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ), bφ p)
-              + (∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ), b0 p)
-              ≤ CartanBound.Cφ * (4 : ℝ) ^ τ * Y * (1 + r) ^ τ
-                + (m : ℝ) * (4 : ℝ) ^ τ * Y * (1 + r) ^ τ :=
-          add_le_add hφ_leY hb0_leY
-        have h123 :
-            ((∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ), bφ p)
-                + (∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ), b0 p))
-              + (∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ), bmτ p)
-              ≤ (CartanBound.Cφ * (4 : ℝ) ^ τ * Y * (1 + r) ^ τ
-                    + (m : ℝ) * (4 : ℝ) ^ τ * Y * (1 + r) ^ τ)
-                  + (m : ℝ) * (4 : ℝ) ^ τ * Y * (1 + r) ^ τ :=
-          add_le_add h12 hbmτ_leY
-        have h123' :
-            ((∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ), bφ p)
-                + (∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ), b0 p))
-              + (∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ), bmτ p)
-              ≤ (CartanBound.Cφ + (2 : ℝ) * m) * (4 : ℝ) ^ τ * Y * (1 + r) ^ τ := by
-          have :
-              (CartanBound.Cφ * (4 : ℝ) ^ τ * Y * (1 + r) ^ τ
-                    + (m : ℝ) * (4 : ℝ) ^ τ * Y * (1 + r) ^ τ)
-                  + (m : ℝ) * (4 : ℝ) ^ τ * Y * (1 + r) ^ τ
-                = (CartanBound.Cφ + (2 : ℝ) * m) * (4 : ℝ) ^ τ * Y * (1 + r) ^ τ := by
-            ring
-          simpa [this] using h123
-        have h4 :
-            (((∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ), bφ p)
-                  + (∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ), b0 p))
-                + (∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ), bmτ p))
-              + (∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ), bt p)
-              ≤ (CartanBound.Cφ + (2 : ℝ) * m) * (4 : ℝ) ^ τ * Y * (1 + r) ^ τ
-                + (2 : ℝ) * Y * (1 + r) ^ τ := by
-          have hbt_leY :
-              (∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ), bt p) ≤ (2 : ℝ) * Y *
-                (1 + r) ^ τ := by
-            simpa [hY, mul_assoc] using hbt_le
-          exact add_le_add h123' hbt_leY
-        have h4' := h4
-        rw [hY] at h4'
-        exact h4'
+              ≤ (m : ℝ) * (4 : ℝ) ^ τ * Y * T := by
+          simpa [hY, hT, mul_assoc] using hbmτ_le
+        have hbt_leY :
+            (∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ), bt p) ≤ (2 : ℝ) * Y * T := by
+          simpa [hY, hT, mul_assoc] using hbt_le
+        have hmain :=
+          cartan_majorant_four_term_bound
+            (q := (4 : ℝ) ^ τ) hφ_leY hb0_leY hbmτ_leY hbt_leY
+        simpa [Y, T, add_assoc] using hmain
       have hring :
           (CartanBound.Cφ + (2 : ℝ) * m) * (4 : ℝ) ^ τ * (Sτ + 1) * (1 + r) ^ τ
               + (2 : ℝ) * (Sτ + 1) * (1 + r) ^ τ
             = (((CartanBound.Cφ + (2 : ℝ) * m) * (4 : ℝ) ^ τ + 2) * (Sτ + 1)) * (1 + r) ^ τ := by
-        ring
+        exact cartan_majorant_add_two_factor
+          ((CartanBound.Cφ + (2 : ℝ) * m) * (4 : ℝ) ^ τ) (Sτ + 1) ((1 + r) ^ τ)
       rw [← hring]
       exact htsum_majorant'
     have hCprod' :
         (((CartanBound.Cφ + (2 : ℝ) * m) * (4 : ℝ) ^ τ + 2) * (Sτ + 1)) * (1 + r) ^ τ
           ≤ Cprod * (1 + r) ^ τ := by
-      have hnr' : 0 ≤ (1 + r) ^ τ := by positivity
-      have : ((CartanBound.Cφ + (2 : ℝ) * m) * (4 : ℝ) ^ τ + 2) * (Sτ + 1)
-            ≤ ((CartanBound.Cφ + (2 : ℝ) * m) * (4 : ℝ) ^ τ + 3) * (Sτ + 1) := by
-        nlinarith [hS]
-      have := mul_le_mul_of_nonneg_right this hnr'
-      simpa [Cprod, mul_assoc, mul_left_comm, mul_comm] using this
+      simpa [Cprod, mul_assoc, mul_left_comm, mul_comm] using
+        cartan_majorant_pad_two_to_three
+          (A := (CartanBound.Cφ + (2 : ℝ) * m) * (4 : ℝ) ^ τ)
+          (S := Sτ) (T := (1 + r) ^ τ) hS (by positivity)
     exact (le_trans (le_trans htsum_le htsum_majorant) hCprod')
   have hsum_fin_le :
       (∑ p ∈ s, b p) ≤ (∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ), b p) := by

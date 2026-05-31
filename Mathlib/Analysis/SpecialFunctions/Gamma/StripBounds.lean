@@ -13,6 +13,7 @@ public import Mathlib.Analysis.SpecialFunctions.Stirling
 public import Mathlib.Data.Real.StarOrdered
 public import Mathlib.Analysis.SpecialFunctions.Gamma.BinetFormula
 public import Mathlib.Analysis.SpecialFunctions.GammaBounds
+public import Mathlib.Analysis.SpecialFunctions.Gamma.GammaStirlingAux
 
 
 
@@ -99,26 +100,6 @@ lemma norm_le_four_of_re_half_to_one {w : ℂ}
     _ ≤ 2 + 2 := by linarith [Real.Stirling.sqrt_pi_lt_two]
     _ = 4 := by norm_num
 
-/-- For `s : ℂ` and `n : ℕ`, the product
-`∏ k ∈ Finset.range n, (s - (k + 1))` has norm at most `(‖s‖ + n)^n`. -/
-lemma prod_sub_norm_le {s : ℂ} {n : ℕ} :
-    ‖∏ k ∈ Finset.range n, (s - (k + 1))‖ ≤ (‖s‖ + n) ^ n := by
-  calc ‖∏ k ∈ Finset.range n, (s - (k + 1))‖
-      = ∏ k ∈ Finset.range n, ‖s - (k + 1)‖ := by simp
-    _ ≤ ∏ _k ∈ Finset.range n, (‖s‖ + n) := by
-      refine Finset.prod_le_prod ?_ ?_
-      · intro k _; exact norm_nonneg _
-      · intro k hk
-        have h1 : ‖s - (k + 1 : ℂ)‖ ≤ ‖s‖ + ‖(k + 1 : ℂ)‖ := norm_sub_le _ _
-        have h2 : ‖(k + 1 : ℂ)‖ = (k + 1 : ℝ) := by norm_cast
-        have h3 : (k + 1 : ℝ) ≤ n := by
-          have := Finset.mem_range.mp hk
-          exact_mod_cast Nat.succ_le_of_lt this
-        calc ‖s - (k + 1 : ℂ)‖ ≤ ‖s‖ + ‖(k + 1 : ℂ)‖ := h1
-          _ = ‖s‖ + (k + 1 : ℝ) := by simp [h2]
-          _ ≤ ‖s‖ + n := add_le_add_right h3 _
-    _ = (‖s‖ + n) ^ n := by simp [Finset.prod_const, Finset.card_range]
-
 /-- For any `s : ℂ`, the real part of `s' := s - ⌊Re(s)⌋` lies in `[0, 1)`. -/
 lemma floor_shift_re_in_strip {s : ℂ} :
     let s' := s - (⌊s.re⌋ : ℂ)
@@ -160,47 +141,21 @@ theorem norm_bound_re_ge_one :
       have : (1 : ℕ) ≤ ⌊s.re⌋₊ := by omega
       simp [m, Nat.cast_sub this, Nat.cast_one]
     have hm_pos : 0 < m := by simp [m]; omega
-
     have h_re_lo : 1 ≤ (s - (m : ℂ)).re := by
       simp [sub_re, hm_eq]
       linarith [h_floor_le]
     have h_re_hi : (s - (m : ℂ)).re < 2 := by
       simp [sub_re, hm_eq]
       linarith [h_floor_gt]
-
     have h_k_bound : ∀ k < m, (k : ℝ) + 1 < s.re := by
       intro k hk
       calc (k : ℝ) + 1 ≤ (m : ℝ) := by exact_mod_cast (Nat.lt_iff_add_one_le.mp hk)
         _ = (⌊s.re⌋₊ : ℝ) - 1 := hm_eq
         _ < (⌊s.re⌋₊ : ℝ) := by linarith
         _ ≤ s.re := h_floor_le
-
-    have norm_shift_le : ∀ {k : ℕ}, k < m → ‖s - 1 - (k : ℂ)‖ ≤ ‖s‖ := by
-      intro k hk
-      have hk' : (k : ℝ) + 1 < s.re := h_k_bound k hk
-      have h1 : Complex.normSq (s - 1 - (k : ℂ)) ≤ Complex.normSq s := by
-        simp only [Complex.normSq_apply, Complex.sub_re, Complex.one_re, Complex.natCast_re,
-          Complex.sub_im, Complex.one_im, Complex.natCast_im, sub_zero]
-        have : (s.re - ((1 : ℝ) + k)) ^ 2 ≤ s.re ^ 2 := by nlinarith
-        linarith [sq_nonneg s.im]
-      calc
-        ‖s - 1 - (k : ℂ)‖ = Real.sqrt (Complex.normSq (s - 1 - (k : ℂ))) := rfl
-        _ ≤ Real.sqrt (Complex.normSq s) := Real.sqrt_le_sqrt h1
-        _ = ‖s‖ := rfl
-
     have prod_norm_le_pow :
         ‖∏ k ∈ Finset.range m, (s - 1 - (k : ℂ))‖ ≤ ‖s‖ ^ m := by
-      calc
-        ‖∏ k ∈ Finset.range m, (s - 1 - (k : ℂ))‖
-            = ∏ k ∈ Finset.range m, ‖s - 1 - (k : ℂ)‖ := by simp
-        _ ≤ ∏ _k ∈ Finset.range m, ‖s‖ := by
-              refine Finset.prod_le_prod (fun _ _ => norm_nonneg _) ?_
-              intro k hk
-              have hk' : k < m := Finset.mem_range.mp hk
-              exact norm_shift_le hk'
-        _ = ‖s‖ ^ m := by simp [Finset.prod_const, Finset.card_range]
-
-    -- Iterated functional equation (descending).
+      simpa using Stirling.GammaAux.prod_norm_le_pow (s := s) (m := m) h_k_bound
     have Gamma_iterate :
         Gamma s = Gamma (s - (m : ℂ)) * ∏ k ∈ Finset.range m, (s - 1 - (k : ℂ)) := by
       have hs_nonzero : ∀ k < m, s - 1 - (k : ℂ) ≠ 0 := by
@@ -209,68 +164,28 @@ theorem norm_bound_re_ge_one :
         have hk' : (k : ℝ) + 1 < s.re := h_k_bound k hk
         simp [Complex.sub_re] at this
         linarith
-      -- Induct on a fresh variable `n` (so the nonzero hypothesis is threaded correctly).
-      have Gamma_iterate_aux :
-          ∀ n : ℕ, (∀ k < n, s - 1 - (k : ℂ) ≠ 0) →
-            Gamma s = Gamma (s - (n : ℂ)) * ∏ k ∈ Finset.range n, (s - 1 - (k : ℂ)) := by
-        intro n
-        induction n with
-        | zero =>
-            intro _
-            simp
-        | succ n ih =>
-            intro hs
-            have h_prev : ∀ k < n, s - 1 - (k : ℂ) ≠ 0 := fun k hk => hs k (Nat.lt_succ_of_lt hk)
-            have h_curr : s - 1 - (n : ℂ) ≠ 0 := hs n (Nat.lt_succ_self n)
-            have h_ne : s - (n : ℂ) - 1 ≠ 0 := by
-              simpa [sub_eq_add_neg, add_assoc, add_comm, add_left_comm] using h_curr
-            have h_func :
-                Gamma (s - (n : ℂ)) = (s - (n : ℂ) - 1) * Gamma (s - (n : ℂ) - 1) := by
-              have := Complex.Gamma_add_one (s - (n : ℂ) - 1) h_ne
-              simpa [sub_eq_add_neg, add_assoc, add_comm, add_left_comm] using this
-            have h_cast : s - ((n + 1 : ℕ) : ℂ) = s - (n : ℂ) - 1 := by
-              simp [Nat.cast_add, Nat.cast_one, sub_eq_add_neg, add_assoc, add_comm]
-            have h_prod_eq :
-                (s - (n : ℂ) - 1) * ∏ k ∈ Finset.range n, (s - 1 - (k : ℂ)) =
-                  ∏ k ∈ Finset.range (n + 1), (s - 1 - (k : ℂ)) := by
-              rw [Finset.prod_range_succ]
-              ring
-            have ih' :
-                Gamma s = Gamma (s - (n : ℂ)) * ∏ k ∈ Finset.range n, (s - 1 - (k : ℂ)) :=
-              ih h_prev
-            calc
-              Gamma s
-                  = Gamma (s - (n : ℂ)) * ∏ k ∈ Finset.range n, (s - 1 - (k : ℂ)) := ih'
-              _ = (s - (n : ℂ) - 1) * Gamma (s - (n : ℂ) - 1) * ∏ k ∈ Finset.range n, (s - 1 - (k : ℂ)) := by
-                    rw [h_func]
-              _ = Gamma (s - (n : ℂ) - 1) *
-                    ((s - (n : ℂ) - 1) * ∏ k ∈ Finset.range n, (s - 1 - (k : ℂ))) := by
-                    ring
-              _ = Gamma (s - (n : ℂ) - 1) * ∏ k ∈ Finset.range (n + 1), (s - 1 - (k : ℂ)) := by
-                    rw [h_prod_eq]
-              _ = Gamma (s - ((n + 1 : ℕ) : ℂ)) * ∏ k ∈ Finset.range (n + 1), (s - 1 - (k : ℂ)) := by
-                    rw [h_cast]
-      exact Gamma_iterate_aux m hs_nonzero
-
+      simpa using Stirling.GammaAux.Gamma_iterate (s := s) (n := m) hs_nonzero
     have h_gamma_base : ‖Gamma (s - (m : ℂ))‖ ≤ 1 :=
       Binet.norm_Gamma_le_one (z := s - (m : ℂ)) h_re_lo (le_of_lt h_re_hi)
-
     have hΓ_le_pow : ‖Gamma s‖ ≤ ‖s‖ ^ m := by
       calc
-        ‖Gamma s‖ = ‖Gamma (s - (m : ℂ)) * ∏ k ∈ Finset.range m, (s - 1 - (k : ℂ))‖ := by
+        ‖Gamma s‖ =
+            ‖Gamma (s - (m : ℂ)) * ∏ k ∈ Finset.range m, (s - 1 - (k : ℂ))‖ := by
               simp [Gamma_iterate]
-        _ = ‖Gamma (s - (m : ℂ))‖ * ‖∏ k ∈ Finset.range m, (s - 1 - (k : ℂ))‖ := by
+        _ =
+            ‖Gamma (s - (m : ℂ))‖ *
+              ‖∏ k ∈ Finset.range m, (s - 1 - (k : ℂ))‖ := by
               simp
-        _ ≤ 1 * ‖s‖ ^ m := mul_le_mul h_gamma_base prod_norm_le_pow (norm_nonneg _) (by norm_num)
+        _ ≤ 1 * ‖s‖ ^ m :=
+            mul_le_mul h_gamma_base prod_norm_le_pow (norm_nonneg _) (by norm_num)
         _ = ‖s‖ ^ m := by ring
-
     have hm_le_norm : (m : ℝ) ≤ ‖s‖ := by
       have hm_le_floor : m ≤ ⌊s.re⌋₊ := Nat.sub_le _ _
       have hm_le_re : (m : ℝ) ≤ s.re := by
-        have h_floor_le' : (⌊s.re⌋₊ : ℝ) ≤ s.re := Nat.floor_le (by linarith : (0 : ℝ) ≤ s.re)
+        have h_floor_le' : (⌊s.re⌋₊ : ℝ) ≤ s.re :=
+          Nat.floor_le (by linarith : (0 : ℝ) ≤ s.re)
         exact le_trans (by exact_mod_cast hm_le_floor) h_floor_le'
       exact le_trans hm_le_re (Complex.re_le_norm s)
-
     have hpow_le : ‖s‖ ^ m ≤ (1 + ‖s‖) ^ (‖s‖ + 1) := by
       have hx0 : (0 : ℝ) ≤ ‖s‖ := norm_nonneg _
       have hm0 : (0 : ℝ) ≤ (m : ℝ) := by exact_mod_cast (Nat.cast_nonneg m)
@@ -287,7 +202,6 @@ theorem norm_bound_re_ge_one :
         ‖s‖ ^ m = (‖s‖ : ℝ) ^ (m : ℝ) := h1
         _ ≤ (1 + ‖s‖) ^ (m : ℝ) := h2
         _ ≤ (1 + ‖s‖) ^ (‖s‖ + 1) := h3
-
     have : ‖Gamma s‖ ≤ (1 + ‖s‖) ^ (‖s‖ + 1) := le_trans hΓ_le_pow hpow_le
     simpa [one_mul] using this
 
@@ -315,14 +229,12 @@ theorem stirling_bound_re_ge_zero :
       linarith
     have h := Real.exp_le_exp.mpr hlog
     simpa [K, Real.exp_log hC₁_pos] using h
-
   let Cbase : ℝ := K / Real.log 2 + 2
   have hCbase_pos : 0 < Cbase := by
     have hK_div_nonneg : 0 ≤ K / Real.log 2 := div_nonneg hK_pos.le hlog2_pos.le
     linarith [Cbase, hK_div_nonneg]
   let C : ℝ := 4 * Cbase
   refine ⟨C, by nlinarith [hCbase_pos], ?_⟩
-
   have h_re_ge_one :
       ∀ z : ℂ, 1 ≤ z.re →
         ‖Gamma z‖ ≤ Real.exp (Cbase * ‖z‖ * Real.log (1 + ‖z‖)) := by
@@ -346,20 +258,27 @@ theorem stirling_bound_re_ge_zero :
     have hK_le : K ≤ (K / Real.log 2) * (‖z‖ * Real.log (1 + ‖z‖)) := by
       have : (K / Real.log 2) * Real.log 2 = K := by field_simp [hlog2_ne]
       simpa [this] using hscaled
-
-    have hlin : Real.log (1 + ‖z‖) * (‖z‖ + 1) ≤ 2 * (‖z‖ * Real.log (1 + ‖z‖)) := by
+    have hlin :
+        Real.log (1 + ‖z‖) * (‖z‖ + 1) ≤
+          2 * (‖z‖ * Real.log (1 + ‖z‖)) := by
       have hz_le : ‖z‖ + 1 ≤ 2 * ‖z‖ := by linarith [hz_norm]
-      have hmul : Real.log (1 + ‖z‖) * (‖z‖ + 1) ≤ Real.log (1 + ‖z‖) * (2 * ‖z‖) :=
+      have hmul :
+          Real.log (1 + ‖z‖) * (‖z‖ + 1) ≤
+            Real.log (1 + ‖z‖) * (2 * ‖z‖) :=
         mul_le_mul_of_nonneg_left hz_le hL_nonneg
       -- rewrite
       simpa [mul_assoc, mul_left_comm, mul_comm, two_mul] using hmul
-
     -- Convert the polynomial bound into an exponential bound.
     have hpoly : ‖Gamma z‖ ≤ C₁ * (1 + ‖z‖) ^ (‖z‖ + 1) := hC₁ z hz_re
-    have hnonneg_rpow : 0 ≤ (1 + ‖z‖) ^ (‖z‖ + 1) := Real.rpow_nonneg (by linarith [norm_nonneg z]) _
-    have hmul : C₁ * (1 + ‖z‖) ^ (‖z‖ + 1) ≤ Real.exp K * (1 + ‖z‖) ^ (‖z‖ + 1) :=
+    have hnonneg_rpow : 0 ≤ (1 + ‖z‖) ^ (‖z‖ + 1) :=
+      Real.rpow_nonneg (by linarith [norm_nonneg z]) _
+    have hmul :
+        C₁ * (1 + ‖z‖) ^ (‖z‖ + 1) ≤
+          Real.exp K * (1 + ‖z‖) ^ (‖z‖ + 1) :=
       mul_le_mul_of_nonneg_right hC₁_exp hnonneg_rpow
-    have hrpow : (1 + ‖z‖) ^ (‖z‖ + 1) = Real.exp (Real.log (1 + ‖z‖) * (‖z‖ + 1)) := by
+    have hrpow :
+        (1 + ‖z‖) ^ (‖z‖ + 1) =
+          Real.exp (Real.log (1 + ‖z‖) * (‖z‖ + 1)) := by
       simp [Real.rpow_def_of_pos hx_pos, mul_comm]
     have hexp1 :
         C₁ * (1 + ‖z‖) ^ (‖z‖ + 1) ≤
@@ -385,8 +304,10 @@ theorem stirling_bound_re_ge_zero :
         have h2_term :
             Real.log (1 + ‖z‖) * (‖z‖ + 1) ≤ 2 * (‖z‖ * Real.log (1 + ‖z‖)) := hlin
         -- combine
-        have : K + Real.log (1 + ‖z‖) * (‖z‖ + 1)
-              ≤ (K / Real.log 2) * (‖z‖ * Real.log (1 + ‖z‖)) + 2 * (‖z‖ * Real.log (1 + ‖z‖)) := by
+        have :
+            K + Real.log (1 + ‖z‖) * (‖z‖ + 1) ≤
+              (K / Real.log 2) * (‖z‖ * Real.log (1 + ‖z‖)) +
+                2 * (‖z‖ * Real.log (1 + ‖z‖)) := by
           nlinarith [hK_term, h2_term]
         -- factor
         simpa [Cbase, add_mul, mul_add, two_mul, mul_assoc, mul_left_comm, mul_comm] using this
@@ -397,7 +318,6 @@ theorem stirling_bound_re_ge_zero :
     have : ‖Gamma z‖ ≤ Real.exp (Cbase * ‖z‖ * Real.log (1 + ‖z‖)) :=
       le_trans hpoly (le_trans hexp1 (le_trans hexp2 (by simp [hexp3] )))
     simpa [mul_assoc] using this
-
   intro s hs_re hs_norm
   have hs0 : s ≠ 0 := (norm_pos_iff).1 (lt_of_lt_of_le (by norm_num) hs_norm)
   by_cases hs_ge_one : 1 ≤ s.re
@@ -492,8 +412,14 @@ theorem stirling_bound_re_ge_zero :
               ≤ Cbase * (4 * (‖s‖ * Real.log (1 + ‖s‖))) := by
                     exact mul_le_mul_of_nonneg_left hshift hC_nonneg
           _ = C * (‖s‖ * Real.log (1 + ‖s‖)) := by simp [C, mul_assoc, mul_left_comm, mul_comm]
-      have h0' : Cbase * ‖s + 1‖ * Real.log (1 + ‖s + 1‖) = Cbase * (‖s + 1‖ * Real.log (1 + ‖s + 1‖)) := by ring
-      have h1' : C * ‖s‖ * Real.log (1 + ‖s‖) = C * (‖s‖ * Real.log (1 + ‖s‖)) := by ring
+      have h0' :
+          Cbase * ‖s + 1‖ * Real.log (1 + ‖s + 1‖) =
+            Cbase * (‖s + 1‖ * Real.log (1 + ‖s + 1‖)) := by
+        ring
+      have h1' :
+          C * ‖s‖ * Real.log (1 + ‖s‖) =
+            C * (‖s‖ * Real.log (1 + ‖s‖)) := by
+        ring
       exact le_trans h0 (by
         apply Real.exp_le_exp.mpr
         simpa [h0', h1'] using hCshift)
@@ -513,7 +439,6 @@ theorem half_bound_re_ge_zero :
   have hlog3_pos : 0 < Real.log 3 := by
     have : (1 : ℝ) < 3 := by norm_num
     exact Real.log_pos this
-
   -- A constant that will absorb the shift `s/2 ↦ s/2 + 1` and the prefactor `2`.
   let A : ℝ := (3 / 2 : ℝ) * (Real.log 3 / Real.log 2 + 1)
   have hA_pos : 0 < A := by
@@ -524,7 +449,6 @@ theorem half_bound_re_ge_zero :
       linarith
     have : 0 < (3 / 2 : ℝ) * (Real.log 3 / Real.log 2 + 1) := mul_pos this hcoef_pos
     simpa [A] using this
-
   let C : ℝ := 1 + C₀ * A
   refine ⟨C, by nlinarith [hC₀_pos, hA_pos], ?_⟩
   intro s hs_re hs_norm
@@ -554,19 +478,21 @@ theorem half_bound_re_ge_zero :
         _ = ‖Gamma (s / 2 + 1)‖ / ‖s / 2‖ := by simp [hnorm_mul]
     -- now use `1/‖s/2‖ ≤ 2`
     rw [this, div_eq_mul_inv]
-    have : (‖Gamma (s / 2 + 1)‖ : ℝ) * (1 / ‖s / 2‖) ≤ ‖Gamma (s / 2 + 1)‖ * 2 :=
+    have :
+        (‖Gamma (s / 2 + 1)‖ : ℝ) * (1 / ‖s / 2‖) ≤
+          ‖Gamma (s / 2 + 1)‖ * 2 :=
       mul_le_mul_of_nonneg_left h_inv (norm_nonneg _)
     simpa [mul_assoc, mul_left_comm, mul_comm] using this
-
   -- Apply the main Stirling bound to `z = s/2 + 1`.
   have hz_re : 0 ≤ (s / 2 + 1).re := by simp [Complex.add_re]; linarith
   have hz_norm : (1 : ℝ) ≤ ‖s / 2 + 1‖ := by
     -- `‖z‖ ≥ re z ≥ 1`
     have : (1 : ℝ) ≤ (s / 2 + 1).re := by simp [Complex.add_re]; linarith
     exact le_trans this (Complex.re_le_norm (s / 2 + 1))
-  have hΓz : ‖Gamma (s / 2 + 1)‖ ≤ Real.exp (C₀ * ‖s / 2 + 1‖ * Real.log (1 + ‖s / 2 + 1‖)) :=
+  have hΓz :
+      ‖Gamma (s / 2 + 1)‖ ≤
+        Real.exp (C₀ * ‖s / 2 + 1‖ * Real.log (1 + ‖s / 2 + 1‖)) :=
     hC₀ (s / 2 + 1) hz_re hz_norm
-
   -- Compare `‖s/2+1‖ * log(1+‖s/2+1‖)` to `‖s‖ * log(1+‖s‖)`.
   have hnorm_w : ‖s / 2 + 1‖ ≤ (3 / 2 : ℝ) * ‖s‖ := by
     have h1 : ‖s / 2 + 1‖ ≤ ‖s / 2‖ + ‖(1 : ℂ)‖ := norm_add_le _ _
@@ -589,13 +515,20 @@ theorem half_bound_re_ge_zero :
   have hlog2_le : Real.log 2 ≤ Real.log (1 + ‖s‖) :=
     Real.Stirling.log_one_add_ge_log_two hs_norm
   have hlog3_le : Real.log 3 ≤ (Real.log 3 / Real.log 2) * Real.log (1 + ‖s‖) := by
-    have hcoef_nonneg : 0 ≤ Real.log 3 / Real.log 2 := div_nonneg hlog3_pos.le hlog2_pos.le
-    have hscaled : (Real.log 3 / Real.log 2) * Real.log 2 ≤ (Real.log 3 / Real.log 2) * Real.log (1 + ‖s‖) :=
+    have hcoef_nonneg : 0 ≤ Real.log 3 / Real.log 2 :=
+      div_nonneg hlog3_pos.le hlog2_pos.le
+    have hscaled :
+        (Real.log 3 / Real.log 2) * Real.log 2 ≤
+          (Real.log 3 / Real.log 2) * Real.log (1 + ‖s‖) :=
       mul_le_mul_of_nonneg_left hlog2_le hcoef_nonneg
     have : (Real.log 3 / Real.log 2) * Real.log 2 = Real.log 3 := by field_simp [hlog2_ne]
     simpa [this] using hscaled
-  have hlog_w' : Real.log (1 + ‖s / 2 + 1‖) ≤ (Real.log 3 / Real.log 2 + 1) * Real.log (1 + ‖s‖) := by
-    have : Real.log 3 + Real.log (1 + ‖s‖) ≤ (Real.log 3 / Real.log 2 + 1) * Real.log (1 + ‖s‖) := by
+  have hlog_w' :
+      Real.log (1 + ‖s / 2 + 1‖) ≤
+        (Real.log 3 / Real.log 2 + 1) * Real.log (1 + ‖s‖) := by
+    have :
+        Real.log 3 + Real.log (1 + ‖s‖) ≤
+          (Real.log 3 / Real.log 2 + 1) * Real.log (1 + ‖s‖) := by
       nlinarith [hlog3_le]
     exact le_trans hlog_w this
   have hprod_w :
@@ -603,7 +536,8 @@ theorem half_bound_re_ge_zero :
     have hlog_nonneg : 0 ≤ Real.log (1 + ‖s / 2 + 1‖) :=
       Real.log_nonneg (by linarith [norm_nonneg (s / 2 + 1)])
     have hstep1 :
-        ‖s / 2 + 1‖ * Real.log (1 + ‖s / 2 + 1‖) ≤ ((3 / 2 : ℝ) * ‖s‖) * Real.log (1 + ‖s / 2 + 1‖) :=
+        ‖s / 2 + 1‖ * Real.log (1 + ‖s / 2 + 1‖) ≤
+          ((3 / 2 : ℝ) * ‖s‖) * Real.log (1 + ‖s / 2 + 1‖) :=
       mul_le_mul_of_nonneg_right hnorm_w hlog_nonneg
     have hstep2 :
         ((3 / 2 : ℝ) * ‖s‖) * Real.log (1 + ‖s / 2 + 1‖)
@@ -614,7 +548,6 @@ theorem half_bound_re_ge_zero :
         = A * (‖s‖ * Real.log (1 + ‖s‖)) := by
       simp [A, mul_assoc, mul_left_comm, mul_comm]
     exact le_trans (le_trans hstep1 hstep2) (by simp [this])
-
   have hlog2_le_xlog : Real.log 2 ≤ ‖s‖ * Real.log (1 + ‖s‖) := by
     have hx_mul : ‖s‖ * Real.log 2 ≤ ‖s‖ * Real.log (1 + ‖s‖) :=
       mul_le_mul_of_nonneg_left hlog2_le (by linarith)
@@ -622,12 +555,13 @@ theorem half_bound_re_ge_zero :
       have := mul_le_mul_of_nonneg_right hs_norm hlog2_pos.le
       simpa [one_mul] using this
     exact le_trans hx_ge hx_mul
-
   -- Put everything together.
   have hmain :
       ‖Gamma (s / 2)‖ ≤ Real.exp (C * ‖s‖ * Real.log (1 + ‖s‖)) := by
     -- from `‖Γ(s/2)‖ ≤ 2‖Γ(s/2+1)‖`
-    have htmp : ‖Gamma (s / 2)‖ ≤ 2 * Real.exp (C₀ * ‖s / 2 + 1‖ * Real.log (1 + ‖s / 2 + 1‖)) :=
+    have htmp :
+        ‖Gamma (s / 2)‖ ≤
+          2 * Real.exp (C₀ * ‖s / 2 + 1‖ * Real.log (1 + ‖s / 2 + 1‖)) :=
       le_trans hdiv (mul_le_mul_of_nonneg_left hΓz (by norm_num))
     -- rewrite `2 = exp(log 2)`
     -- convert to a single exponential and compare exponents
@@ -640,7 +574,8 @@ theorem half_bound_re_ge_zero :
       -- `exp(log 2) * exp(A) = exp(log 2 + A)`
       calc
         2 * Real.exp (C₀ * ‖s / 2 + 1‖ * Real.log (1 + ‖s / 2 + 1‖))
-            = Real.exp (Real.log 2) * Real.exp (C₀ * ‖s / 2 + 1‖ * Real.log (1 + ‖s / 2 + 1‖)) := by
+            = Real.exp (Real.log 2) *
+                Real.exp (C₀ * ‖s / 2 + 1‖ * Real.log (1 + ‖s / 2 + 1‖)) := by
                 simp [htwo, mul_assoc]
         _ = Real.exp (Real.log 2 + C₀ * ‖s / 2 + 1‖ * Real.log (1 + ‖s / 2 + 1‖)) := by
               simp [Real.exp_add]
@@ -651,7 +586,8 @@ theorem half_bound_re_ge_zero :
             ≤ C * (‖s‖ * Real.log (1 + ‖s‖)) := by
         have hC0_nonneg : 0 ≤ C₀ := le_of_lt hC₀_pos
         have hA_term :
-            C₀ * ‖s / 2 + 1‖ * Real.log (1 + ‖s / 2 + 1‖) ≤ (C₀ * A) * (‖s‖ * Real.log (1 + ‖s‖)) := by
+            C₀ * ‖s / 2 + 1‖ * Real.log (1 + ‖s / 2 + 1‖) ≤
+              (C₀ * A) * (‖s‖ * Real.log (1 + ‖s‖)) := by
           -- use `hprod_w`
           have := mul_le_mul_of_nonneg_left hprod_w hC0_nonneg
           -- rearrange

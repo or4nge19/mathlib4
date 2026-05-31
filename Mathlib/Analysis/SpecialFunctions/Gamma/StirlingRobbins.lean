@@ -66,17 +66,17 @@ theorem log_factorial_theta {n : ℕ} (hn : 0 < n) :
       Real.log (n.factorial : ℝ) =
         n * Real.log n - n + Real.log (2 * Real.pi * n) / 2 + θ / (12 * n) := by
   have h_fact : Real.log (n.factorial) = Real.log n + Real.log (Real.Gamma n) := by
-    rw [← Real.log_mul (Nat.cast_ne_zero.mpr (ne_of_gt hn)) (Real.Gamma_pos_of_pos (Nat.cast_pos.mpr hn)).ne']
+    rw [← Real.log_mul
+      (Nat.cast_ne_zero.mpr (ne_of_gt hn))
+      (Real.Gamma_pos_of_pos (Nat.cast_pos.mpr hn)).ne']
     rw [← Real.Gamma_add_one (Nat.cast_ne_zero.mpr (ne_of_gt hn))]
     rw [Real.Gamma_nat_eq_factorial]
   let x : ℝ := n
   have hx : 0 < x := Nat.cast_pos.mpr hn
-  -- Binet formula for log Gamma(x)
   have h_binet :
       Real.log (Real.Gamma x) =
         (x - 1/2) * Real.log x - x + Real.log (2 * Real.pi) / 2 + (Binet.J x).re := by
     exact Binet.log_Gamma_real_eq hx
-  -- Bounds on J(x)
   have h_J_bounds : 0 < (Binet.J x).re ∧ (Binet.J x).re < 1 / (12 * x) := by
     constructor
     · exact Binet.re_J_pos hx
@@ -97,7 +97,9 @@ theorem log_factorial_theta {n : ℕ} (hn : 0 < n) :
   rw [h_fact, h_binet]
   have h_theta : θ / (12 * x) = (Binet.J x).re := by field_simp [θ]; ring
   rw [h_theta]
-  have h_log_term : Real.log (2 * Real.pi * n) / 2 = Real.log (2 * Real.pi) / 2 + Real.log n / 2 := by
+  have h_log_term :
+      Real.log (2 * Real.pi * n) / 2 =
+        Real.log (2 * Real.pi) / 2 + Real.log n / 2 := by
     rw [Real.log_mul (by positivity) (by positivity)]
     ring
   rw [h_log_term]
@@ -127,7 +129,6 @@ theorem factorial_upper_robbins (n : ℕ) (hn : 0 < n) :
     exact mul_nonneg (by norm_num) hn_pos.le
   have h_exp := Real.exp_le_exp.mpr h_log_le
   rw [Real.exp_log (Nat.cast_pos.mpr (Nat.factorial_pos n))] at h_exp
-  -- Simplify RHS
   have h_pow_eq : (n : ℝ) ^ (n : ℝ) / Real.exp n = ((n : ℝ) / Real.exp 1) ^ n := by
     have h1 : Real.exp n = (Real.exp 1) ^ n := by rw [← Real.exp_one_rpow, Real.rpow_natCast]
     rw [h1]
@@ -138,134 +139,110 @@ theorem factorial_upper_robbins (n : ℕ) (hn : 0 < n) :
   have h_sqrt : Real.exp (Real.log (2 * Real.pi * n) / 2) = Real.sqrt (2 * Real.pi * n) :=
     exp_half_log (by positivity : 0 < 2 * Real.pi * n)
   convert h_exp using 1
-  -- Split off the `exp(1/(12n))` factor on the RHS, then cancel it.
   rw [Real.exp_add]
   have hexp_ne : Real.exp (1 / (12 * (n : ℝ))) ≠ 0 := Real.exp_ne_zero _
   apply mul_right_cancel₀ hexp_ne
-  -- Now show `exp(n log n - n + log(2πn)/2) = sqrt(2πn) * (n/exp 1)^n`.
   have hA :
       (n : ℝ) * Real.log n - n + Real.log (2 * Real.pi * n) / 2
         = ((n : ℝ) * Real.log n - n) + Real.log (2 * Real.pi * n) / 2 := by
     ring
-  -- Expand the exponential of a sum and rewrite the `sqrt` factor.
   rw [hA, Real.exp_add, h_sqrt]
-  -- Rewrite `exp(n log n - n)` as `(n/exp 1)^n`.
   have hExpMain :
       Real.exp ((n : ℝ) * Real.log n - n) = ((n : ℝ) / Real.exp 1) ^ n := by
-    -- `exp(a - b) = exp a / exp b`
     rw [Real.exp_sub]
-    -- `exp(n log n) = n^n` (as a real power)
     rw [h_exp_n]
-    -- turn `/(exp n)` into the `((n/exp 1)^n)` form
     simpa [div_eq_mul_inv, Real.exp_nat_mul] using h_pow_eq
-  -- Finish by commutativity.
   simp [hExpMain, mul_left_comm, mul_comm]
 
 /-! ## Section 4: Lower bound -/
+
+/-- Combine the two exponential factors in the Robbins lower-bound integrand. -/
+lemma exp_neg_div_twelve_mul_exp_neg_mul (x t : ℝ) :
+    Real.exp (-t / 12) * Real.exp (-t * x) = Real.exp (-t * (x + 1 / 12)) := by
+  rw [← Real.exp_add]
+  congr 1
+  ring
+
+/-- The elementary integrand used in Robbins' lower bound is integrable on `(0,∞)`. -/
+lemma integrable_one_div_twelve_mul_exp_neg_div_mul_exp_neg_mul {x : ℝ} (hx : 0 < x) :
+    IntegrableOn
+      (fun t : ℝ => (1 / 12 : ℝ) * Real.exp (-t / 12) * Real.exp (-t * x))
+      (Ioi (0 : ℝ)) volume := by
+  have hx' : 0 < x + 1 / 12 := by linarith [hx]
+  have hExp :
+      IntegrableOn (fun t : ℝ => Real.exp (-(x + 1 / 12) * t)) (Ioi (0 : ℝ))
+        volume := by
+    apply integrableOn_exp_mul_Ioi (a := -(x + 1 / 12)) (c := 0)
+    nlinarith [hx']
+  have hConst :
+      IntegrableOn (fun t : ℝ => (1 / 12 : ℝ) * Real.exp (-(x + 1 / 12) * t))
+        (Ioi (0 : ℝ)) volume := by
+    simpa [IntegrableOn] using
+      (MeasureTheory.Integrable.const_mul (μ := volume.restrict (Ioi (0 : ℝ)))
+        (h := hExp) (c := (1 / 12 : ℝ)))
+  refine hConst.congr_fun ?_ measurableSet_Ioi
+  intro t _ht
+  have harg : -(x + 1 / 12) * t = -t * (x + 1 / 12) := by ring
+  calc
+    (1 / 12 : ℝ) * Real.exp (-(x + 1 / 12) * t)
+        = (1 / 12 : ℝ) * Real.exp (-t * (x + 1 / 12)) := by rw [harg]
+    _ = (1 / 12 : ℝ) * (Real.exp (-t / 12) * Real.exp (-t * x)) := by
+        rw [exp_neg_div_twelve_mul_exp_neg_mul]
+    _ = (1 / 12 : ℝ) * Real.exp (-t / 12) * Real.exp (-t * x) := by
+        ring
+
+/-- Integral of the elementary Robbins lower-bound integrand. -/
+lemma integral_one_div_twelve_mul_exp_neg_div_mul_exp_neg_mul {x : ℝ} (hx : 0 < x) :
+    ∫ t in Ioi (0 : ℝ), (1 / 12 : ℝ) * Real.exp (-t / 12) * Real.exp (-t * x) =
+      1 / (12 * x + 1) := by
+  have hx' : 0 < x + 1 / 12 := by linarith [hx]
+  have hbase :
+      ∫ t in Ioi (0 : ℝ), Real.exp (-t * (x + 1 / 12)) = 1 / (x + 1 / 12) := by
+    simpa using (Binet.integral_exp_neg_mul_Ioi (x := x + 1 / 12) hx')
+  calc
+    (∫ t in Ioi (0 : ℝ), (1 / 12 : ℝ) * Real.exp (-t / 12) * Real.exp (-t * x))
+        = ∫ t in Ioi (0 : ℝ), (1 / 12 : ℝ) * Real.exp (-t * (x + 1 / 12)) := by
+            refine MeasureTheory.setIntegral_congr_fun measurableSet_Ioi ?_
+            intro t _ht
+            calc
+              (1 / 12 : ℝ) * Real.exp (-t / 12) * Real.exp (-t * x)
+                  = (1 / 12 : ℝ) * (Real.exp (-t / 12) * Real.exp (-t * x)) := by
+                    ring
+              _ = (1 / 12 : ℝ) * Real.exp (-t * (x + 1 / 12)) := by
+                    rw [exp_neg_div_twelve_mul_exp_neg_mul]
+    _ = (1 / 12 : ℝ) * ∫ t in Ioi (0 : ℝ), Real.exp (-t * (x + 1 / 12)) := by
+        simp [MeasureTheory.integral_const_mul]
+    _ = (1 / 12 : ℝ) * (1 / (x + 1 / 12)) := by rw [hbase]
+    _ = 1 / (12 * x + 1) := by field_simp
 
 /-- For the lower bound, we need J(n+1) ≥ 1/(12(n+1)+1).
 
 This refined lower bound on the Binet integral uses monotonicity of K̃. -/
 lemma J_lower_bound (n : ℕ) :
     1 / (12 * (n + 1 : ℝ) + 1) ≤ (Binet.J (n + 1 : ℂ)).re := by
-  -- The proof only uses `n+1 > 0`.
   let x : ℝ := n + 1
   have hx : 0 < x := by
     dsimp [x]
     exact add_pos_of_nonneg_of_pos (Nat.cast_nonneg n) zero_lt_one
-  -- rewrite the real part of `J` using the `x` notation
   have hJ : (Binet.J (n + 1 : ℂ)).re =
       ∫ t in Ioi (0 : ℝ), BinetKernel.Ktilde t * Real.exp (-t * x) := by
     simpa [x] using (Binet.re_J_eq_integral_Ktilde (x := x) hx)
   rw [hJ]
-  -- We use the bound K̃(t) ≥ (1/12) * e^{-t/12}
   have h_bound : ∀ t ∈ Ioi 0, (1/12) * Real.exp (-t/12) ≤ BinetKernel.Ktilde t := by
     intro t ht
-    -- Robbins-type pointwise lower bound for the Binet kernel, proved in `BinetKernel.lean`.
-    simpa using (BinetKernel.Ktilde_ge_one_div_twelve_mul_exp_neg_div_twelve (t := t) (by simpa using ht))
-
-  -- We integrate the inequality
-  have h_int_le : ∫ t in Ioi 0, (1/12) * Real.exp (-t/12) * Real.exp (-t * x) ≤
-                  ∫ t in Ioi 0, BinetKernel.Ktilde t * Real.exp (-t * x) := by
-    -- integrability of the LHS integrand
-    have h_left_int :
-        IntegrableOn (fun t : ℝ => (1 / 12 : ℝ) * Real.exp (-t / 12) * Real.exp (-t * x))
-          (Ioi (0 : ℝ)) volume := by
-      -- rewrite as a constant times a single exponential `exp (-(x+1/12)*t)`
-      have hx' : 0 < x + 1 / 12 := by linarith [hx]
-      have hExp :
-          IntegrableOn (fun t : ℝ => Real.exp (-(x + 1 / 12) * t)) (Ioi (0 : ℝ)) volume := by
-        apply integrableOn_exp_mul_Ioi (a := -(x + 1 / 12)) (c := 0)
-        nlinarith [hx']
-      have hConst :
-          IntegrableOn (fun t : ℝ => (1 / 12 : ℝ) * Real.exp (-(x + 1 / 12) * t))
-            (Ioi (0 : ℝ)) volume := by
-        simpa [IntegrableOn] using
-          (MeasureTheory.Integrable.const_mul (μ := volume.restrict (Ioi (0 : ℝ))) (h := hExp) (c := (1 / 12 : ℝ)))
-      refine hConst.congr_fun ?_ measurableSet_Ioi
-      intro t ht
-      have hexp : Real.exp (-(x + 1 / 12) * t) = Real.exp (-t / 12) * Real.exp (-t * x) := by
-        have : (-(x + 1 / 12) * t) = (-t / 12) + (-t * x) := by ring
-        calc
-          Real.exp (-(x + 1 / 12) * t) = Real.exp ((-t / 12) + (-t * x)) := by simpa [this]
-          _ = Real.exp (-t / 12) * Real.exp (-t * x) := by simp [Real.exp_add]
-      -- rewrite without `simpa` to avoid simp-normal-form mismatches
-      have h1 :
-          (1 / 12 : ℝ) * Real.exp (-(x + 1 / 12) * t)
-            = (1 / 12 : ℝ) * (Real.exp (-t / 12) * Real.exp (-t * x)) :=
-        congrArg (fun y => (1 / 12 : ℝ) * y) hexp
-      calc
-        (1 / 12 : ℝ) * Real.exp (-(x + 1 / 12) * t)
-            = (1 / 12 : ℝ) * (Real.exp (-t / 12) * Real.exp (-t * x)) := h1
-        _ = (1 / 12 : ℝ) * Real.exp (-t / 12) * Real.exp (-t * x) := by simp [mul_assoc]
-    -- apply monotonicity under `ae` on the restricted measure
-    refine MeasureTheory.setIntegral_mono_ae_restrict h_left_int
+    simpa using
+      (BinetKernel.Ktilde_ge_one_div_twelve_mul_exp_neg_div_twelve (t := t)
+        (by simpa using ht))
+  have h_int_le :
+      ∫ t in Ioi 0, (1/12) * Real.exp (-t/12) * Real.exp (-t * x) ≤
+        ∫ t in Ioi 0, BinetKernel.Ktilde t * Real.exp (-t * x) := by
+    refine MeasureTheory.setIntegral_mono_ae_restrict
+      (integrable_one_div_twelve_mul_exp_neg_div_mul_exp_neg_mul hx)
       (Binet.integrable_Ktilde_mul_exp_neg_mul hx) ?_
     filter_upwards [self_mem_ae_restrict (measurableSet_Ioi)] with t ht
     gcongr
     exact h_bound t ht
-
-  -- Calculate the LHS integral
-  have h_lhs : ∫ t in Ioi 0, (1/12) * Real.exp (-t/12) * Real.exp (-t * x) = 1 / (12 * x + 1) := by
-    -- rewrite integrand as `(1/12) * exp (-(x+1/12)*t)` and use `Binet.integral_exp_neg_mul_Ioi`
-    have hx' : 0 < x + 1 / 12 := by linarith [hx]
-    have hexp : ∀ t : ℝ,
-        (1 / 12 : ℝ) * Real.exp (-t / 12) * Real.exp (-t * x)
-          = (1 / 12 : ℝ) * Real.exp (-t * (x + 1 / 12)) := by
-      intro t
-      have hmul : Real.exp (-t / 12) * Real.exp (-t * x) = Real.exp (-t * (x + 1 / 12)) := by
-        calc
-          Real.exp (-t / 12) * Real.exp (-t * x) = Real.exp ((-t / 12) + (-t * x)) := by
-            symm
-            simp [Real.exp_add]
-          _ = Real.exp (-t * (x + 1 / 12)) := by
-            congr 1
-            ring
-      have h1 :
-          (1 / 12 : ℝ) * (Real.exp (-t / 12) * Real.exp (-t * x))
-            = (1 / 12 : ℝ) * Real.exp (-t * (x + 1 / 12)) :=
-        congrArg (fun y => (1 / 12 : ℝ) * y) hmul
-      calc
-        (1 / 12 : ℝ) * Real.exp (-t / 12) * Real.exp (-t * x)
-            = (1 / 12 : ℝ) * (Real.exp (-t / 12) * Real.exp (-t * x)) := by simp [mul_assoc]
-        _ = (1 / 12 : ℝ) * Real.exp (-t * (x + 1 / 12)) := by simpa using h1
-    -- apply the pointwise rewrite inside the integral
-    have hbase : ∫ t in Ioi (0 : ℝ), Real.exp (-t * (x + 1 / 12)) = 1 / (x + 1 / 12) := by
-      simpa using (Binet.integral_exp_neg_mul_Ioi (x := x + 1 / 12) hx')
-    calc
-      (∫ t in Ioi (0 : ℝ), (1 / 12 : ℝ) * Real.exp (-t / 12) * Real.exp (-t * x))
-          = ∫ t in Ioi (0 : ℝ), (1 / 12 : ℝ) * Real.exp (-t * (x + 1 / 12)) := by
-              refine MeasureTheory.setIntegral_congr_fun measurableSet_Ioi ?_
-              intro t ht
-              -- `hexp` is pointwise equality of the integrands
-              simpa using (hexp t)
-      _ = (1 / 12 : ℝ) * ∫ t in Ioi (0 : ℝ), Real.exp (-t * (x + 1 / 12)) := by
-              simp [MeasureTheory.integral_const_mul]
-      _ = (1 / 12 : ℝ) * (1 / (x + 1 / 12)) := by simp only [one_div, neg_mul,
-        mul_eq_mul_left_iff, inv_eq_zero, OfNat.ofNat_ne_zero, or_false]; simp_all
-      _ = 1 / (12 * x + 1) := by
-              field_simp
-
+  have h_lhs := integral_one_div_twelve_mul_exp_neg_div_mul_exp_neg_mul hx
   rw [h_lhs] at h_int_le
   exact h_int_le
 
@@ -275,16 +252,19 @@ theorem factorial_lower_robbins (n : ℕ) (hn : 0 < n) :
       n.factorial := by
   have hn_pos : (0 : ℝ) < n := Nat.cast_pos.mpr hn
   have h_J_ge : (1 + (n : ℝ) * 12)⁻¹ ≤ (Binet.J n).re := by
-    -- apply the bound to `n = (n-1)+1`
     have h0 : (1 / (12 * (n : ℝ) + 1) : ℝ) ≤ (Binet.J n).re := by
-      simpa [Nat.add_sub_cancel, Nat.cast_sub (Nat.succ_le_of_lt hn)] using (J_lower_bound (n := n - 1))
+      simpa [Nat.add_sub_cancel, Nat.cast_sub (Nat.succ_le_of_lt hn)] using
+        (J_lower_bound (n := n - 1))
     have h0' : (12 * (n : ℝ) + 1)⁻¹ ≤ (Binet.J n).re := by
       simpa [one_div] using h0
-    -- rewrite `(12*n+1)⁻¹` to `(1+n*12)⁻¹`
     convert h0' using 1; ring_nf
-  have h_log_ge : n * Real.log n - n + Real.log (2 * Real.pi * n) / 2 + 1 / (12 * n + 1) ≤ Real.log (n.factorial : ℝ) := by
+  have h_log_ge :
+      n * Real.log n - n + Real.log (2 * Real.pi * n) / 2 + 1 / (12 * n + 1) ≤
+        Real.log (n.factorial : ℝ) := by
     have h_fact : Real.log (n.factorial) = Real.log n + Real.log (Real.Gamma n) := by
-      rw [← Real.log_mul (Nat.cast_ne_zero.mpr (ne_of_gt hn)) (Real.Gamma_pos_of_pos (Nat.cast_pos.mpr hn)).ne']
+      rw [← Real.log_mul
+        (Nat.cast_ne_zero.mpr (ne_of_gt hn))
+        (Real.Gamma_pos_of_pos (Nat.cast_pos.mpr hn)).ne']
       rw [← Real.Gamma_add_one (Nat.cast_ne_zero.mpr (ne_of_gt hn))]
       rw [Real.Gamma_nat_eq_factorial]
     have h_binet :
@@ -300,13 +280,14 @@ theorem factorial_lower_robbins (n : ℕ) (hn : 0 < n) :
   have h2pi_pos : (0 : ℝ) < 2 * Real.pi := by nlinarith [Real.pi_pos]
   have h_sqrt_pos : 0 < Real.sqrt (2 * Real.pi * n) := by
     apply Real.sqrt_pos.mpr
-    -- `0 < 2 * π * n`
     simpa [mul_assoc] using (mul_pos h2pi_pos hn_pos)
   rw [← Real.log_le_log_iff
     (mul_pos (mul_pos h_sqrt_pos (pow_pos (div_pos hn_pos (Real.exp_pos 1)) n)) (Real.exp_pos _))
     (Nat.cast_pos.mpr (Nat.factorial_pos n))]
   convert h_log_ge using 1
-  rw [Real.log_mul (mul_pos h_sqrt_pos (pow_pos (div_pos hn_pos (Real.exp_pos 1)) n)).ne' (Real.exp_pos _).ne']
+  rw [Real.log_mul
+    (mul_pos h_sqrt_pos (pow_pos (div_pos hn_pos (Real.exp_pos 1)) n)).ne'
+    (Real.exp_pos _).ne']
   rw [Real.log_exp]
   rw [Real.log_mul h_sqrt_pos.ne' (pow_pos (div_pos hn_pos (Real.exp_pos 1)) n).ne']
   rw [Real.log_sqrt (le_of_lt (mul_pos h2pi_pos hn_pos))]
@@ -386,7 +367,8 @@ theorem factorial_asymptotic :
       have hc : c + θ / (12 * (n : ℝ)) ≤ c + 1 / (12 * (n : ℝ)) := by
         simpa [c, add_assoc, add_left_comm, add_comm] using add_le_add_left hθ_div c
       -- goal is the same inequality, up to commutativity and rewriting `1/(12n)` as an inverse
-      simpa [one_div, c, add_assoc, add_left_comm, add_comm, mul_assoc, mul_left_comm, mul_comm] using hc
+      simpa [one_div, c, add_assoc, add_left_comm, add_comm, mul_assoc, mul_left_comm,
+        mul_comm] using hc
   refine (tendsto_of_tendsto_of_tendsto_of_le_of_le'
     (f := fun n : ℕ =>
       (n.factorial : ℝ) / (Real.sqrt (2 * Real.pi * n) * (n / Real.exp 1) ^ n))
@@ -450,4 +432,3 @@ theorem factorial_ge_stirling_lower (n : ℕ) (hn : 0 < n) :
 end Nat
 
 end
-
