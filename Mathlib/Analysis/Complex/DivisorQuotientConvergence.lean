@@ -5,14 +5,7 @@ Authors: Matteo Cipollina
 -/
 module
 
-public import Mathlib.Analysis.Complex.DivisorComplement
-public import Mathlib.Analysis.Complex.DivisorConvergence
-public import Mathlib.Analysis.Complex.DivisorFiber
 public import Mathlib.Analysis.Complex.DivisorPartialProductFactor
-public import Mathlib.Analysis.Normed.Module.MultipliableUniformlyOn
-public import Mathlib.Topology.Algebra.InfiniteSum.UniformOn
-public import Mathlib.Topology.UniformSpace.UniformConvergence
-public import Mathlib.Order.Filter.Cofinite
 
 
 /-!
@@ -42,7 +35,6 @@ theorem tendstoLocallyUniformlyOn_divisorPartialProduct_univ
       (divisorCanonicalProduct m f (Set.univ : Set ℂ))
       Filter.atTop
       (Set.univ : Set ℂ) := by
-  classical
   have hprod :
       HasProdLocallyUniformlyOn
         (fun (p : divisorZeroIndex₀ f (Set.univ : Set ℂ)) (z : ℂ) =>
@@ -68,7 +60,6 @@ theorem tendstoUniformlyOn_divisorPartialProduct_div_pow_sub
       (fun z => (divisorCanonicalProduct m f (Set.univ : Set ℂ) z) / (z - z₀) ^ k)
       (Filter.atTop : Filter (Finset (divisorZeroIndex₀ f (Set.univ : Set ℂ))))
       K := by
-  classical
   have hloc :
       TendstoLocallyUniformlyOn
         (fun s : Finset (divisorZeroIndex₀ f (Set.univ : Set ℂ)) => divisorPartialProduct m f s)
@@ -146,8 +137,7 @@ This is the core “removable singularity” input: near `z₀`, the quotient
 
 open Filter
 
-set_option maxHeartbeats 800000 in
--- The proof below is heartbeat-heavy: it combines local uniform convergence of partial products
+-- The proof combines local uniform convergence of partial products
 -- with a removable singularity argument around `z₀`.
 theorem exists_ball_eq_divisorCanonicalProduct_div_pow_eq
     (m : ℕ) (f : ℂ → ℂ)
@@ -156,7 +146,6 @@ theorem exists_ball_eq_divisorCanonicalProduct_div_pow_eq
     u z₀ ≠ 0 ∧ ∀ z : ℂ, z ∈ Metric.ball z₀ ε → z ≠ z₀ → (divisorCanonicalProduct m f
     (Set.univ : Set ℂ) z) / (z - z₀) ^ (divisorZeroIndex₀_fiberFinset (f := f) z₀).card =
           (divisorComplementCanonicalProduct m f z₀ z) * u z := by
-  classical
   let fiber : Finset (divisorZeroIndex₀ f (Set.univ : Set ℂ)) :=
     divisorZeroIndex₀_fiberFinset (f := f) z₀
   have hfib : ∃ u : ℂ → ℂ, AnalyticAt ℂ u z₀ ∧ u z₀ ≠ 0 ∧
@@ -265,7 +254,6 @@ theorem bddAbove_norm_divisorCanonicalProduct_div_pow_puncturedBall
             (divisorCanonicalProduct m f (Set.univ : Set ℂ) z) /
               (z - z₀) ^ (divisorZeroIndex₀_fiberFinset (f := f) z₀).card) ''
             ((Metric.ball z₀ r) \ {z₀})) := by
-  classical
   rcases exists_ball_eq_divisorCanonicalProduct_div_pow_eq (m := m) (f := f) (h_sum := h_sum)
     (z₀ := z₀) with ⟨ε, hε, u, huA, hu0, hEq⟩
   have huC : ContinuousAt u z₀ := huA.continuousAt
@@ -330,7 +318,6 @@ theorem divisorComplementCanonicalProduct_ne_zero_at
     (h_sum : Summable (fun p : divisorZeroIndex₀ f (Set.univ : Set ℂ) =>
       ‖divisorZeroIndex₀_val p‖⁻¹ ^ (m + 1))) :
     divisorComplementCanonicalProduct m f z₀ z₀ ≠ 0 := by
-  classical
   let Φ : divisorZeroIndex₀ f (Set.univ : Set ℂ) → ℂ :=
     fun p => if divisorZeroIndex₀_val p = z₀ then (1 : ℂ)
       else weierstrassFactor m (z₀ / divisorZeroIndex₀_val p)
@@ -452,7 +439,6 @@ theorem exists_ball_divisorComplementCanonicalProduct_ne_zero
     (h_sum : Summable (fun p : divisorZeroIndex₀ f (Set.univ : Set ℂ) =>
       ‖divisorZeroIndex₀_val p‖⁻¹ ^ (m + 1))) :
     ∃ r > 0, ∀ z ∈ Metric.ball z₀ r, divisorComplementCanonicalProduct m f z₀ z ≠ 0 := by
-  classical
   have hdiff :
       DifferentiableOn ℂ (divisorComplementCanonicalProduct m f z₀) (Set.univ : Set ℂ) :=
     differentiableOn_divisorComplementCanonicalProduct_univ (m := m) (f := f) (z₀ := z₀) h_sum
@@ -487,7 +473,6 @@ theorem eventually_exists_analyticAt_eq_pow_smul_divisorPartialProduct
             =ᶠ[𝓝 z₀]
             fun z : ℂ =>
               (z - z₀) ^ (divisorZeroIndex₀_fiberFinset (f := f) z₀).card • g z := by
-  classical
   refine (eventually_atTop_subset_fiberFinset (f := f) z₀).mono ?_
   intro s hs
   rcases
@@ -511,7 +496,6 @@ theorem eventually_eq_punctured_quotient_of_factorization
       ∃ g : ℂ → ℂ, AnalyticAt ℂ g z₀ ∧ (fun z : ℂ => (divisorPartialProduct m f s z) /
             (z - z₀) ^ (divisorZeroIndex₀_fiberFinset (f := f) z₀).card)
             =ᶠ[𝓝[≠] z₀] g := by
-  classical
   refine (eventually_exists_analyticAt_eq_pow_smul_divisorPartialProduct (m := m)
     (f := f) z₀).mono ?_
   intro s hs
@@ -538,7 +522,6 @@ theorem eventually_exists_ball_eq_punctured_quotient_of_factorization
         ∀ z : ℂ, z ∈ Metric.ball z₀ ε → z ≠ z₀ → (divisorPartialProduct m f s z) /
               (z - z₀) ^ (divisorZeroIndex₀_fiberFinset (f := f) z₀).card
             = g z := by
-  classical
   refine (eventually_eq_punctured_quotient_of_factorization (m := m) (f := f) z₀).mono ?_
   intro s hs
   rcases hs with ⟨g, hg, hEq⟩

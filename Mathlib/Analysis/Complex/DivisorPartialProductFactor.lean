@@ -189,7 +189,6 @@ theorem analyticOrderAt_partialProduct_eq_fiberCard_of_subset
     analyticOrderAt
         (fun z : ℂ => ∏ p ∈ s, weierstrassFactor m (z / divisorZeroIndex₀_val p))
         z₀ = ((divisorZeroIndex₀_fiberFinset (f := f) z₀).card : ℕ∞) := by
-  classical
   have h :=
     analyticOrderAt_finset_prod_weierstrassFactor_divisorZeroIndex₀
       (m := m) (f := f) (s := s) (z₀ := z₀)
@@ -217,7 +216,6 @@ theorem exists_analyticAt_eq_pow_smul_of_partialProduct_contains_fiber
         (fun z : ℂ => ∏ p ∈ s, weierstrassFactor m (z / divisorZeroIndex₀_val p))
           =ᶠ[𝓝 z₀]
           fun z : ℂ => (z - z₀) ^ (divisorZeroIndex₀_fiberFinset (f := f) z₀).card • g z := by
-  classical
   let F : ℂ → ℂ := fun z : ℂ => ∏ p ∈ s, weierstrassFactor m (z / divisorZeroIndex₀_val p)
   have hF_ana : AnalyticAt ℂ F z₀ := by
     have hdiff : Differentiable ℂ F := by

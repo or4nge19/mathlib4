@@ -6,33 +6,7 @@ Authors: Matteo Cipollina
 
 module
 
-public import Mathlib.Analysis.Complex.CanonicalProduct
-public import Mathlib.Analysis.Complex.DivisorIndex
-public import Mathlib.Analysis.Complex.DivisorConvergence
-public import Mathlib.Analysis.Complex.DivisorFiber
-public import Mathlib.Analysis.Complex.DivisorUnits
-public import Mathlib.Analysis.Complex.DivisorComplement
-public import Mathlib.Analysis.Complex.DivisorPartialProductFactor
-public import Mathlib.Analysis.Complex.DivisorQuotientConvergence
 public import Mathlib.Analysis.Complex.DivisorQuotientRemovable
-public import Mathlib.Analysis.Meromorphic.Divisor
-public import Mathlib.Analysis.Meromorphic.DivisorSupport
-public import Mathlib.Analysis.Meromorphic.Order
-public import Mathlib.Analysis.Meromorphic.NormalForm
-public import Mathlib.Analysis.Analytic.Order
-public import Mathlib.Analysis.Analytic.Uniqueness
-public import Mathlib.Analysis.Complex.CauchyIntegral
-public import Mathlib.Topology.Compactness.Lindelof
-public import Mathlib.Data.Set.Countable
-public import Mathlib.Topology.LocallyFinsupp
-public import Mathlib.Topology.Compactness.Compact
-public import Mathlib.Data.Set.Finite.Basic
-public import Mathlib.Topology.Algebra.InfiniteSum.UniformOn
-public import Mathlib.Analysis.Normed.Module.MultipliableUniformlyOn
-public import Mathlib.Order.Filter.Cofinite
-public import Mathlib.Analysis.Complex.LocallyUniformLimit
-public import Mathlib.Analysis.Calculus.Deriv.Mul
-public import Mathlib.Topology.UniformSpace.UniformConvergence
 
 
 /-!
@@ -90,7 +64,6 @@ hence `analyticOrderAt f z ≠ ⊤` for all `z`.
 lemma analyticOrderAt_ne_top_of_exists_ne_zero {f : ℂ → ℂ} (hf : Differentiable ℂ f)
     (hnot : ∃ z : ℂ, f z ≠ 0) :
     ∀ z : ℂ, analyticOrderAt f z ≠ ⊤ := by
-  classical
   rcases hnot with ⟨z1, hz1⟩
   have hf_an : AnalyticOnNhd ℂ f (Set.univ : Set ℂ) := by
     intro z hz
@@ -119,7 +92,6 @@ lemma no_zero_on_sphere_of_forall_val_norm_ne
       ∀ p : divisorZeroIndex₀ f (Set.univ : Set ℂ),
         ‖divisorZeroIndex₀_val p‖ ≤ B → r ≠ ‖divisorZeroIndex₀_val p‖) :
     ∀ u : ℂ, ‖u‖ = r → f u ≠ 0 := by
-  classical
   intro u hur
   have hu0 : u ≠ 0 := by
     intro hu0
@@ -165,7 +137,6 @@ theorem divisorCanonicalProduct_eq_zero_of_exists
     (h0 : ∃ p : divisorZeroIndex₀ f (Set.univ : Set ℂ),
       weierstrassFactor m (z / divisorZeroIndex₀_val p) = 0) :
     divisorCanonicalProduct m f (Set.univ : Set ℂ) z = 0 := by
-  classical
   have hloc :
       HasProdLocallyUniformlyOn
         (fun (p : divisorZeroIndex₀ f (Set.univ : Set ℂ)) (w : ℂ) =>
@@ -194,7 +165,6 @@ theorem divisorCanonicalProduct_eq_zero_at_index
       ‖divisorZeroIndex₀_val p‖⁻¹ ^ (m + 1)))
     (p : divisorZeroIndex₀ f (Set.univ : Set ℂ)) :
     divisorCanonicalProduct m f (Set.univ : Set ℂ) (divisorZeroIndex₀_val p) = 0 := by
-  classical
   refine divisorCanonicalProduct_eq_zero_of_exists (m := m) (f := f)
     (z := divisorZeroIndex₀_val p) h_sum ?_
   refine ⟨p, ?_⟩
@@ -213,7 +183,6 @@ theorem analyticOrderAt_prod_fiberFinset
     analyticOrderAt (fun z : ℂ => ∏ p ∈ divisorZeroIndex₀_fiberFinset (f := f) z₀,
             weierstrassFactor m (z / divisorZeroIndex₀_val p))
       z₀ = ((divisorZeroIndex₀_fiberFinset (f := f) z₀).card : ℕ∞) := by
-  classical
   have h :=
     analyticOrderAt_finset_prod_weierstrassFactor_divisorZeroIndex₀
       (m := m) (f := f) (s := divisorZeroIndex₀_fiberFinset (f := f) z₀) (z₀ := z₀)
@@ -248,7 +217,6 @@ theorem analyticOrderAt_divisorCanonicalProduct_eq_fiber_card
     (z₀ : ℂ) :
     analyticOrderAt (divisorCanonicalProduct m f (Set.univ : Set ℂ)) z₀ =
       ((divisorZeroIndex₀_fiberFinset (f := f) z₀).card : ℕ∞) := by
-  classical
   let F : ℂ → ℂ := divisorCanonicalProduct m f (Set.univ : Set ℂ)
   have hNat :
       analyticOrderNatAt F z₀ = (divisorZeroIndex₀_fiberFinset (f := f) z₀).card := by
@@ -310,7 +278,6 @@ theorem eventually_exists_analyticAt_eq_pow_smul_divisorComplementPartialProduct
             fun z : ℂ =>
               (z - z₀) ^ (divisorZeroIndex₀_fiberFinset (f := f) z₀).card •
                 (divisorComplementPartialProduct m f z₀ s z * u z) := by
-  classical
   let fiber : Finset (divisorZeroIndex₀ f (Set.univ : Set ℂ)) :=
     divisorZeroIndex₀_fiberFinset (f := f) z₀
   have hfib : ∃ u : ℂ → ℂ, AnalyticAt ℂ u z₀ ∧ u z₀ ≠ 0 ∧ (fun z : ℂ =>
@@ -349,7 +316,6 @@ lemma divisorPartialProduct_ne_zero_on_ball_punctured
       Metric.ball z₀ ε ∩ (MeromorphicOn.divisor f (Set.univ : Set ℂ)).support = {z₀})
     (s : Finset (divisorZeroIndex₀ f (Set.univ : Set ℂ))) :
     ∀ z ∈ Metric.ball z₀ ε, z ≠ z₀ → divisorPartialProduct m f s z ≠ 0 := by
-  classical
   intro z hz hz0
   have hfac :
       ∀ p ∈ s, weierstrassFactor m (z / divisorZeroIndex₀_val p) ≠ 0 := by

@@ -37,7 +37,6 @@ theorem differentiableOn_divisorPartialProduct_div_pow_sub
     (s : Finset (divisorZeroIndex₀ f (Set.univ : Set ℂ))) :
     DifferentiableOn ℂ (fun z : ℂ => (divisorPartialProduct m f s z) / (z - z₀) ^ k)
       ((Set.univ : Set ℂ) \ {z₀}) := by
-  classical
   have hdiff_prod : DifferentiableOn ℂ (divisorPartialProduct m f s) (Set.univ : Set ℂ) := by
     have hdiff : Differentiable ℂ (divisorPartialProduct m f s) := by
       let Φ : divisorZeroIndex₀ f (Set.univ : Set ℂ) → ℂ → ℂ :=
@@ -73,7 +72,6 @@ theorem differentiableOn_divisorCanonicalProduct_div_pow_sub
     (z₀ : ℂ) (k : ℕ) : DifferentiableOn ℂ
       (fun z : ℂ => (divisorCanonicalProduct m f (Set.univ : Set ℂ) z) / (z - z₀) ^ k)
       ((Set.univ : Set ℂ) \ {z₀}) := by
-  classical
   have hopen : IsOpen ((Set.univ : Set ℂ) \ {z₀}) := by
     have hset : ((Set.univ : Set ℂ) \ {z₀}) = ({z₀} : Set ℂ)ᶜ := by
       ext z; simp
@@ -103,7 +101,6 @@ theorem differentiableOn_update_limUnder_divisorCanonicalProduct_div_pow
           (limUnder (𝓝[≠] z₀) (fun z : ℂ => (divisorCanonicalProduct m f (Set.univ : Set ℂ) z) /
                 (z - z₀) ^ (divisorZeroIndex₀_fiberFinset (f := f) z₀).card)))
         (Metric.ball z₀ r) := by
-  classical
   rcases bddAbove_norm_divisorCanonicalProduct_div_pow_puncturedBall (m := m) (f := f)
       (h_sum := h_sum) (z₀ := z₀) with ⟨r, hrpos, hbdd⟩
   refine ⟨r, hrpos, ?_⟩
@@ -138,7 +135,6 @@ theorem analyticAt_update_limUnder_divisorCanonicalProduct_div_pow
         (limUnder (𝓝[≠] z₀) (fun z : ℂ => (divisorCanonicalProduct m f (Set.univ : Set ℂ) z) /
               (z - z₀) ^ (divisorZeroIndex₀_fiberFinset (f := f) z₀).card)))
       z₀ := by
-  classical
   rcases
       differentiableOn_update_limUnder_divisorCanonicalProduct_div_pow
         (m := m) (f := f) h_sum (z₀ := z₀) with ⟨r, hrpos, hdiff⟩
@@ -227,7 +223,6 @@ theorem analyticOrderNatAt_divisorCanonicalProduct_eq_fiber_card
     (z₀ : ℂ) :
     analyticOrderNatAt (divisorCanonicalProduct m f (Set.univ : Set ℂ)) z₀ =
       (divisorZeroIndex₀_fiberFinset (f := f) z₀).card := by
-  classical
   set k : ℕ := (divisorZeroIndex₀_fiberFinset (f := f) z₀).card
   let F : ℂ → ℂ := divisorCanonicalProduct m f (Set.univ : Set ℂ)
   let q0 : ℂ → ℂ := fun z => F z / (z - z₀) ^ k
@@ -351,7 +346,6 @@ theorem analyticOrderNatAt_divisorCanonicalProduct_eq_analyticOrderNatAt
     {z₀ : ℂ} (hz₀ : z₀ ≠ 0) :
     analyticOrderNatAt (divisorCanonicalProduct m f (Set.univ : Set ℂ)) z₀ =
       analyticOrderNatAt f z₀ := by
-  classical
   have hcp :
       analyticOrderNatAt (divisorCanonicalProduct m f (Set.univ : Set ℂ)) z₀ =
         (divisorZeroIndex₀_fiberFinset (f := f) z₀).card :=
