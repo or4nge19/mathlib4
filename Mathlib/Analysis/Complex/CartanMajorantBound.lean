@@ -28,7 +28,7 @@ namespace Complex.Hadamard
 open scoped BigOperators
 open Filter Finset Real Topology
 
-private lemma cartan_majorant_nonneg
+lemma cartan_majorant_nonneg
     {f : ℂ → ℂ} {m : ℕ} {τ r : ℝ} (hr : 0 ≤ r)
     (small : Finset (divisorZeroIndex₀ f (Set.univ : Set ℂ))) :
     letI : DecidableEq (divisorZeroIndex₀ f (Set.univ : Set ℂ)) := Classical.decEq _

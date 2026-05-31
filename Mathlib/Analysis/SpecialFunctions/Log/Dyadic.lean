@@ -19,6 +19,7 @@ This file records elementary estimates for dyadic radii selected by `⌊logb 2 x
 noncomputable section
 
 open scoped BigOperators
+open Filter
 
 namespace Real
 
@@ -75,6 +76,13 @@ lemma dyadicShell_upper_bound {r0 x : ℝ} {k : ℕ} (hr0 : 0 < r0) (hx : r0 ≤
   have hxEq : r0 * (x / r0) = x := by
     field_simp [hr0ne]
   exact le_of_lt (by simpa [mul_assoc, hxEq] using this)
+
+/-- Some dyadic scale is beyond any prescribed real bound. -/
+lemma exists_nat_le_two_pow (A : ℝ) :
+    ∃ k0 : ℕ, ∀ n ≥ k0, A ≤ (2 : ℝ) ^ n := by
+  have htend : Tendsto (fun n : ℕ => (2 : ℝ) ^ n) atTop atTop :=
+    tendsto_pow_atTop_atTop_of_one_lt (r := (2 : ℝ)) (by norm_num : (1 : ℝ) < 2)
+  exact eventually_atTop.1 ((tendsto_atTop.1 htend) A)
 
 /-- Once the dyadic scale is past `r₀⁻¹`, the upper endpoint `r₀ 2^(k+1)` is at least `1`. -/
 lemma one_le_dyadicRadius_succ_of_inv_le_two_pow
@@ -211,6 +219,97 @@ lemma inv_dyadicRadius_rpow_eq (r0 τ : ℝ) (k : ℕ) (hr0 : 0 ≤ r0) :
               rw [hr0']
         _ = (r0⁻¹ : ℝ) ^ τ * ((2 : ℝ) ^ (-τ)) ^ k := by
               rw [h2']
+
+lemma two_rpow_sub_eq_mul_neg (ρ τ : ℝ) :
+    (2 : ℝ) ^ (ρ - τ) = (2 : ℝ) ^ ρ * (2 : ℝ) ^ (-τ) := by
+  have h2pos : (0 : ℝ) < (2 : ℝ) := by norm_num
+  calc
+    (2 : ℝ) ^ (ρ - τ) = (2 : ℝ) ^ (ρ + (-τ)) := by ring_nf
+    _ = (2 : ℝ) ^ ρ * (2 : ℝ) ^ (-τ) := by
+      simp [Real.rpow_add h2pos]
+
+lemma two_rpow_sub_pow_eq_mul_pow (ρ τ : ℝ) (k : ℕ) :
+    ((2 : ℝ) ^ (ρ - τ)) ^ k =
+      ((2 : ℝ) ^ ρ) ^ k * (((2 : ℝ) ^ (-τ)) ^ k) := by
+  simp [two_rpow_sub_eq_mul_neg, mul_pow]
+
+lemma dyadic_growth_inv_term_eq (C L M r0 ρ τ : ℝ) (k : ℕ) (hr0 : 0 ≤ r0) :
+    ((C / L) * (M * ((2 : ℝ) ^ ρ) ^ k)) *
+        ((r0 * (2 : ℝ) ^ (k : ℝ))⁻¹ ^ τ)
+      = (((C / L) * M) * (r0⁻¹ : ℝ) ^ τ) * ((2 : ℝ) ^ (ρ - τ)) ^ k := by
+  have hrk_inv :
+      (r0 * (2 : ℝ) ^ (k : ℝ))⁻¹ ^ τ =
+        (r0⁻¹ : ℝ) ^ τ * (((2 : ℝ) ^ (-τ)) ^ k) :=
+    inv_dyadicRadius_rpow_eq r0 τ k hr0
+  rw [hrk_inv, two_rpow_sub_pow_eq_mul_pow]
+  ac_rfl
+
+lemma dyadic_trailing_inv_term_le (C L r0 τ : ℝ) (k : ℕ) (hr0 : 0 ≤ r0) :
+    (C / L) * ((r0 * (2 : ℝ) ^ (k : ℝ))⁻¹ ^ τ)
+      ≤ (((C / L) + 1) * (r0⁻¹ : ℝ) ^ τ) * ((2 : ℝ) ^ (-τ)) ^ k := by
+  rw [inv_dyadicRadius_rpow_eq r0 τ k hr0]
+  have hcoeff : C / L ≤ C / L + 1 := by linarith
+  have hr0Inv_nonneg : 0 ≤ (r0⁻¹ : ℝ) ^ τ :=
+    Real.rpow_nonneg (inv_nonneg.2 hr0) _
+  have hmul :
+      (C / L) * ((r0⁻¹ : ℝ) ^ τ)
+        ≤ ((C / L) + 1) * ((r0⁻¹ : ℝ) ^ τ) :=
+    mul_le_mul_of_nonneg_right hcoeff hr0Inv_nonneg
+  have hqpow_nonneg : 0 ≤ ((2 : ℝ) ^ (-τ)) ^ k :=
+    pow_nonneg (le_of_lt (Real.rpow_pos_of_pos (by norm_num : (0 : ℝ) < 2) _)) _
+  have := mul_le_mul_of_nonneg_right hmul hqpow_nonneg
+  simpa [mul_assoc, mul_left_comm, mul_comm] using this
+
+lemma dyadic_growth_mass_mul_inv_le_geometric {C L M X T Ctrail r0 ρ τ : ℝ} {k : ℕ}
+    (hL : 0 < L) (hC : 0 ≤ C) (hr0 : 0 ≤ r0)
+    (hX : X ≤ M * ((2 : ℝ) ^ ρ) ^ k)
+    (hT : T ≤ ((C * X + Ctrail) / L) * ((r0 * (2 : ℝ) ^ (k : ℝ))⁻¹ ^ τ)) :
+    T ≤ (((C / L) * M) * (r0⁻¹ : ℝ) ^ τ) * ((2 : ℝ) ^ (ρ - τ)) ^ k
+        + (((Ctrail / L) + 1) * (r0⁻¹ : ℝ) ^ τ) * ((2 : ℝ) ^ (-τ)) ^ k := by
+  have hmul : C * X ≤ C * (M * ((2 : ℝ) ^ ρ) ^ k) :=
+    mul_le_mul_of_nonneg_left hX hC
+  have hnum : C * X + Ctrail ≤ C * (M * ((2 : ℝ) ^ ρ) ^ k) + Ctrail :=
+    add_le_add hmul le_rfl
+  have hdiv :
+      (C * X + Ctrail) / L ≤ (C * (M * ((2 : ℝ) ^ ρ) ^ k) + Ctrail) / L :=
+    div_le_div_of_nonneg_right hnum hL.le
+  have h2k_nonneg : 0 ≤ (2 : ℝ) ^ (k : ℝ) :=
+    le_of_lt (Real.rpow_pos_of_pos (by norm_num : (0 : ℝ) < 2) (k : ℝ))
+  have hrk_nonneg : 0 ≤ r0 * (2 : ℝ) ^ (k : ℝ) :=
+    mul_nonneg hr0 h2k_nonneg
+  have hfactor_nonneg : 0 ≤ ((r0 * (2 : ℝ) ^ (k : ℝ))⁻¹ ^ τ) :=
+    Real.rpow_nonneg (inv_nonneg.2 hrk_nonneg) τ
+  have hmul' :=
+    mul_le_mul_of_nonneg_right hdiv hfactor_nonneg
+  have hdecomp :
+      ((C * (M * ((2 : ℝ) ^ ρ) ^ k) + Ctrail) / L) *
+          ((r0 * (2 : ℝ) ^ (k : ℝ))⁻¹ ^ τ)
+        =
+        ((C / L) * (M * ((2 : ℝ) ^ ρ) ^ k)) *
+            ((r0 * (2 : ℝ) ^ (k : ℝ))⁻¹ ^ τ)
+          + ((Ctrail / L) * ((r0 * (2 : ℝ) ^ (k : ℝ))⁻¹ ^ τ)) := by
+    let Y : ℝ := (r0 * (2 : ℝ) ^ (k : ℝ))⁻¹ ^ τ
+    have :
+        ((C * (M * ((2 : ℝ) ^ ρ) ^ k) + Ctrail) / L) * Y
+          = ((C / L) * (M * ((2 : ℝ) ^ ρ) ^ k)) * Y
+            + ((Ctrail / L) * Y) := by
+      ring
+    simpa [Y]
+  have hpre :
+      T ≤ ((C / L) * (M * ((2 : ℝ) ^ ρ) ^ k)) *
+            ((r0 * (2 : ℝ) ^ (k : ℝ))⁻¹ ^ τ)
+          + ((Ctrail / L) * ((r0 * (2 : ℝ) ^ (k : ℝ))⁻¹ ^ τ)) :=
+    hT.trans (hmul'.trans_eq hdecomp)
+  have hA := le_of_eq (dyadic_growth_inv_term_eq C L M r0 ρ τ k hr0)
+  have hB := dyadic_trailing_inv_term_le Ctrail L r0 τ k hr0
+  exact hpre.trans (by
+    simpa [mul_assoc, mul_left_comm, mul_comm] using add_le_add hA hB)
+
+lemma two_geometric_shift_add (A B q qσ : ℝ) (k k0 : ℕ) :
+    A * q ^ (k + k0) + B * qσ ^ (k + k0)
+      = (A * q ^ k0) * q ^ k + (B * qσ ^ k0) * qσ ^ k := by
+  rw [pow_add, pow_add]
+  ac_rfl
 
 end Real
  
