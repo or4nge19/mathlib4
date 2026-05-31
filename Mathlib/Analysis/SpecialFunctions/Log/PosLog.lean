@@ -66,6 +66,10 @@ theorem half_mul_log_add_log_abs : 2⁻¹ * (log x + |log x|) = log⁺ x := by
 /-- The positive part of `log` is never negative. -/
 theorem posLog_nonneg : 0 ≤ log⁺ x := by simp [posLog]
 
+/-- Lower bound for `log x` in terms of `log⁺ x⁻¹`. -/
+theorem neg_posLog_inv_le_log (x : ℝ) : -log⁺ x⁻¹ ≤ log x := by
+  linarith [posLog_sub_posLog_inv (x := x), posLog_nonneg (x := x)]
+
 /-- The function `log⁺` is even. -/
 @[simp] theorem posLog_neg (x : ℝ) : log⁺ (-x) = log⁺ x := by simp [posLog]
 

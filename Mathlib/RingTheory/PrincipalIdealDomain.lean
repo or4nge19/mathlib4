@@ -5,12 +5,14 @@ Authors: Chris Hughes, Morenikeji Neri
 -/
 module
 
+
 public import Mathlib.Algebra.EuclideanDomain.Basic
 public import Mathlib.Algebra.EuclideanDomain.Field
 public import Mathlib.Algebra.GCDMonoid.Basic
 public import Mathlib.RingTheory.Ideal.Prod
 public import Mathlib.RingTheory.Ideal.Nonunits
 public import Mathlib.RingTheory.Noetherian.UniqueFactorizationDomain
+
 
 /-!
 # Principal ideal rings, principal ideal domains, and Bézout rings

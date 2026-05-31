@@ -5,7 +5,9 @@ Authors: Chris Hughes, Johannes Hölzl, Kim Morrison, Jens Wagemaker
 -/
 module
 
+
 public import Mathlib.Algebra.Polynomial.Degree.Operations
+
 
 /-!
 # Univariate polynomials form a domain

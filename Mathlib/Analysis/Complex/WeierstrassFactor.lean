@@ -6,6 +6,7 @@ Authors: Matteo Cipollina
 module
 
 public import Mathlib.Analysis.SpecialFunctions.Complex.LogBounds
+public import Mathlib.Analysis.Analytic.Order
 public import Mathlib.Analysis.Normed.Group.Bounded
 public import Mathlib.Analysis.Normed.Module.MultipliableUniformlyOn
 public import Mathlib.Analysis.SpecialFunctions.ExpDeriv
@@ -49,6 +50,10 @@ namespace Complex
 def weierstrassFactor (m : ℕ) (z : ℂ) : ℂ :=
   (1 - z) * exp (partialLogSum m z)
 
+lemma weierstrassFactor_def (m : ℕ) (z : ℂ) :
+    weierstrassFactor m z = (1 - z) * exp (partialLogSum m z) := by
+  simp [weierstrassFactor]
+
 @[simp]
 lemma weierstrassFactor_zero (z : ℂ) : weierstrassFactor 0 z = 1 - z := by
   simp [weierstrassFactor]
@@ -71,6 +76,14 @@ lemma weierstrassFactor_eq_zero_iff (m : ℕ) (z : ℂ) :
     · exact absurd h2 (exp_ne_zero _)
   · rintro rfl
     simp [weierstrassFactor]
+
+lemma weierstrassFactor_ne_zero_iff (m : ℕ) (z : ℂ) :
+    weierstrassFactor m z ≠ 0 ↔ z ≠ 1 := by
+  simpa [ne_eq] using (not_congr (weierstrassFactor_eq_zero_iff (m := m) (z := z)))
+
+lemma weierstrassFactor_ne_zero_of_ne_one (m : ℕ) {z : ℂ} (hz : z ≠ 1) :
+    weierstrassFactor m z ≠ 0 :=
+  (weierstrassFactor_ne_zero_iff (m := m) (z := z)).2 hz
 
 lemma weierstrassFactor_div_eq_zero_iff (m : ℕ) {a z : ℂ} (ha : a ≠ 0) :
     weierstrassFactor m (z / a) = 0 ↔ z = a := by
@@ -132,6 +145,48 @@ lemma deriv_weierstrassFactor_div_at_self (m : ℕ) {a : ℂ} (ha : a ≠ 0) :
 lemma deriv_weierstrassFactor_div_at_self_ne_zero (m : ℕ) {a : ℂ} (ha : a ≠ 0) :
     deriv (fun z : ℂ ↦ weierstrassFactor m (z / a)) a ≠ 0 := by
   simp [deriv_weierstrassFactor_div_at_self, ha]
+
+/-- The elementary factor `z ↦ E_m (z / a)` has a simple zero at `a`. -/
+theorem analyticOrderAt_weierstrassFactor_div_self (m : ℕ) {a : ℂ} (ha : a ≠ 0) :
+    analyticOrderAt (fun z : ℂ => weierstrassFactor m (z / a)) a = (1 : ℕ∞) := by
+  set F : ℂ → ℂ := fun z => weierstrassFactor m (z / a)
+  have hF : AnalyticAt ℂ F a := by
+    have hdiv : Differentiable ℂ (fun z : ℂ => z / a) := by
+      simp [div_eq_mul_inv]
+    have hdiff : Differentiable ℂ F := (differentiable_weierstrassFactor m).comp hdiv
+    exact Differentiable.analyticAt (f := F) hdiff a
+  let g : ℂ → ℂ := fun z => (-a⁻¹) * Complex.exp (partialLogSum m (z / a))
+  have hg : AnalyticAt ℂ g a := by
+    have hdiv : Differentiable ℂ (fun z : ℂ => z / a) := by
+      simp [div_eq_mul_inv]
+    have hpls : Differentiable ℂ (fun z : ℂ => partialLogSum m (z / a)) :=
+      (differentiable_partialLogSum m).comp hdiv
+    have hexp : Differentiable ℂ (fun z : ℂ => Complex.exp (partialLogSum m (z / a))) :=
+      (Complex.differentiable_exp).comp hpls
+    have hdiffg : Differentiable ℂ g := by
+      simpa [g] using hexp.const_mul (-a⁻¹ : ℂ)
+    exact Differentiable.analyticAt (f := g) hdiffg a
+  have hg0 : g a ≠ 0 := by
+    have hconst : (-a⁻¹ : ℂ) ≠ 0 := by simp [ha]
+    have hexp0 : Complex.exp (partialLogSum m (a / a)) ≠ 0 :=
+      Complex.exp_ne_zero (partialLogSum m (a / a))
+    simpa [g] using mul_ne_zero hconst hexp0
+  refine (hF.analyticOrderAt_eq_natCast (n := 1)).2 ?_
+  refine ⟨g, hg, hg0, ?_⟩
+  refine Filter.Eventually.of_forall ?_
+  intro z
+  have hlin : (1 - z / a) = (z - a) * (-a⁻¹) := by
+    have h1 : (1 : ℂ) = a * a⁻¹ := by simp [ha]
+    simp [div_eq_mul_inv, h1]
+    ring
+  simp only [F, g, pow_one, smul_eq_mul]
+  rw [weierstrassFactor_def]
+  simp [hlin, mul_assoc]
+
+/-- The natural-valued analytic order of `z ↦ E_m (z / a)` at `a` is `1`. -/
+theorem analyticOrderNatAt_weierstrassFactor_div_self (m : ℕ) {a : ℂ} (ha : a ≠ 0) :
+    analyticOrderNatAt (fun z : ℂ => weierstrassFactor m (z / a)) a = 1 := by
+  simp [analyticOrderNatAt, analyticOrderAt_weierstrassFactor_div_self (m := m) ha]
 
 /-- For `‖z‖ < 1` and `z ≠ 1`, `E_m(z) = exp(-logTail_m(z))`. -/
 lemma weierstrassFactor_eq_exp_neg_tail (m : ℕ) {z : ℂ} (hz : ‖z‖ < 1) (hz1 : z ≠ 1) :
@@ -201,8 +256,7 @@ theorem weierstrassFactor_sub_one_pow_bound {m : ℕ} {z : ℂ} (hz : ‖z‖ �
 Auxiliary inequalities for minimum-modulus / Cartan-type arguments in Hadamard factorization.
 -/
 
-private lemma log_norm_weierstrassFactor_ge_log_norm_one_sub_sub_norm_partialLogSum
-    (m : ℕ) (z : ℂ) :
+lemma log_norm_weierstrassFactor_ge_log_norm_one_sub_sub (m : ℕ) (z : ℂ) :
     Real.log ‖1 - z‖ - ‖partialLogSum m z‖ ≤ Real.log ‖weierstrassFactor m z‖ := by
   by_cases hz1 : z = (1 : ℂ)
   · subst hz1
@@ -261,7 +315,7 @@ lemma log_norm_weierstrassFactor_ge_log_norm_one_sub_nat_mul_max_one_norm_pow
           gcongr
           exact norm_partialLogSum_le_nat_mul_max_one_norm_pow m z
     _ ≤ Real.log ‖weierstrassFactor m z‖ :=
-      log_norm_weierstrassFactor_ge_log_norm_one_sub_sub_norm_partialLogSum m z
+      log_norm_weierstrassFactor_ge_log_norm_one_sub_sub m z
 
 /-! ## Locally uniform convergence of products of scaled factors -/
 
