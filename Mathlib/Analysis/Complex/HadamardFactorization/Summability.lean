@@ -60,12 +60,10 @@ lemma card_shell_le_sum_divisor_closedBall
                 (MeromorphicOn.divisor f (Set.univ : Set ℂ)))
               (isCompact_closedBall (0 : ℂ) |R|)).toFinset).filter fun z : ℂ => z ≠ 0).sum
           fun z : ℂ => (MeromorphicOn.divisor f (Set.univ : Set ℂ) z : ℝ)) := by
-  classical
   set U : Set ℂ := (Set.univ : Set ℂ)
   set D : Function.locallyFinsuppWithin U ℤ := MeromorphicOn.divisor f U
   haveI :
       Fintype {p : divisorZeroIndex₀ f U // ‖divisorZeroIndex₀_val p‖ ≤ R} := by
-    classical
     have : Finite {p : divisorZeroIndex₀ f U // ‖divisorZeroIndex₀_val p‖ ≤ R} := by
       have : Metric.closedBall (0 : ℂ) R ⊆ U := by simp [U]
       simpa using (finite_divisorZeroIndex₀_subtype_norm_le (f := f) (U := U) (B := R) this)
@@ -93,17 +91,20 @@ lemma card_shell_le_sum_divisor_closedBall
         simpa [Metric.mem_closedBall, dist_zero_right] using this
       have hz0_support : z0 ∈ (Function.locallyFinsuppWithin.toClosedBall R D).support := by
         have hz0_suppD : z0 ∈ D.support := by
-          simpa [z0, D] using (divisorZeroIndex₀_val_mem_divisor_support (p := p.1))
+          simp [z0, D]
         have hEq : (Function.locallyFinsuppWithin.toClosedBall R D) z0 = D z0 := by
           simpa using
-            (Function.locallyFinsuppWithin.toClosedBall_eval_within (r := R) (f := D) (z := z0) hz0_ball)
+            (Function.locallyFinsuppWithin.toClosedBall_eval_within (r := R) (f := D)
+              (z := z0) hz0_ball)
         have hDz0_ne : D z0 ≠ 0 := by
           simpa [Function.mem_support] using hz0_suppD
-        have : (Function.locallyFinsuppWithin.toClosedBall R D) z0 ≠ 0 := by simpa [hEq] using hDz0_ne
+        have : (Function.locallyFinsuppWithin.toClosedBall R D) z0 ≠ 0 := by
+          simpa [hEq] using hDz0_ne
         simpa [Function.mem_support] using this
       exact (Set.Finite.mem_toFinset
-        (Function.locallyFinsuppWithin.finiteSupport (Function.locallyFinsuppWithin.toClosedBall R D)
-          (isCompact_closedBall (0 : ℂ) |R|))).2 hz0_support
+        (Function.locallyFinsuppWithin.finiteSupport
+          (Function.locallyFinsuppWithin.toClosedBall R D)
+            (isCompact_closedBall (0 : ℂ) |R|))).2 hz0_support
     have hz0_ne0 : z0 ≠ 0 := divisorZeroIndex₀_val_ne_zero p.1
     have hz0_memS : z0 ∈ S := Finset.mem_filter.2 ⟨hz0_memSR, hz0_ne0⟩
     ⟨⟨z0, hz0_memS⟩, by
@@ -125,7 +126,6 @@ lemma card_shell_le_sum_divisor_closedBall
   have hT_card :
       (Fintype.card T : ℝ) =
         (S.sum fun z : ℂ => (Int.toNat (D z) : ℝ)) := by
-    classical
     have hNat :
         Fintype.card T = ∑ z : S, Int.toNat (D z.1) := by
       have h1 :
@@ -143,7 +143,6 @@ lemma card_shell_le_sum_divisor_closedBall
     calc
       (Fintype.card T : ℝ) = S.attach.sum (fun z : S => (Int.toNat (D z.1) : ℝ)) := hR'
       _ = S.sum (fun z : ℂ => (Int.toNat (D z) : ℝ)) := by
-            -- `S.attach.sum (fun z => f z.1) = S.sum f`
             simpa using (Finset.sum_attach (s := S) (f := fun z : ℂ => (Int.toNat (D z) : ℝ)))
   have htoNat_le : ∀ z ∈ S, (Int.toNat (D z) : ℝ) ≤ (D z : ℝ) := by
     intro z hz
@@ -275,7 +274,6 @@ lemma tsum_inv_rpow_le_card_mul_of_lower_bound {α : Type*} [Fintype α] {a : α
     {R τ : ℝ} (hR : 0 < R) (hτ : 0 < τ) (ha_nonneg : ∀ x, 0 ≤ a x)
     (ha_lower : ∀ x, R ≤ a x) :
     (∑' x : α, (a x)⁻¹ ^ τ) ≤ (Fintype.card α : ℝ) * (R⁻¹ ^ τ) := by
-  classical
   have hsum_le :
       (∑ x : α, (a x)⁻¹ ^ τ) ≤ ∑ _x : α, R⁻¹ ^ τ := by
     refine Finset.sum_le_sum ?_
@@ -324,7 +322,6 @@ theorem summable_norm_inv_rpow_divisorZeroIndex₀_of_growth {f : ℂ → ℂ} {
     (hgrowth : ∃ C > 0, ∀ z : ℂ, Real.log (1 + ‖f z‖) ≤ C * (1 + ‖z‖) ^ ρ) :
     Summable (fun p : divisorZeroIndex₀ f (Set.univ : Set ℂ) =>
       ‖divisorZeroIndex₀_val p‖⁻¹ ^ τ) := by
-  classical
   have hτpos : 0 < τ := lt_of_le_of_lt hρ hτ
   rcases exists_r0_le_norm_divisorZeroIndex₀_val (f := f) hf hnot with ⟨r0, hr0pos, hr0⟩
   have hr0ne : (r0 : ℝ) ≠ 0 := ne_of_gt hr0pos
@@ -440,7 +437,6 @@ theorem summable_norm_inv_rpow_divisorZeroIndex₀_of_growth {f : ℂ → ℂ} {
           have htsum_le :
               (∑' p : S kk, ‖divisorZeroIndex₀_val p.1‖⁻¹ ^ τ)
                 ≤ (Fintype.card (S kk) : ℝ) * (rk⁻¹ ^ τ) := by
-            classical
             exact tsum_inv_rpow_le_card_mul_of_lower_bound
               (a := fun p : S kk => ‖divisorZeroIndex₀_val p.1‖)
               hrk_pos hτpos (fun _ => norm_nonneg _) hk_lower
@@ -479,11 +475,9 @@ theorem summable_norm_inv_rpow_divisorZeroIndex₀_of_growth {f : ℂ → ℂ} {
                         (isCompact_closedBall (0 : ℂ) |Rk|)).toFinset).filter
                     fun z : ℂ => z ≠ 0).sum
                     fun z : ℂ => (MeromorphicOn.divisor f (Set.univ : Set ℂ) z : ℝ)) := by
-            classical
             let Aball : Type :=
               {p : divisorZeroIndex₀ f (Set.univ : Set ℂ) // ‖divisorZeroIndex₀_val p‖ ≤ Rk}
             haveI : Fintype Aball := by
-              classical
               have : Finite Aball := by
                 have : Metric.closedBall (0 : ℂ) Rk ⊆ (Set.univ : Set ℂ) := by simp
                 simpa using
@@ -639,7 +633,6 @@ theorem summable_norm_inv_pow_divisorZeroIndex₀_of_growth {f : ℂ → ℂ} {�
     (hgrowth : ∃ C > 0, ∀ z : ℂ, Real.log (1 + ‖f z‖) ≤ C * (1 + ‖z‖) ^ ρ) :
     Summable (fun p : divisorZeroIndex₀ f (Set.univ : Set ℂ) =>
       ‖divisorZeroIndex₀_val p‖⁻¹ ^ (Nat.floor ρ + 1)) := by
-  classical
   have hτ : ρ < (Nat.floor ρ + 1 : ℝ) := by
     simpa [Nat.cast_add, Nat.cast_one] using (Nat.lt_floor_add_one (a := ρ))
   have hs :=
