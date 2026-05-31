@@ -9,7 +9,7 @@ public import Mathlib.Analysis.Complex.CanonicalProduct
 public import Mathlib.Analysis.Meromorphic.DivisorSupport
 
 /-!
-# Indexing zeros via the intrinsic divisor
+# Indexing zeros via the divisor
 
 This file defines index types that enumerate zeros of a meromorphic function (with multiplicity)
 using `MeromorphicOn.divisor`.
@@ -96,7 +96,7 @@ theorem divisorCanonicalProduct_eq_tprod_of_equiv
     (e.tprod_eq (fun p : divisorZeroIndex₀ f U =>
       weierstrassFactor m (z / divisorZeroIndex₀_val p))).symm
 
-/-- If a sequence enumerates the nonzero divisor indices, the intrinsic divisor product is the
+/-- If a sequence enumerates the nonzero divisor indices, the divisor-indexed product is the
 corresponding canonical product. -/
 theorem divisorCanonicalProduct_eq_canonicalProduct_of_equiv
     (m : ℕ) (f : ℂ → ℂ) (U : Set ℂ) (e : ℕ ≃ divisorZeroIndex₀ f U) (z : ℂ) :

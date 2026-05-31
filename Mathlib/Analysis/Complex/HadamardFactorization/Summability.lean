@@ -74,7 +74,7 @@ lemma log_norm_le_growth_on_sphere {f : ℂ → ℂ} {C ρ R : ℝ}
     Real.log ‖f z‖ ≤ C * (1 + |R|) ^ ρ := by
   have hz_norm : ‖z‖ = |R| := by
     simpa [Metric.mem_sphere, dist_zero_right] using hz
-  exact (le_trans (log_norm_le_log_one_add_norm (f z)) (hC z)).trans_eq (by rw [hz_norm])
+  simpa [hz_norm] using le_trans (log_norm_le_log_one_add_norm (f z)) (hC z)
 
 lemma logCounting_divisor_univ_le_of_growth {f : ℂ → ℂ} {ρ : ℝ}
     (hf : Differentiable ℂ f)
@@ -100,16 +100,7 @@ lemma logCounting_divisor_univ_le_of_growth {f : ℂ → ℂ} {ρ : ℝ}
   have hbound_circle : ∀ z ∈ Metric.sphere (0 : ℂ) |R|,
       Real.log ‖f z‖ ≤ C * (1 + |R|) ^ ρ := by
     intro z hz
-    have hz_norm : ‖z‖ = |R| := by
-      simpa [Metric.mem_sphere, dist_zero_right] using hz
-    have hlog1 : Real.log ‖f z‖ ≤ Real.log (1 + ‖f z‖) := by
-      by_cases h0 : f z = 0
-      · simp [h0]
-      · have hpos : 0 < ‖f z‖ := norm_pos_iff.2 h0
-        have hle : ‖f z‖ ≤ 1 + ‖f z‖ := by linarith [norm_nonneg (f z)]
-        exact Real.log_le_log hpos hle
-    have hlog1' : Real.log ‖f z‖ ≤ C * (1 + ‖z‖) ^ ρ := le_trans hlog1 (hC z)
-    simpa [hz_norm] using hlog1'
+    exact log_norm_le_growth_on_sphere hC hz
   have hCircleAvg_le :
       Real.circleAverage (fun z : ℂ => Real.log ‖f z‖) 0 R ≤ C * (1 + |R|) ^ ρ :=
     Real.circleAverage_mono_on_of_le_circle (c := (0 : ℂ)) (R := R)
@@ -715,6 +706,83 @@ lemma finite_divisorZeroIndex₀_dyadicShell
         (B := r0 * (2 : ℝ) ^ ((k : ℝ) + 1)) this)
   exact hfin.subset hsub
 
+lemma tsum_divisorZeroIndex₀_dyadicShell_inv_rpow_le_geometric_of_growth
+    {f : ℂ → ℂ} {ρ τ r0 : ℝ}
+    (hρ : 0 ≤ ρ) (hτpos : 0 < τ) (hf : Differentiable ℂ f)
+    (hgrowth : ∃ C > 0, ∀ z : ℂ, Real.log (1 + ‖f z‖) ≤ C * (1 + ‖z‖) ^ ρ)
+    (hr0pos : 0 < r0)
+    (hr0 : ∀ p : divisorZeroIndex₀ f (Set.univ : Set ℂ),
+      r0 ≤ ‖divisorZeroIndex₀_val p‖)
+    (k : ℕ) (hk_ge_one : 1 ≤ r0 * (2 : ℝ) ^ ((k : ℝ) + 1)) :
+    let kfun : divisorZeroIndex₀ f (Set.univ : Set ℂ) → ℕ :=
+      fun p => ⌊Real.logb 2 (‖divisorZeroIndex₀_val p‖ / r0)⌋₊
+    let S : Set (divisorZeroIndex₀ f (Set.univ : Set ℂ)) := {p | kfun p = k}
+    let Cgrow : ℝ := Classical.choose hgrowth
+    let Ctrail : ℝ := |Real.log ‖meromorphicTrailingCoeffAt f 0‖|
+    let A : ℝ := ((Cgrow / Real.log 2) * (1 + 4 * r0) ^ ρ) * (r0⁻¹) ^ τ
+    let B : ℝ := ((Ctrail / Real.log 2) + 1) * (r0⁻¹) ^ τ
+    let q : ℝ := (2 : ℝ) ^ (ρ - τ)
+    let qσ : ℝ := (2 : ℝ) ^ (-τ)
+    (∑' p : S, ‖divisorZeroIndex₀_val p.1‖⁻¹ ^ τ) ≤ A * q ^ k + B * qσ ^ k := by
+  classical
+  intro kfun S Cgrow Ctrail A B q qσ
+  let rk : ℝ := r0 * (2 : ℝ) ^ (k : ℝ)
+  let Rk : ℝ := r0 * (2 : ℝ) ^ ((k : ℝ) + 1)
+  have hrk_pos : 0 < rk := mul_pos hr0pos (Real.rpow_pos_of_pos (by norm_num) _)
+  have hrk0 : 0 ≤ rk := le_of_lt hrk_pos
+  haveI : Finite S := by
+    simpa [S, kfun] using (finite_divisorZeroIndex₀_dyadicShell
+      (f := f) hr0pos hr0 k).to_subtype
+  haveI : Fintype S := Fintype.ofFinite S
+  have hk_upper : ∀ p : S, ‖divisorZeroIndex₀_val p.1‖ ≤ Rk := by
+    intro p
+    have hk' : kfun p.1 = k := p.2
+    simpa [Rk, kfun] using
+      divisorZeroIndex₀_dyadicShell_upper_bound (f := f) hr0pos hr0 hk'
+  have hk_lower : ∀ p : S, rk ≤ ‖divisorZeroIndex₀_val p.1‖ := by
+    intro p
+    have hk' : kfun p.1 = k := p.2
+    simpa [rk, kfun] using
+      divisorZeroIndex₀_dyadicShell_lower_bound (f := f) hr0pos hr0 hk'
+  have htsum_le :
+      (∑' p : S, ‖divisorZeroIndex₀_val p.1‖⁻¹ ^ τ)
+        ≤ (Fintype.card S : ℝ) * (rk⁻¹ ^ τ) := by
+    exact Real.tsum_inv_rpow_le_card_mul_of_lower_bound
+      (a := fun p : S => ‖divisorZeroIndex₀_val p.1‖)
+      hrk_pos hτpos (fun _ => norm_nonneg _) hk_lower
+  have hmass_le_growth :
+      divisorMassClosedBall₀ f Rk
+        ≤ (Cgrow * (1 + |2 * Rk|) ^ ρ + Ctrail) / (Real.log 2) := by
+    simpa [Cgrow, Ctrail, Rk] using
+      (divisorMassClosedBall₀_le_of_growth (f := f) (ρ := ρ) hf hgrowth
+        (R := Rk) hk_ge_one)
+  have hcard_le_mass :
+      (Fintype.card S : ℝ) ≤ divisorMassClosedBall₀ f Rk := by
+    have hRk_pos : 0 < Rk := lt_of_lt_of_le (by norm_num) hk_ge_one
+    exact card_subtype_le_divisorMassClosedBall₀_of_norm_le (f := f) hf hRk_pos hk_upper
+  have htsum' :
+      (∑' p : S, ‖divisorZeroIndex₀_val p.1‖⁻¹ ^ τ)
+        ≤ ((Cgrow * (1 + |2 * Rk|) ^ ρ + Ctrail) / (Real.log 2)) * (rk⁻¹ ^ τ) := by
+    have hcard_le_growth :
+        (Fintype.card S : ℝ) ≤
+          (Cgrow * (1 + |2 * Rk|) ^ ρ + Ctrail) / (Real.log 2) :=
+      le_trans hcard_le_mass hmass_le_growth
+    exact le_trans htsum_le <|
+      mul_le_mul_of_nonneg_right hcard_le_growth (Real.rpow_nonneg (inv_nonneg.2 hrk0) τ)
+  have hpow_bound :
+      (1 + |2 * Rk|) ^ ρ ≤ (1 + 4 * r0) ^ ρ * ((2 : ℝ) ^ ρ) ^ k := by
+    simpa [Rk] using
+      Real.one_add_abs_two_mul_dyadicRadius_rpow_le (r0 := r0) (ρ := ρ) k hr0pos hρ
+  have hlog2pos : 0 < Real.log 2 := Real.log_pos (by norm_num : (1 : ℝ) < 2)
+  simpa [A, B, q, qσ, rk, Cgrow, Ctrail, mul_assoc, mul_left_comm, mul_comm] using
+    Real.dyadic_growth_mass_mul_inv_le_geometric
+      (C := Cgrow) (L := Real.log 2) (M := (1 + 4 * r0) ^ ρ)
+      (X := (1 + |2 * Rk|) ^ ρ)
+      (T := ∑' p : S, ‖divisorZeroIndex₀_val p.1‖⁻¹ ^ τ)
+      (Ctrail := Ctrail) (r0 := r0) (ρ := ρ) (τ := τ) (k := k)
+      hlog2pos (le_of_lt (Classical.choose_spec hgrowth).1) hr0pos.le hpow_bound
+      (by simpa [rk] using htsum')
+
 theorem summable_norm_inv_rpow_divisorZeroIndex₀_of_growth {f : ℂ → ℂ} {ρ τ : ℝ}
     (hρ : 0 ≤ ρ) (hτ : ρ < τ) (hf : Differentiable ℂ f) (hnot : ∃ z : ℂ, f z ≠ 0)
     (hgrowth : ∃ C > 0, ∀ z : ℂ, Real.log (1 + ‖f z‖) ≤ C * (1 + ‖z‖) ^ ρ) :
@@ -759,7 +827,6 @@ theorem summable_norm_inv_rpow_divisorZeroIndex₀_of_growth {f : ℂ → ℂ} {
       summable_geometric_of_lt_one hq_nonneg hq_lt_one
     have hgeom_qσ : Summable (fun k : ℕ => qσ ^ k) :=
       summable_geometric_of_lt_one hqσ_nonneg hqσ_lt_one
-    have hlog2pos : 0 < Real.log 2 := Real.log_pos (by norm_num : (1 : ℝ) < 2)
     let Cgrow : ℝ := Classical.choose hgrowth
     let Ctrail : ℝ := |Real.log ‖meromorphicTrailingCoeffAt f 0‖|
     let A : ℝ := ((Cgrow / Real.log 2) * (1 + 4 * r0) ^ ρ) * (r0⁻¹) ^ τ
@@ -778,73 +845,17 @@ theorem summable_norm_inv_rpow_divisorZeroIndex₀_of_growth {f : ℂ → ℂ} {
           exact tsum_nonneg this)
         (fun k => by
           let kk : ℕ := k + k0
-          let rk : ℝ := r0 * (2 : ℝ) ^ (kk : ℝ)
           let Rk : ℝ := r0 * (2 : ℝ) ^ ((kk : ℝ) + 1)
-          have hrk_pos : 0 < rk := mul_pos hr0pos (Real.rpow_pos_of_pos (by norm_num) _)
-          have hrk0 : 0 ≤ rk := le_of_lt hrk_pos
-          haveI : Finite (S kk) := by
-            simpa [S, kfun] using (finite_divisorZeroIndex₀_dyadicShell
-              (f := f) hr0pos hr0 kk).to_subtype
-          haveI : Fintype (S kk) := Fintype.ofFinite (S kk)
-          have hk_upper : ∀ p : S kk, ‖divisorZeroIndex₀_val p.1‖ ≤ Rk := by
-            intro p
-            have hk' : kfun p.1 = kk := p.2
-            simpa [Rk] using
-              divisorZeroIndex₀_dyadicShell_upper_bound (f := f) hr0pos hr0 (by
-                simpa [kfun] using hk')
-          have hk_lower : ∀ p : S kk, rk ≤ ‖divisorZeroIndex₀_val p.1‖ := by
-            intro p
-            have hk' : kfun p.1 = kk := p.2
-            simpa [rk] using
-              divisorZeroIndex₀_dyadicShell_lower_bound (f := f) hr0pos hr0 (by
-                simpa [kfun] using hk')
-          have htsum_le :
-              (∑' p : S kk, ‖divisorZeroIndex₀_val p.1‖⁻¹ ^ τ)
-                ≤ (Fintype.card (S kk) : ℝ) * (rk⁻¹ ^ τ) := by
-            exact Real.tsum_inv_rpow_le_card_mul_of_lower_bound
-              (a := fun p : S kk => ‖divisorZeroIndex₀_val p.1‖)
-              hrk_pos hτpos (fun _ => norm_nonneg _) hk_lower
           have hRk_ge_one : (1 : ℝ) ≤ Rk := by
             have hkk : k0 ≤ kk + 1 := by
               simp [kk, Nat.add_assoc, Nat.add_comm]
             simpa [Rk] using
               Real.one_le_dyadicRadius_succ_of_inv_le_two_pow hr0pos hk0 hkk
-          have hmass_le_growth :
-              divisorMassClosedBall₀ f Rk
-                ≤ (Cgrow * (1 + |2 * Rk|) ^ ρ + Ctrail) / (Real.log 2) := by
-            simpa [Cgrow, Ctrail] using
-              (divisorMassClosedBall₀_le_of_growth (f := f) (ρ := ρ) hf hgrowth
-                (R := Rk) hRk_ge_one)
-          have hcard_le_mass :
-              (Fintype.card (S kk) : ℝ) ≤ divisorMassClosedBall₀ f Rk := by
-            have hRk_pos : 0 < Rk := lt_of_lt_of_le (by norm_num) hRk_ge_one
-            exact card_subtype_le_divisorMassClosedBall₀_of_norm_le (f := f) hf hRk_pos
-              hk_upper
-          have htsum' :
-              (∑' p : S kk, ‖divisorZeroIndex₀_val p.1‖⁻¹ ^ τ)
-                ≤ ((Cgrow * (1 + |2 * Rk|) ^ ρ + Ctrail) / (Real.log 2)) * (rk⁻¹ ^ τ) := by
-            have hcard_le_growth :
-                (Fintype.card (S kk) : ℝ) ≤
-                  (Cgrow * (1 + |2 * Rk|) ^ ρ + Ctrail) / (Real.log 2) :=
-              le_trans hcard_le_mass hmass_le_growth
-            have :=
-              mul_le_mul_of_nonneg_right hcard_le_growth
-                (Real.rpow_nonneg (inv_nonneg.2 hrk0) τ)
-            exact le_trans htsum_le this
-          have hpow_bound :
-              (1 + |2 * Rk|) ^ ρ ≤ (1 + 4 * r0) ^ ρ * ((2 : ℝ) ^ ρ) ^ kk := by
-            simpa [Rk] using
-              Real.one_add_abs_two_mul_dyadicRadius_rpow_le (r0 := r0) (ρ := ρ) kk hr0pos hρ
           have hmain :
               (∑' p : S kk, ‖divisorZeroIndex₀_val p.1‖⁻¹ ^ τ) ≤ A * q ^ kk + B * qσ ^ kk := by
-            simpa [A, B, q, qσ, rk, mul_assoc, mul_left_comm, mul_comm] using
-              Real.dyadic_growth_mass_mul_inv_le_geometric
-                (C := Cgrow) (L := Real.log 2) (M := (1 + 4 * r0) ^ ρ)
-                (X := (1 + |2 * Rk|) ^ ρ)
-                (T := ∑' p : S kk, ‖divisorZeroIndex₀_val p.1‖⁻¹ ^ τ)
-                (Ctrail := Ctrail) (r0 := r0) (ρ := ρ) (τ := τ) (k := kk)
-                hlog2pos (le_of_lt (Classical.choose_spec hgrowth).1) hr0pos.le
-                hpow_bound (by simpa [rk] using htsum')
+            simpa [S, kfun, Cgrow, Ctrail, A, B, q, qσ] using
+              tsum_divisorZeroIndex₀_dyadicShell_inv_rpow_le_geometric_of_growth
+                (f := f) (ρ := ρ) (τ := τ) hρ hτpos hf hgrowth hr0pos hr0 kk hRk_ge_one
           have : A * q ^ kk + B * qσ ^ kk = A0 * q ^ k + B0 * qσ ^ k := by
             simpa [A0, B0, kk] using Real.two_geometric_shift_add A B q qσ k k0
           simpa [kk] using (hmain.trans_eq this)

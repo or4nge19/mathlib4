@@ -20,7 +20,7 @@ factorization:
 - a bound in the “far regime” (`‖u / a‖ ≤ 1 / 2`), based on
   `Complex.log_norm_weierstrassFactor_ge_neg_two_pow`.
 
-The results are stated in a form convenient for later use with intrinsic zero enumerations.
+The results are stated in a form convenient for divisor-indexed zero enumerations.
 -/
 
 @[expose] public section

@@ -13,8 +13,8 @@ public import Mathlib.Analysis.Complex.DivisorQuotientRemovable
 # Hadamard factorization (preliminaries)
 
 This file develops preliminary lemmas towards Hadamard factorization for entire functions on `ℂ`.
-The main idea is to index zeros (with multiplicity) using the intrinsic divisor
-`MeromorphicOn.divisor`, and to form the corresponding canonical product.
+Zeros are indexed with multiplicity using `MeromorphicOn.divisor`, then assembled into the
+corresponding canonical product.
 
 ## Main definitions
 
@@ -203,8 +203,8 @@ theorem analyticOrderNatAt_prod_fiberFinset
 /-!
 ## Exact multiplicity of the divisor canonical product
 
-The infinite canonical product has precisely the zero multiplicities encoded by the intrinsic
-divisor index.  The proof is supplied by the quotient/removable-singularity layer, and the
+The infinite canonical product has precisely the zero multiplicities encoded by the divisor index.
+The proof is supplied by the quotient/removable-singularity layer, and the
 statements here record the multiplicity theorem at the level where the product is introduced.
 -/
 

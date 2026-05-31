@@ -202,8 +202,8 @@ theorem analyticAt_divisorCanonicalProductQuotientExtension
 /-!
 ## Exact multiplicity of the divisor canonical product
 
-At each `z₀`, the zero multiplicity of `divisorCanonicalProduct` equals the intrinsic fiber
-cardinality `card (divisorZeroIndex₀_fiberFinset z₀)`.
+At each `z₀`, the zero multiplicity of `divisorCanonicalProduct` equals the fiber cardinality
+`card (divisorZeroIndex₀_fiberFinset z₀)`.
 -/
 
 theorem analyticOrderNatAt_divisorCanonicalProduct_eq_fiber_card
