@@ -55,6 +55,15 @@ lemma log_factorial_eq_log_Gamma {n : ℕ} (_hn : 0 < n) :
     Real.log (n.factorial : ℝ) = Real.log (Real.Gamma (n + 1)) := by
   rw [Gamma_nat_eq_factorial]
 
+/-- For `n ≥ 1`, `log(n!) = log n + log Γ(n)`. -/
+lemma log_factorial_eq_log_nat_add_log_Gamma {n : ℕ} (hn : 0 < n) :
+    Real.log (n.factorial : ℝ) = Real.log (n : ℝ) + Real.log (Real.Gamma n) := by
+  rw [← Real.log_mul
+    (Nat.cast_ne_zero.mpr (ne_of_gt hn))
+    (Real.Gamma_pos_of_pos (Nat.cast_pos.mpr hn)).ne']
+  rw [← Real.Gamma_add_one (Nat.cast_ne_zero.mpr (ne_of_gt hn))]
+  rw [Real.Gamma_nat_eq_factorial]
+
 /-! ## Section 2: The theta parameter -/
 
 /-- For n ≥ 1, there exists θ ∈ (0, 1) such that
@@ -65,12 +74,8 @@ theorem log_factorial_theta {n : ℕ} (hn : 0 < n) :
     ∃ θ : ℝ, 0 < θ ∧ θ < 1 ∧
       Real.log (n.factorial : ℝ) =
         n * Real.log n - n + Real.log (2 * Real.pi * n) / 2 + θ / (12 * n) := by
-  have h_fact : Real.log (n.factorial) = Real.log n + Real.log (Real.Gamma n) := by
-    rw [← Real.log_mul
-      (Nat.cast_ne_zero.mpr (ne_of_gt hn))
-      (Real.Gamma_pos_of_pos (Nat.cast_pos.mpr hn)).ne']
-    rw [← Real.Gamma_add_one (Nat.cast_ne_zero.mpr (ne_of_gt hn))]
-    rw [Real.Gamma_nat_eq_factorial]
+  have h_fact : Real.log (n.factorial) = Real.log n + Real.log (Real.Gamma n) :=
+    log_factorial_eq_log_nat_add_log_Gamma hn
   let x : ℝ := n
   have hx : 0 < x := Nat.cast_pos.mpr hn
   have h_binet :
@@ -113,6 +118,19 @@ lemma exp_half_log {x : ℝ} (hx : 0 < x) :
   rw [Real.sqrt_eq_rpow]
   rw [Real.rpow_def_of_pos hx]
   congr 1
+  ring
+
+/-- Logarithm of the main Stirling factor `√(2πn) (n/e)^n`. -/
+lemma log_stirlingFactor {n : ℕ} (hn : 0 < n) :
+    Real.log (Real.sqrt (2 * Real.pi * n) * (n / Real.exp 1) ^ n) =
+      n * Real.log n - n + Real.log (2 * Real.pi * n) / 2 := by
+  have h2pi_pos : (0 : ℝ) < 2 * Real.pi := by nlinarith [Real.pi_pos]
+  have hn_pos : (0 : ℝ) < n := Nat.cast_pos.mpr hn
+  rw [Real.log_mul (Real.sqrt_pos.mpr (mul_pos h2pi_pos hn_pos)).ne'
+    (pow_pos (div_pos hn_pos (Real.exp_pos 1)) n).ne']
+  rw [Real.log_sqrt (le_of_lt (mul_pos h2pi_pos hn_pos))]
+  rw [Real.log_pow, Real.log_div (Nat.cast_ne_zero.mpr (ne_of_gt hn)) (Real.exp_pos 1).ne']
+  rw [Real.log_exp]
   ring
 
 /-- Exponentiating the Stirling formula with `θ < 1` gives Robbins' upper bound. -/
@@ -262,11 +280,7 @@ theorem factorial_lower_robbins (n : ℕ) (hn : 0 < n) :
       n * Real.log n - n + Real.log (2 * Real.pi * n) / 2 + 1 / (12 * n + 1) ≤
         Real.log (n.factorial : ℝ) := by
     have h_fact : Real.log (n.factorial) = Real.log n + Real.log (Real.Gamma n) := by
-      rw [← Real.log_mul
-        (Nat.cast_ne_zero.mpr (ne_of_gt hn))
-        (Real.Gamma_pos_of_pos (Nat.cast_pos.mpr hn)).ne']
-      rw [← Real.Gamma_add_one (Nat.cast_ne_zero.mpr (ne_of_gt hn))]
-      rw [Real.Gamma_nat_eq_factorial]
+      exact log_factorial_eq_log_nat_add_log_Gamma hn
     have h_binet :
         Real.log (Real.Gamma n) =
           (n - 1/2) * Real.log n - n + Real.log (2 * Real.pi) / 2 + (Binet.J n).re := by
@@ -284,15 +298,16 @@ theorem factorial_lower_robbins (n : ℕ) (hn : 0 < n) :
   rw [← Real.log_le_log_iff
     (mul_pos (mul_pos h_sqrt_pos (pow_pos (div_pos hn_pos (Real.exp_pos 1)) n)) (Real.exp_pos _))
     (Nat.cast_pos.mpr (Nat.factorial_pos n))]
-  convert h_log_ge using 1
-  rw [Real.log_mul
-    (mul_pos h_sqrt_pos (pow_pos (div_pos hn_pos (Real.exp_pos 1)) n)).ne'
-    (Real.exp_pos _).ne']
-  rw [Real.log_exp]
-  rw [Real.log_mul h_sqrt_pos.ne' (pow_pos (div_pos hn_pos (Real.exp_pos 1)) n).ne']
-  rw [Real.log_sqrt (le_of_lt (mul_pos h2pi_pos hn_pos))]
-  rw [Real.log_pow, Real.log_div hn_pos.ne' (Real.exp_pos 1).ne', Real.log_exp]
-  ring
+  calc
+    Real.log
+        (Real.sqrt (2 * Real.pi * n) * (n / Real.exp 1) ^ n *
+          Real.exp (1 / (12 * n + 1))) =
+        n * Real.log n - n + Real.log (2 * Real.pi * n) / 2 + 1 / (12 * n + 1) := by
+      rw [Real.log_mul
+        (mul_pos h_sqrt_pos (pow_pos (div_pos hn_pos (Real.exp_pos 1)) n)).ne'
+        (Real.exp_pos _).ne']
+      rw [Real.log_exp, log_stirlingFactor hn]
+    _ ≤ Real.log (n.factorial : ℝ) := h_log_ge
 
 /-! ## Section 5: Two-sided bound -/
 
@@ -330,52 +345,37 @@ theorem factorial_asymptotic :
     rw [le_div_iff₀ h_stirling_pos, div_le_iff₀ h_stirling_pos]
     have h_log_stirling :
         Real.log stirling = n * Real.log n - n + Real.log (2 * Real.pi * n) / 2 := by
-      have h2pi_pos : (0 : ℝ) < 2 * Real.pi := by nlinarith [Real.pi_pos]
-      have hn_pos : (0 : ℝ) < n := Nat.cast_pos.mpr hn
-      rw [Real.log_mul (Real.sqrt_pos.mpr (mul_pos h2pi_pos hn_pos)).ne'
-        (pow_pos (div_pos hn_pos (Real.exp_pos 1)) n).ne']
-      rw [Real.log_sqrt (le_of_lt (mul_pos h2pi_pos hn_pos))]
-      rw [Real.log_pow, Real.log_div (Nat.cast_ne_zero.mpr (ne_of_gt hn)) (Real.exp_pos 1).ne']
-      rw [Real.log_exp]; ring
+      simpa [stirling] using log_stirlingFactor hn
     constructor
-    · -- `lower n = 1`, so this is `stirling ≤ n!`
-      dsimp [lower]
+    · dsimp [lower]
       rw [one_mul]
       rw [← Real.log_le_log_iff h_stirling_pos (Nat.cast_pos.mpr (Nat.factorial_pos n)),
         h_log_stirling]
-      -- rewrite `log (n!)` using the Robbins/Binet expansion
       rw [hlog]
       simp only [le_add_iff_nonneg_right]
       positivity
-    · -- `upper n = exp (1/(12n))`
-      dsimp [upper]
+    · dsimp [upper]
       rw [← Real.log_le_log_iff (Nat.cast_pos.mpr (Nat.factorial_pos n))
         (mul_pos (Real.exp_pos _) h_stirling_pos)]
       rw [Real.log_mul (Real.exp_pos _).ne' h_stirling_pos.ne', Real.log_exp,
         h_log_stirling]
-      -- rewrite `log (n!)` using the Robbins/Binet expansion
       rw [hlog]
-      -- reduce to `θ / (12n) ≤ 1 / (12n)` and use `θ < 1`
       have hn' : (0 : ℝ) < 12 * (n : ℝ) := by
         have hn0 : (0 : ℝ) < (n : ℝ) := Nat.cast_pos.mpr hn
         nlinarith
       have hθle : θ ≤ 1 := le_of_lt hθ_lt_one
       have hθ_div : θ / (12 * (n : ℝ)) ≤ 1 / (12 * (n : ℝ)) :=
         div_le_div_of_nonneg_right hθle (le_of_lt hn')
-      -- isolate the common term and use `add_le_add_left`
       set c : ℝ := (n : ℝ) * Real.log n - n + Real.log (2 * Real.pi * n) / 2
       have hc : c + θ / (12 * (n : ℝ)) ≤ c + 1 / (12 * (n : ℝ)) := by
         simpa [c, add_assoc, add_left_comm, add_comm] using add_le_add_left hθ_div c
-      -- goal is the same inequality, up to commutativity and rewriting `1/(12n)` as an inverse
       simpa [one_div, c, add_assoc, add_left_comm, add_comm, mul_assoc, mul_left_comm,
         mul_comm] using hc
   refine (tendsto_of_tendsto_of_tendsto_of_le_of_le'
     (f := fun n : ℕ =>
       (n.factorial : ℝ) / (Real.sqrt (2 * Real.pi * n) * (n / Real.exp 1) ^ n))
     (g := lower) (h := upper) tendsto_const_nhds ?_ ?_ ?_)
-  · -- `upper n = exp (1/(12n)) → exp 0 = 1`
-    have h_lim : Tendsto (fun n : ℕ => 1 / (12 * (n : ℝ))) atTop (𝓝 (0 : ℝ)) := by
-      -- first show `12 * n → +∞`, then compose with `x ↦ x⁻¹ → 0`
+  · have h_lim : Tendsto (fun n : ℕ => 1 / (12 * (n : ℝ))) atTop (𝓝 (0 : ℝ)) := by
       have h_to : Tendsto (fun n : ℕ => (12 : ℝ) * (n : ℝ)) atTop atTop := by
         have hn : Tendsto (fun n : ℕ => (n : ℝ)) atTop atTop := by
           simpa using (tendsto_natCast_atTop_atTop : Tendsto (Nat.cast : ℕ → ℝ) atTop atTop)

@@ -54,7 +54,7 @@ lemma divisor_support_countable [HereditarilyLindelofSpace 𝕜] (f : 𝕜 → E
   classical
   have hdisc : IsDiscrete (MeromorphicOn.divisor f U).support := divisor_support_discrete (f := f) U
   have hlin : IsLindelof (MeromorphicOn.divisor f U).support :=
-    HereditarilyLindelof_LindelofSets _
+    HereditarilyLindelofSpace.isLindelof _
   exact hlin.countable_of_isDiscrete hdisc
 
 /-!

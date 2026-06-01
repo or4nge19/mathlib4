@@ -11,7 +11,7 @@ public import Mathlib.Analysis.Complex.RemovableSingularity
 public import Mathlib.Analysis.SpecialFunctions.Gamma.Deligne
 public import Mathlib.Analysis.SpecialFunctions.Stirling
 public import Mathlib.Data.Real.StarOrdered
-public import Mathlib.Analysis.SpecialFunctions.Gamma.BinetFormula
+public import Mathlib.Analysis.SpecialFunctions.GammaProductBound
 public import Mathlib.Analysis.SpecialFunctions.GammaBounds
 public import Mathlib.Analysis.SpecialFunctions.Gamma.GammaStirlingAux
 
@@ -123,7 +123,8 @@ theorem norm_bound_re_ge_one :
   classical
   by_cases hs_small : s.re < 2
   · -- On the strip `1 ≤ re s ≤ 2`, we have the sharp bound `‖Γ(s)‖ ≤ 1`.
-    have hΓ : ‖Gamma s‖ ≤ 1 := Binet.norm_Gamma_le_one (z := s) hs_re (le_of_lt hs_small)
+    have hΓ : ‖Gamma s‖ ≤ 1 := Complex.norm_Gamma_le_one (z := s) hs_re
+      (le_of_lt hs_small)
     have hpow : (1 : ℝ) ≤ (1 + ‖s‖) ^ (‖s‖ + 1) := by
       have hbase : (1 : ℝ) ≤ 1 + ‖s‖ := by linarith [norm_nonneg s]
       have hexp : (0 : ℝ) ≤ ‖s‖ + 1 := by linarith [norm_nonneg s]
@@ -166,7 +167,7 @@ theorem norm_bound_re_ge_one :
         linarith
       simpa using Stirling.GammaAux.Gamma_iterate (s := s) (n := m) hs_nonzero
     have h_gamma_base : ‖Gamma (s - (m : ℂ))‖ ≤ 1 :=
-      Binet.norm_Gamma_le_one (z := s - (m : ℂ)) h_re_lo (le_of_lt h_re_hi)
+      Complex.norm_Gamma_le_one (z := s - (m : ℂ)) h_re_lo (le_of_lt h_re_hi)
     have hΓ_le_pow : ‖Gamma s‖ ≤ ‖s‖ ^ m := by
       calc
         ‖Gamma s‖ =

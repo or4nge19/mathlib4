@@ -60,13 +60,12 @@ lemma logCounting_divisor_univ_eq_circleAverage_sub_log_trailingCoeff {f : ℂ �
     (Function.locallyFinsuppWithin.logCounting_divisor_eq_circleAverage_sub_const (f := f)
       (h := hmero) (hR := hR))
 
-lemma log_norm_le_log_one_add_norm (w : ℂ) :
+lemma log_norm_le_log_one_add_norm {E : Type*} [SeminormedAddCommGroup E] (w : E) :
     Real.log ‖w‖ ≤ Real.log (1 + ‖w‖) := by
-  by_cases h0 : w = 0
+  by_cases h0 : ‖w‖ = 0
   · simp [h0]
-  · have hpos : 0 < ‖w‖ := norm_pos_iff.2 h0
-    have hle : ‖w‖ ≤ 1 + ‖w‖ := by linarith [norm_nonneg w]
-    exact Real.log_le_log hpos hle
+  · have hpos : 0 < ‖w‖ := lt_of_le_of_ne (norm_nonneg w) (Ne.symm h0)
+    exact Real.log_le_log hpos (by linarith [norm_nonneg w])
 
 lemma log_norm_le_growth_on_sphere {f : ℂ → ℂ} {C ρ R : ℝ}
     (hC : ∀ z : ℂ, Real.log (1 + ‖f z‖) ≤ C * (1 + ‖z‖) ^ ρ)
@@ -181,6 +180,27 @@ lemma mem_support_of_mem_toClosedBall_support
     simpa [Function.mem_support] using hz
   simpa [Function.mem_support, hEq] using hz_ne
 
+lemma log_nonneg_mul_inv_norm_of_norm_le {E : Type*} [NormedAddCommGroup E]
+    {z : E} {r : ℝ} (hz : ‖z‖ ≤ r) :
+    0 ≤ Real.log (r * ‖z‖⁻¹) := by
+  by_cases hz0 : z = 0
+  · simp [hz0]
+  · have hzpos : 0 < ‖z‖ := norm_pos_iff.2 hz0
+    have : 1 ≤ r * ‖z‖⁻¹ := by
+      have : 1 ≤ r / ‖z‖ := (one_le_div hzpos).2 hz
+      simpa [div_eq_mul_inv] using this
+    exact Real.log_nonneg this
+
+lemma log_two_le_log_two_mul_mul_inv_norm_of_norm_le {E : Type*} [NormedAddCommGroup E]
+    {z : E} {R : ℝ} (hz0 : z ≠ 0) (hz : ‖z‖ ≤ R) :
+    Real.log 2 ≤ Real.log ((2 * R) * ‖z‖⁻¹) := by
+  have hzpos : 0 < ‖z‖ := norm_pos_iff.2 hz0
+  have hRdiv : 1 ≤ R / ‖z‖ := (one_le_div hzpos).2 hz
+  have hle2 : (2 : ℝ) ≤ (2 * R) * ‖z‖⁻¹ := by
+    have : (2 : ℝ) ≤ 2 * (R / ‖z‖) := by nlinarith
+    simpa [div_eq_mul_inv, mul_assoc, mul_left_comm, mul_comm] using this
+  exact Real.log_le_log (by norm_num) hle2
+
 lemma log_two_mul_divisorMassClosedBall₀_le_logCounting_two_mul {f : ℂ → ℂ}
     (hf : Differentiable ℂ f) {R : ℝ} (hR : 1 ≤ R) :
     (Real.log 2) * divisorMassClosedBall₀ f R
@@ -252,17 +272,10 @@ lemma log_two_mul_divisorMassClosedBall₀_le_logCounting_two_mul {f : ℂ → �
             (norm_le_abs_radius_of_mem_toClosedBall_support hz_sup)
         simpa [hDrz] using hDz'
       have hlog : 0 ≤ Real.log (r * ‖z‖⁻¹) := by
-        by_cases hz0 : z = 0
-        · subst hz0
-          simp
-        · have hzpos : 0 < ‖z‖ := norm_pos_iff.2 hz0
-          have hzle : ‖z‖ ≤ r := by
-            have : ‖z‖ ≤ |r| := norm_le_abs_radius_of_mem_toClosedBall_support hz_sup
-            simpa [abs_of_pos hrpos] using this
-          have : 1 ≤ r * ‖z‖⁻¹ := by
-            have : 1 ≤ r / ‖z‖ := (one_le_div hzpos).2 hzle
-            simpa [div_eq_mul_inv] using this
-          exact Real.log_nonneg this
+        have hzle : ‖z‖ ≤ r := by
+          have : ‖z‖ ≤ |r| := norm_le_abs_radius_of_mem_toClosedBall_support hz_sup
+          simpa [abs_of_pos hrpos] using this
+        exact log_nonneg_mul_inv_norm_of_norm_le hzle
       exact mul_nonneg (by exact_mod_cast hDz) hlog
     have hsumSF :
         S.sum (fun z : ℂ => (Dr z : ℝ) * Real.log (r * ‖z‖⁻¹))
@@ -283,13 +296,8 @@ lemma log_two_mul_divisorMassClosedBall₀_le_logCounting_two_mul {f : ℂ → �
                 (isCompact_closedBall (0 : ℂ) |R|))).1 hz_mem_SR
         have : ‖z‖ ≤ |R| := norm_le_abs_radius_of_mem_toClosedBall_support hzRsup
         simpa [abs_of_pos hR0] using this
-      have hzpos : 0 < ‖z‖ := norm_pos_iff.2 hz0
-      have hle2 : (2 : ℝ) ≤ r * ‖z‖⁻¹ := by
-        have hRdiv : 1 ≤ R / ‖z‖ := (one_le_div hzpos).2 hz_norm_le_R
-        have : (2 : ℝ) ≤ 2 * (R / ‖z‖) := by nlinarith
-        simpa [r, div_eq_mul_inv, mul_assoc, mul_left_comm, mul_comm] using this
       have hlog_le : Real.log 2 ≤ Real.log (r * ‖z‖⁻¹) :=
-        Real.log_le_log (by positivity : (0 : ℝ) < 2) hle2
+        by simpa [r] using log_two_le_log_two_mul_mul_inv_norm_of_norm_le hz0 hz_norm_le_R
       have hDz_nonneg : 0 ≤ D z := hDnonneg z
       have hz_in_ballr : z ∈ Metric.closedBall (0 : ℂ) |r| := by
         have : ‖z‖ ≤ r := le_trans hz_norm_le_R (by dsimp [r]; nlinarith)

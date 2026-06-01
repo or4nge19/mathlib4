@@ -978,6 +978,71 @@ theorem tendsto_re_J_atTop_zero :
     simpa using lt_of_le_of_lt hbound h1
   simpa [Real.dist_eq] using this
 
+private lemma R_nat_eq_log_stirlingSeq_sub_log_pi_half {n : ℕ} (hn : 0 < n) :
+    R (n : ℝ) = Real.log (Stirling.stirlingSeq n) - Real.log Real.pi / 2 := by
+  have hGamma_n : Real.Gamma (n : ℝ) = ((n - 1)! : ℝ) := by
+    have hn_succ : (n - 1).succ = n := Nat.succ_pred_eq_of_pos hn
+    have hcast : ((n - 1 : ℕ) : ℝ) + 1 = n := by
+      have := congrArg (fun k : ℕ => (k : ℝ)) hn_succ
+      simpa [Nat.cast_succ] using this
+    have hGamma := Real.Gamma_nat_eq_factorial (n - 1)
+    simpa [hcast, Nat.cast_add, Nat.cast_one, add_assoc] using hGamma
+  have hlogGamma :
+      Real.log (Real.Gamma (n : ℝ)) = Real.log (n ! : ℝ) - Real.log (n : ℝ) := by
+    have hpred_fact_ne : (((n - 1)! : ℕ) : ℝ) ≠ 0 := by
+      exact_mod_cast (Nat.factorial_ne_zero (n - 1))
+    have hn_ne : (n : ℝ) ≠ 0 := by
+      exact_mod_cast (Nat.ne_of_gt hn)
+    have hfac : (n ! : ℝ) = (n : ℝ) * ((n - 1)! : ℝ) := by
+      have hn' : n - 1 + 1 = n := Nat.sub_add_cancel (Nat.succ_le_of_lt hn)
+      have hnat : ((n - 1 + 1) ! : ℕ) = (n - 1 + 1) * (n - 1)! :=
+        Nat.factorial_succ (n - 1)
+      have := congrArg (fun k : ℕ => (k : ℝ)) hnat
+      simpa [hn', Nat.cast_mul, Nat.cast_add, Nat.cast_one, mul_assoc, mul_comm,
+        mul_left_comm] using this
+    have hlog_mul :
+        Real.log (n ! : ℝ) = Real.log (n : ℝ) + Real.log ((n - 1)! : ℝ) := by
+      have h : Real.log ((n : ℝ) * ((n - 1)! : ℝ)) =
+          Real.log (n : ℝ) + Real.log ((n - 1)! : ℝ) := by
+        simpa using
+          Real.log_mul (x := (n : ℝ)) (y := ((n - 1)! : ℝ)) hn_ne hpred_fact_ne
+      simpa [hfac, mul_comm, add_comm, add_left_comm, add_assoc] using h
+    have : Real.log ((n - 1)! : ℝ) = Real.log (n ! : ℝ) - Real.log (n : ℝ) := by
+      linarith
+    simp [hGamma_n, this]
+  unfold R stirlingMainReal
+  have hlog_pi2 : Real.log (Real.pi * 2) = Real.log Real.pi + Real.log 2 := by
+    simpa [mul_comm] using Real.log_mul (Real.pi_pos.ne') (by norm_num : (2 : ℝ) ≠ 0)
+  have hlogst_formula' :
+      Real.log (Stirling.stirlingSeq n) =
+        Real.log (n ! : ℝ) - (1 / 2 : ℝ) * (Real.log 2 + Real.log (n : ℝ))
+          - (n : ℝ) * (Real.log (n : ℝ) - 1) := by
+    have hn_pos_real : (0 : ℝ) < (n : ℝ) := by exact_mod_cast hn
+    have hn_ne : (n : ℝ) ≠ 0 := hn_pos_real.ne'
+    have h2_ne : (2 : ℝ) ≠ 0 := by norm_num
+    have hlog_2n : Real.log (2 * (n : ℝ)) = Real.log 2 + Real.log (n : ℝ) := by
+      simpa using Real.log_mul h2_ne hn_ne
+    have hlog_div : Real.log ((n : ℝ) / Real.exp 1) = Real.log (n : ℝ) - 1 := by
+      simpa [Real.log_exp, sub_eq_add_neg] using
+        (Real.log_div hn_ne (Real.exp_pos 1).ne')
+    have h0 :
+        Real.log (Stirling.stirlingSeq n) =
+          Real.log (n ! : ℝ) - (1 / 2 : ℝ) * Real.log (2 * (n : ℝ))
+            - (n : ℝ) * Real.log ((n : ℝ) / Real.exp 1) := by
+      simpa [Stirling.stirlingSeq, sub_eq_add_neg, one_div, mul_assoc, mul_left_comm,
+        mul_comm, add_assoc, add_left_comm, add_comm] using
+          Stirling.log_stirlingSeq_formula n
+    calc
+      Real.log (Stirling.stirlingSeq n)
+          = Real.log (n ! : ℝ) - (1 / 2 : ℝ) * Real.log (2 * (n : ℝ))
+              - (n : ℝ) * Real.log ((n : ℝ) / Real.exp 1) := h0
+      _ = Real.log (n ! : ℝ) - (1 / 2 : ℝ) * (Real.log 2 + Real.log (n : ℝ))
+            - (n : ℝ) * (Real.log (n : ℝ) - 1) := by
+          simp [hlog_2n, hlog_div]
+  simp [hlogGamma, hlogst_formula', hlog_pi2, sub_eq_add_neg, mul_add, add_mul,
+    mul_comm]
+  ring_nf
+
 private lemma stirlingMainReal_floor_lower_step {y : ℝ} {n : ℕ}
     (hn_pos : 0 < (n : ℝ)) (hy1 : 0 ≤ y - (1 / 2 : ℝ))
     (ha_nonneg : 0 ≤ y - (n : ℝ)) (ha_le : y - (n : ℝ) ≤ 1)
@@ -1065,6 +1130,28 @@ private lemma stirlingMainReal_floor_lower_step {y : ℝ} {n : ℕ}
     _ = a * (1 / 2 - a) / (n : ℝ) - 2 * a / (n : ℝ) := hsimp
     _ ≥ - (3 / (n : ℝ)) := hfinal
 
+private lemma eq_zero_of_tendsto_atTop_periodic_add_one {h : ℝ → ℝ} {x : ℝ}
+    (hx : 0 < x) (h_periodic : ∀ y, 0 < y → h y = h (y + 1))
+    (hlim : Tendsto h atTop (𝓝 0)) :
+    h x = 0 := by
+  have hxseq : Tendsto (fun n : ℕ => h (x + n)) atTop (𝓝 0) := by
+    have hxadd : Tendsto (fun n : ℕ => (x + n : ℝ)) atTop atTop := by
+      have hnx : Tendsto (fun n : ℕ => ((n : ℝ) + x)) atTop atTop :=
+        Filter.Tendsto.atTop_add tendsto_natCast_atTop_atTop tendsto_const_nhds
+      simpa [add_assoc, add_comm, add_left_comm] using hnx
+    exact hlim.comp hxadd
+  have hconst : (fun n : ℕ => h (x + n)) = fun _ => h x := by
+    funext n
+    induction n with
+    | zero => simp
+    | succ n ih =>
+        have hxpos : 0 < x + n := by linarith [hx]
+        have hstep : h (x + (n + 1)) = h (x + n) := by
+          simpa [add_assoc, add_comm, add_left_comm] using (h_periodic (x + n) hxpos).symm
+        simpa [ih] using hstep
+  rw [hconst] at hxseq
+  exact tendsto_const_nhds_iff.mp hxseq
+
 /-- Binet's formula for real arguments. -/
 theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
     Real.log (Real.Gamma x) =
@@ -1092,76 +1179,7 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
             (fun n : ℕ => R (n : ℝ)) =ᶠ[atTop]
               fun n : ℕ => Real.log (Stirling.stirlingSeq n) - Real.log Real.pi / 2 := by
           filter_upwards [eventually_gt_atTop 0] with n hn
-          have hn0 : (n : ℝ) ≠ 0 := by
-            exact_mod_cast (Nat.ne_of_gt hn)
-          have hGamma_n :
-              Real.Gamma (n : ℝ) = ((n - 1)! : ℝ) := by
-            have hn' : 0 < n := hn
-            have hn_succ : (n - 1).succ = n := Nat.succ_pred_eq_of_pos hn'
-            have hcast : ((n - 1 : ℕ) : ℝ) + 1 = n := by
-              have := congrArg (fun k : ℕ => (k : ℝ)) hn_succ
-              simpa [Nat.cast_succ] using this
-            have hGamma := Real.Gamma_nat_eq_factorial (n - 1)
-            simpa [hcast, Nat.cast_add, Nat.cast_one, add_assoc] using hGamma
-          have hlogGamma :
-              Real.log (Real.Gamma (n : ℝ)) = Real.log (n ! : ℝ) - Real.log (n : ℝ) := by
-            have hn_fact_ne : ((n ! : ℕ) : ℝ) ≠ 0 := by
-              exact_mod_cast (Nat.factorial_ne_zero n)
-            have hpred_fact_ne : (((n - 1)! : ℕ) : ℝ) ≠ 0 := by
-              exact_mod_cast (Nat.factorial_ne_zero (n - 1))
-            have hn_ne : (n : ℝ) ≠ 0 := by exact_mod_cast (Nat.ne_of_gt hn)
-            have hfac : (n ! : ℝ) = (n : ℝ) * ((n - 1)! : ℝ) := by
-              have hn_succ : (n - 1).succ = n := Nat.succ_pred_eq_of_pos hn
-              have : (n ! : ℝ) = (n : ℝ) * ((n - 1)! : ℝ) := by
-                have hn_pos : 0 < n := hn
-                have hn' : (n - 1 + 1) = n := Nat.sub_add_cancel (Nat.succ_le_of_lt hn_pos)
-                have hnat : ((n - 1 + 1) ! : ℕ) = (n - 1 + 1) * (n - 1)! := Nat.factorial_succ (n - 1)
-                have := congrArg (fun k : ℕ => (k : ℝ)) hnat
-                simpa [hn', Nat.cast_mul, Nat.cast_add, Nat.cast_one, mul_assoc, mul_comm, mul_left_comm] using this
-              exact this
-            have hlog_mul : Real.log (n ! : ℝ) = Real.log (n : ℝ) + Real.log ((n - 1)! : ℝ) := by
-              have h : Real.log ((n : ℝ) * ((n - 1)! : ℝ)) =
-                  Real.log (n : ℝ) + Real.log ((n - 1)! : ℝ) := by
-                simpa using Real.log_mul (x := (n : ℝ)) (y := ((n - 1)! : ℝ)) hn_ne hpred_fact_ne
-              simpa [hfac, mul_comm, add_comm, add_left_comm, add_assoc] using h
-            have : Real.log ((n - 1)! : ℝ) = Real.log (n ! : ℝ) - Real.log (n : ℝ) := by
-              linarith
-            simp [hGamma_n, this]
-          have hn' : n ≠ 0 := Nat.ne_of_gt hn
-          have hlogst_formula := Stirling.log_stirlingSeq_formula n
-          unfold R stirlingMainReal at *
-          have hn_pos_real : (0 : ℝ) < (n : ℝ) := by exact_mod_cast hn
-          have hlog_pi2 : Real.log (Real.pi * 2) = Real.log Real.pi + Real.log 2 := by
-            simpa [mul_comm] using Real.log_mul (Real.pi_pos.ne') (by norm_num : (2 : ℝ) ≠ 0)
-          have hlogst_formula' :
-              Real.log (Stirling.stirlingSeq n) =
-                Real.log (n ! : ℝ) - (1 / 2 : ℝ) * (Real.log 2 + Real.log (n : ℝ))
-                  - (n : ℝ) * (Real.log (n : ℝ) - 1) := by
-            have hn_pos_real : (0 : ℝ) < (n : ℝ) := by exact_mod_cast hn
-            have hn_ne : (n : ℝ) ≠ 0 := hn_pos_real.ne'
-            have h2_ne : (2 : ℝ) ≠ 0 := by norm_num
-            have hlog_2n : Real.log (2 * (n : ℝ)) = Real.log 2 + Real.log (n : ℝ) := by
-              simpa using Real.log_mul h2_ne hn_ne
-            have hlog_div : Real.log ((n : ℝ) / Real.exp 1) = Real.log (n : ℝ) - 1 := by
-              simpa [Real.log_exp, sub_eq_add_neg] using
-                (Real.log_div hn_ne (Real.exp_pos 1).ne')
-            have h0 := Stirling.log_stirlingSeq_formula n
-            have h0' :
-                Real.log (Stirling.stirlingSeq n) =
-                  Real.log (n ! : ℝ) - (1 / 2 : ℝ) * Real.log (2 * (n : ℝ))
-                    - (n : ℝ) * Real.log ((n : ℝ) / Real.exp 1) := by
-              simpa [Stirling.stirlingSeq, sub_eq_add_neg, one_div, mul_assoc, mul_left_comm, mul_comm,
-                add_assoc, add_left_comm, add_comm] using h0
-            calc
-              Real.log (Stirling.stirlingSeq n)
-                  = Real.log (n ! : ℝ) - (1 / 2 : ℝ) * Real.log (2 * (n : ℝ))
-                      - (n : ℝ) * Real.log ((n : ℝ) / Real.exp 1) := h0'
-              _ = Real.log (n ! : ℝ) - (1 / 2 : ℝ) * (Real.log 2 + Real.log (n : ℝ))
-                    - (n : ℝ) * (Real.log (n : ℝ) - 1) := by
-                  simp [hlog_2n, hlog_div]
-          simp [hlogGamma, hlogst_formula', hlog_pi2, sub_eq_add_neg,
-            mul_add, add_mul, mul_comm]
-          ring_nf
+          exact R_nat_eq_log_stirlingSeq_sub_log_pi_half hn
         have h_tendsto :
             Tendsto (fun n : ℕ => Real.log (Stirling.stirlingSeq n) - Real.log Real.pi / 2) atTop (𝓝 0) :=
           by simpa [hπ, sub_eq_add_neg, add_assoc] using hlogst.sub_const (Real.log Real.pi / 2)
@@ -1450,86 +1468,7 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
             stirlingMainReal (n : ℝ) +
                 (y - (n : ℝ)) * Real.log ((n - 1 : ℕ) : ℝ) - stirlingMainReal y ≥
               - (3 / (n : ℝ)) := by
-            unfold stirlingMainReal
-            have hlogy_mul :
-                (y - (1 / 2 : ℝ)) * Real.log y ≤
-                  (y - (1 / 2 : ℝ)) * (Real.log (n : ℝ) + (y - (n : ℝ)) / (n : ℝ)) := by
-              exact mul_le_mul_of_nonneg_left hlogy_ub hy1
-            have hlognm1_mul :
-                (y - (n : ℝ)) * Real.log ((n - 1 : ℕ) : ℝ) ≥
-                  (y - (n : ℝ)) * (Real.log (n : ℝ) - (2 : ℝ) / (n : ℝ)) := by
-              have h := mul_le_mul_of_nonneg_left hlognm1 ha_nonneg
-              exact h
-            set a : ℝ := y - (n : ℝ) with ha
-            have ha0 : 0 ≤ a := by simpa [a] using ha_nonneg
-            have ha1 : a ≤ 1 := by simpa [a] using ha_le
-            have hn0 : (n : ℝ) ≠ 0 := ne_of_gt hn_pos
-            have hy_a : y = (n : ℝ) + a := by
-              dsimp [a]
-              ring
-            have hrew0 :
-                ( (n - 1 / 2) * Real.log (n : ℝ) - (n : ℝ) + Real.log (2 * π) / 2
-                  + (y - (n : ℝ)) * Real.log ((n - 1 : ℕ) : ℝ)
-                  - ((y - 1 / 2) * Real.log y - y + Real.log (2 * π) / 2)) =
-                  ( (n - 1 / 2) * Real.log (n : ℝ) - (n : ℝ)
-                    + a * Real.log ((n - 1 : ℕ) : ℝ)
-                    + (-( (y - 1 / 2) * Real.log y)) + y) := by
-              ring
-            have h1 :
-                a * (Real.log (n : ℝ) - (2 : ℝ) / (n : ℝ)) ≤ a * Real.log ((n - 1 : ℕ) : ℝ) := by
-              have : a * Real.log ((n - 1 : ℕ) : ℝ) ≥ a * (Real.log (n : ℝ) - (2 : ℝ) / (n : ℝ)) := by
-                simpa [a] using hlognm1_mul
-              simpa [ge_iff_le] using this
-            have h2 :
-                -((y - 1 / 2) * (Real.log (n : ℝ) + a / (n : ℝ))) ≤ -((y - 1 / 2) * Real.log y) := by
-              have := neg_le_neg hlogy_mul
-              simpa [a] using this
-            have hmain_lower :
-                ( (n - 1 / 2) * Real.log (n : ℝ) - (n : ℝ)
-                  + a * Real.log ((n - 1 : ℕ) : ℝ)
-                  + (-( (y - 1 / 2) * Real.log y)) + y)
-                  ≥
-                ( (n - 1 / 2) * Real.log (n : ℝ) - (n : ℝ)
-                  + a * (Real.log (n : ℝ) - (2 : ℝ) / (n : ℝ))
-                  + (-( (y - 1 / 2) * (Real.log (n : ℝ) + a / (n : ℝ)))) + y) := by
-              linarith [h1, h2]
-            have hsimp :
-                ( (n - 1 / 2) * Real.log (n : ℝ) - (n : ℝ)
-                  + a * (Real.log (n : ℝ) - (2 : ℝ) / (n : ℝ))
-                  + (-( (y - 1 / 2) * (Real.log (n : ℝ) + a / (n : ℝ)))) + y)
-                  =
-                a * (1 / 2 - a) / (n : ℝ) - 2 * a / (n : ℝ) := by
-              rw [hy_a]
-              field_simp [hn0]
-              ring
-            have hfinal : a * (1 / 2 - a) / (n : ℝ) - 2 * a / (n : ℝ) ≥ - (3 / (n : ℝ)) := by
-              have hnum : a * (1 / 2 - a) - 2 * a ≥ (-3 : ℝ) := by
-                nlinarith [ha0, ha1]
-              have hdiv : (a * (1 / 2 - a) - 2 * a) / (n : ℝ) ≥ (-3 : ℝ) / (n : ℝ) :=
-                div_le_div_of_nonneg_right hnum (le_of_lt hn_pos)
-              have hrew :
-                  a * (1 / 2 - a) / (n : ℝ) - 2 * a / (n : ℝ) =
-                    (a * (1 / 2 - a) - 2 * a) / (n : ℝ) := by
-                field_simp [hn0]
-              calc
-                a * (1 / 2 - a) / (n : ℝ) - 2 * a / (n : ℝ)
-                    = (a * (1 / 2 - a) - 2 * a) / (n : ℝ) := hrew
-                _ ≥ (-3 : ℝ) / (n : ℝ) := hdiv
-                _ = - (3 / (n : ℝ)) := by simp [neg_div]
-            calc
-              ( (n - 1 / 2) * Real.log (n : ℝ) - (n : ℝ) + Real.log (2 * π) / 2
-                + (y - (n : ℝ)) * Real.log ((n - 1 : ℕ) : ℝ)
-                - ((y - 1 / 2) * Real.log y - y + Real.log (2 * π) / 2))
-                  =
-                  ( (n - 1 / 2) * Real.log (n : ℝ) - (n : ℝ)
-                    + a * Real.log ((n - 1 : ℕ) : ℝ)
-                    + (-( (y - 1 / 2) * Real.log y)) + y) := hrew0
-              _ ≥
-                  ( (n - 1 / 2) * Real.log (n : ℝ) - (n : ℝ)
-                    + a * (Real.log (n : ℝ) - (2 : ℝ) / (n : ℝ))
-                    + (-( (y - 1 / 2) * (Real.log (n : ℝ) + a / (n : ℝ)))) + y) := hmain_lower
-              _ = a * (1 / 2 - a) / (n : ℝ) - 2 * a / (n : ℝ) := hsimp
-              _ ≥ - (3 / (n : ℝ)) := hfinal
+          exact stirlingMainReal_floor_lower_step hn_pos hy1 ha_nonneg ha_le hlogy_ub hlognm1
         have : Real.log (Real.Gamma y) - stirlingMainReal y ≥
             (Real.log (Real.Gamma (n : ℝ)) - stirlingMainReal (n : ℝ)) - 3 / (n : ℝ) := by
           linarith [hlogGamma_lb, hmain]
@@ -1573,23 +1512,7 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
       tendsto_re_J_atTop_zero
     have hlim : Tendsto h atTop (𝓝 0) := by
       simpa [h, sub_eq_add_neg] using hRlim.add (hJlim.neg)
-    have hxseq : Tendsto (fun n : ℕ => h (x + n)) atTop (𝓝 0) := by
-      have hxadd : Tendsto (fun n : ℕ => (x + n : ℝ)) atTop atTop := by
-        have hnx : Tendsto (fun n : ℕ => ((n : ℝ) + x)) atTop atTop :=
-          Filter.Tendsto.atTop_add tendsto_natCast_atTop_atTop tendsto_const_nhds
-        simpa [add_assoc, add_comm, add_left_comm] using hnx
-      exact hlim.comp hxadd
-    have hconst : (fun n : ℕ => h (x + n)) = fun _ => h x := by
-      funext n
-      induction n with
-      | zero => simp [h]
-      | succ n ih =>
-        have hxpos : 0 < x + n := by linarith [hx]
-        have hstep : h (x + (n + 1)) = h (x + n) := by
-          simpa [add_assoc, add_comm, add_left_comm] using (h_periodic (x + n) hxpos).symm
-        simpa [ih] using hstep
-    rw [hconst] at hxseq
-    have hx0' : h x = 0 := tendsto_const_nhds_iff.mp hxseq
+    have hx0' : h x = 0 := eq_zero_of_tendsto_atTop_periodic_add_one hx h_periodic hlim
     dsimp [h] at hx0'
     linarith
   have hmain : Real.log (Real.Gamma x) = stirlingMainReal x + (Binet.J (x : ℂ)).re := by

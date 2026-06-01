@@ -191,6 +191,100 @@ lemma riemannZeta_eq_reflected {z w : ℂ} (hw : w = 1 - z)
     ring
   simpa [hsub, mul_assoc, mul_left_comm, mul_comm] using h
 
+/-- A coarse exponential majorant for `2x` once `x ≤ A` and `1 ≤ A`. -/
+lemma two_mul_le_exp_two_mul_rpow_two {x A : ℝ} (hx : x ≤ A) (hA1 : 1 ≤ A) :
+    x * 2 ≤ rexp (2 * A ^ (2 : ℝ)) := by
+  have h1 : x * 2 ≤ 2 * A := by nlinarith [hx]
+  have hA_le_A2 : A ≤ A ^ (2 : ℝ) := by
+    have := Real.rpow_le_rpow_of_exponent_le hA1 (by norm_num : (1 : ℝ) ≤ (2 : ℝ))
+    simpa [Real.rpow_one] using this
+  have h2 : 2 * A ≤ 2 * A ^ (2 : ℝ) := by nlinarith [hA_le_A2]
+  exact le_trans (le_trans h1 h2) (Real.Stirling.le_exp_self _)
+
+/-- The large coefficient in the reflected zeta estimate is dominated by the chosen constant. -/
+lemma reflected_zeta_coefficient_le {C CΓ : ℝ} (hCΓ : 0 ≤ CΓ)
+    (hC : max (40 : ℝ) (20 * CΓ + 500) ≤ C) :
+    (2 + CΓ + 2 + 40 : ℝ) ≤ C := by
+  have : (20 * CΓ + 500 : ℝ) ≤ C := le_trans (le_max_right _ _) hC
+  nlinarith [this, hCΓ]
+
+/-- Reflected functional-equation factors obey the global zeta growth majorant. -/
+lemma norm_mul_riemannZeta_le_exp_of_reflected {z w : ℂ} {A CΓ C : ℝ}
+    (hw : w = 1 - z)
+    (hzeta_fe :
+      riemannZeta z =
+        2 * (2 * π) ^ (-w) * Complex.Gamma w * Complex.cos (π * w / 2) *
+          riemannZeta w)
+    (hpow_le1 : ‖(2 * π : ℂ) ^ (-w)‖ ≤ 1)
+    (hw_norm_le : ‖w‖ ≤ A) (hA1 : 1 ≤ A) (hA2_nonneg : 0 ≤ A ^ (2 : ℝ))
+    (hΓw : ‖Complex.Gamma w‖ ≤ rexp (CΓ * A ^ (2 : ℝ)))
+    (hcosw : ‖Complex.cos (π * w / 2)‖ ≤ rexp (2 * A ^ (2 : ℝ)))
+    (hζw : ‖riemannZeta w‖ ≤ rexp (40 * A ^ (2 : ℝ)))
+    (hcoef : (2 + CΓ + 2 + 40 : ℝ) ≤ C) :
+    ‖(z - 1) * riemannZeta z‖ ≤ rexp (C * A ^ (2 : ℝ)) := by
+  have hprod :
+      ‖(z - 1) * riemannZeta z‖ ≤
+        (‖w‖ * 2) * ‖Complex.Gamma w‖ *
+          ‖Complex.cos (π * w / 2)‖ * ‖riemannZeta w‖ := by
+    have hz1 : (z - 1 : ℂ) = -w := by
+      rw [hw]
+      ring
+    have hζ :
+        ‖riemannZeta z‖ ≤
+          ‖2 * (2 * π) ^ (-w) * Complex.Gamma w *
+            Complex.cos (π * w / 2) * riemannZeta w‖ := by
+      simp [hzeta_fe]
+    calc
+      ‖(z - 1) * riemannZeta z‖
+          ≤ ‖z - 1‖ * ‖riemannZeta z‖ := by simp
+      _ ≤ ‖z - 1‖ *
+            ‖2 * (2 * π) ^ (-w) * Complex.Gamma w *
+              Complex.cos (π * w / 2) * riemannZeta w‖ := by
+          gcongr
+      _ = ‖w‖ *
+            ‖2 * (2 * π) ^ (-w) * Complex.Gamma w *
+              Complex.cos (π * w / 2) * riemannZeta w‖ := by
+          simp [hz1]
+      _ ≤ ‖w‖ * ((2 : ℝ) * ‖(2 * π : ℂ) ^ (-w)‖ *
+            ‖Complex.Gamma w‖ * ‖Complex.cos (π * w / 2)‖ *
+            ‖riemannZeta w‖) := by
+          have :
+              ‖2 * (2 * π) ^ (-w) * Complex.Gamma w *
+                  Complex.cos (π * w / 2) * riemannZeta w‖
+                ≤ (2 : ℝ) * ‖(2 * π : ℂ) ^ (-w)‖ *
+                  ‖Complex.Gamma w‖ * ‖Complex.cos (π * w / 2)‖ *
+                  ‖riemannZeta w‖ := by
+            simp [mul_assoc, mul_left_comm, mul_comm]
+          gcongr
+      _ ≤ ‖w‖ * ((2 : ℝ) * 1 * ‖Complex.Gamma w‖ *
+            ‖Complex.cos (π * w / 2)‖ * ‖riemannZeta w‖) := by
+          gcongr
+      _ = (‖w‖ * 2) * ‖Complex.Gamma w‖ *
+            ‖Complex.cos (π * w / 2)‖ * ‖riemannZeta w‖ := by
+          ring
+  have hw2 : ‖w‖ * 2 ≤ rexp (2 * A ^ (2 : ℝ)) :=
+    two_mul_le_exp_two_mul_rpow_two hw_norm_le hA1
+  have hmul_exp :
+      (‖w‖ * 2) * ‖Complex.Gamma w‖ * ‖Complex.cos (π * w / 2)‖ *
+          ‖riemannZeta w‖ ≤
+        rexp ((2 + CΓ + 2 + 40) * A ^ (2 : ℝ)) := by
+    have h := mul_four_le_exp_add (a := ‖w‖ * 2) (b := ‖Complex.Gamma w‖)
+      (c := ‖Complex.cos (π * w / 2)‖) (d := ‖riemannZeta w‖)
+      (A := 2 * A ^ (2 : ℝ)) (B := CΓ * A ^ (2 : ℝ))
+      (C := 2 * A ^ (2 : ℝ)) (D := 40 * A ^ (2 : ℝ))
+      (norm_nonneg _) (norm_nonneg _) (norm_nonneg _) hw2 hΓw hcosw hζw
+    have hsum :
+        2 * A ^ (2 : ℝ) + CΓ * A ^ (2 : ℝ) +
+            2 * A ^ (2 : ℝ) + 40 * A ^ (2 : ℝ) =
+          (2 + CΓ + 2 + 40) * A ^ (2 : ℝ) := by
+      ring
+    exact h.trans_eq (congrArg rexp hsum)
+  have hdom :
+      rexp ((2 + CΓ + 2 + 40) * A ^ (2 : ℝ)) ≤ rexp (C * A ^ (2 : ℝ)) := by
+    refine (Real.exp_le_exp).2 ?_
+    simpa [mul_assoc] using mul_le_mul_of_nonneg_right hcoef hA2_nonneg
+  exact le_trans (le_trans hprod hmul_exp) hdom
+
 /-- Sharp (order-one) ε-family growth bound for the completed zeta function Λ₀.
 
 This is the standard “order at most 1” formulation (Tao 246B): for every `ε > 0` one has a bound
@@ -745,79 +839,11 @@ theorem zeta_minus_pole_entire_growth :
                       simp [pow_two]
                       nlinarith [hA1]
             exact le_trans hpoly (Real.Stirling.le_exp_self _)
-          have hprod :
-              ‖(z - 1) * riemannZeta z‖ ≤
-                (‖w‖ * 2) * ‖Complex.Gamma w‖ * ‖Complex.cos (π * w / 2)‖ * ‖riemannZeta w‖ := by
-            have hz1 : (z - 1 : ℂ) = -w := by simp [w]
-            have :
-                ‖riemannZeta z‖ ≤
-                  ‖2 * (2 * π) ^ (-w) * Complex.Gamma w *
-                    Complex.cos (π * w / 2) * riemannZeta w‖ := by
-              simp [hzeta_fe]
-            calc
-              ‖(z - 1) * riemannZeta z‖
-                  ≤ ‖z - 1‖ * ‖riemannZeta z‖ := by simp
-              _ ≤ ‖z - 1‖ *
-                    ‖2 * (2 * π) ^ (-w) * Complex.Gamma w *
-                      Complex.cos (π * w / 2) * riemannZeta w‖ := by
-                    gcongr
-              _ = ‖w‖ *
-                    ‖2 * (2 * π) ^ (-w) * Complex.Gamma w *
-                      Complex.cos (π * w / 2) * riemannZeta w‖ := by
-                    simp [hz1]
-              _ ≤ ‖w‖ * ((2 : ℝ) * ‖(2 * π : ℂ) ^ (-w)‖ *
-                    ‖Complex.Gamma w‖ * ‖Complex.cos (π * w / 2)‖ *
-                    ‖riemannZeta w‖) := by
-                    have :
-                        ‖2 * (2 * π) ^ (-w) * Complex.Gamma w *
-                            Complex.cos (π * w / 2) * riemannZeta w‖
-                          ≤ (2 : ℝ) * ‖(2 * π : ℂ) ^ (-w)‖ *
-                            ‖Complex.Gamma w‖ * ‖Complex.cos (π * w / 2)‖ *
-                            ‖riemannZeta w‖ := by
-                      simp [mul_assoc, mul_left_comm, mul_comm]
-                    gcongr
-              _ ≤ ‖w‖ * ((2 : ℝ) * 1 * ‖Complex.Gamma w‖ *
-                    ‖Complex.cos (π * w / 2)‖ * ‖riemannZeta w‖) := by
-                    gcongr
-              _ = (‖w‖ * 2) * ‖Complex.Gamma w‖ *
-                    ‖Complex.cos (π * w / 2)‖ * ‖riemannZeta w‖ := by
-                    ring
-          have hw2 : ‖w‖ * 2 ≤ Real.exp (2 * A ^ (2 : ℝ)) := by
-            have h1 : ‖w‖ * 2 ≤ 2 * A := by nlinarith [hw_norm_le]
-            have h2 : 2 * A ≤ 2 * A ^ (2 : ℝ) := by
-              have : A ≤ A ^ (2 : ℝ) := by
-                have := Real.rpow_le_rpow_of_exponent_le hA1 (by norm_num : (1 : ℝ) ≤ (2 : ℝ))
-                simpa [Real.rpow_one] using this
-              nlinarith [this]
-            exact le_trans (le_trans h1 h2) (Real.Stirling.le_exp_self _)
-          have hmul_exp :
-              (‖w‖ * 2) * ‖Complex.Gamma w‖ * ‖Complex.cos (π * w / 2)‖ * ‖riemannZeta w‖
-                ≤ rexp ((2 + CΓ + 2 + 40) * A ^ (2 : ℝ)) := by
-            have ha : ‖w‖ * 2 ≤ rexp (2 * A ^ (2 : ℝ)) := by simpa using hw2
-            have hb : ‖Complex.Gamma w‖ ≤ rexp (CΓ * A ^ (2 : ℝ)) := by simpa using hΓw
-            have hc : ‖Complex.cos (π * w / 2)‖ ≤ rexp (2 * A ^ (2 : ℝ)) := by simpa using hcosw
-            have hd : ‖riemannZeta w‖ ≤ rexp (40 * A ^ (2 : ℝ)) := by simpa using hζw
-            have h := mul_four_le_exp_add (a := ‖w‖ * 2) (b := ‖Complex.Gamma w‖)
-              (c := ‖Complex.cos (π * w / 2)‖) (d := ‖riemannZeta w‖)
-              (A := 2 * A ^ (2 : ℝ)) (B := CΓ * A ^ (2 : ℝ))
-              (C := 2 * A ^ (2 : ℝ)) (D := 40 * A ^ (2 : ℝ))
-              (norm_nonneg _) (norm_nonneg _) (norm_nonneg _) ha hb hc hd
-            have hsum :
-                2 * A ^ (2 : ℝ) + CΓ * A ^ (2 : ℝ) +
-                    2 * A ^ (2 : ℝ) + 40 * A ^ (2 : ℝ) =
-                  (2 + CΓ + 2 + 40) * A ^ (2 : ℝ) := by
-              ring
-            exact h.trans_eq (congrArg rexp hsum)
           have hcoef : (2 + CΓ + 2 + 40 : ℝ) ≤ C := by
-            have : (20 * CΓ + 500 : ℝ) ≤ C := le_trans (le_max_right _ _) (le_max_right _ _)
-            nlinarith [this, hCΓ_pos.le]
-          have hdom :
-              rexp ((2 + CΓ + 2 + 40) * A ^ (2 : ℝ)) ≤ rexp (C * A ^ (2 : ℝ)) := by
-            refine (Real.exp_le_exp).2 ?_
-            have := mul_le_mul_of_nonneg_right hcoef hA2_nonneg
-            simpa [mul_assoc] using this
+            exact reflected_zeta_coefficient_le hCΓ_pos.le (le_max_right _ _)
           have : ‖(z - 1) * riemannZeta z‖ ≤ rexp (C * A ^ (2 : ℝ)) :=
-            le_trans (le_trans hprod hmul_exp) hdom
+            norm_mul_riemannZeta_le_exp_of_reflected (by simp [w]) hzeta_fe hpow_le1
+              hw_norm_le hA1 hA2_nonneg hΓw hcosw hζw hcoef
           simpa [hzeta_def] using this
       have hC0 : 0 ≤ C := by
         have h0 : (0 : ℝ) ≤ max (40 : ℝ) (20 * CΓ + 500) :=

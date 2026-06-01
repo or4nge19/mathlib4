@@ -24,12 +24,26 @@ open Complex
 
 noncomputable section
 
+namespace Real
+
+/-- On `[1, 2]`, the real Gamma function is bounded by `1`. -/
+theorem Gamma_le_one_of_mem_Icc {x : ℝ} (hlo : 1 ≤ x) (hhi : x ≤ 2) :
+    Gamma x ≤ 1 :=
+  Binet.Gamma_le_one_of_mem_Icc hlo hhi
+
+end Real
+
 namespace Complex
 
 /-- **DLMF 5.6.7**: for `0 < re z`, `‖Γ z‖ ≤ Γ (re z)`. -/
 theorem norm_Gamma_le_Gamma_re {z : ℂ} (hz : 0 < z.re) :
     ‖Gamma z‖ ≤ Real.Gamma z.re :=
   Binet.norm_Gamma_le_Gamma_re hz
+
+/-- For `1 ≤ re z ≤ 2`, `‖Γ z‖ ≤ 1`. -/
+theorem norm_Gamma_le_one {z : ℂ} (hlo : 1 ≤ z.re) (hhi : z.re ≤ 2) :
+    ‖Gamma z‖ ≤ 1 :=
+  Binet.norm_Gamma_le_one hlo hhi
 
 /-- Squared form of `Complex.norm_Gamma_le_Gamma_re`. -/
 theorem norm_sq_Gamma_le_Gamma_re {z : ℂ} (hz : 0 < z.re) :

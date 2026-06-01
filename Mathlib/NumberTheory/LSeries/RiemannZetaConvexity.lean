@@ -3059,57 +3059,34 @@ lemma lem_integralAnalytic (s : ℂ) (hs : 1/10 < s.re) :
   -- Analyticity follows from eventual differentiability near s
   exact analyticAt_of_eventually_differentiableAt hDiff_eventually
 
-/-- Lemma: The continuation formula is analytic on `T = { s ≠ 1, Re(s) > 0 }`. -/
-lemma lem_zetaFormulaAC :
+/-- The Abel-summation continuation formula is analytic on `T = {s | s ≠ 1 ∧ 1 / 10 < re s}`. -/
+lemma analyticOn_zetaContinuationAux :
     (let S := {s : ℂ | s ≠ 1}
      let T := {s : ℂ | s ∈ S ∧ 1/10 < s.re}
      let F := fun z : ℂ =>
        z / (z - 1)
        - z * ∫ u in Ioi (1 : ℝ), (Int.fract u : ℝ) * (u : ℂ) ^ (-z - 1)
      AnalyticOn ℂ F T) := by
-  -- Unfold definition of AnalyticOn
-  simp only [AnalyticOn]
+  simp only [AnalyticOn, Set.mem_setOf_eq]
   intro s hs
-  simp at hs
   obtain ⟨hs_ne_1, hs_re⟩ := hs
-
-  -- Convert from AnalyticAt to AnalyticWithinAt
   apply AnalyticAt.analyticWithinAt
-
-  -- Part 1: z/(z-1) is analytic at s since s ≠ 1
   have h1 : AnalyticAt ℂ (fun z => z / (z - 1)) s := by
     apply AnalyticAt.div
     · exact analyticAt_id
     · exact analyticAt_id.sub analyticAt_const
-    · -- Show s - 1 ≠ 0 from s ≠ 1
-      rw [sub_ne_zero]
-      exact hs_ne_1
-
-  -- Part 2: Handle the real conversion and use convergence
-  -- Note: hs_re : 10⁻¹ < s.re, need (1 : ℝ) / 10 < s.re
-  have hs_re_eq : (10 : ℝ)⁻¹ = (1 : ℝ) / 10 := by norm_num
-  have hs_re_correct : (1 : ℝ) / 10 < s.re := by rwa [← hs_re_eq]
-
-  -- Get convergence with bound
-  have hconv := lem_integralConvergence (1/10) (by norm_num) s (le_of_lt hs_re_correct)
-
-  -- Extract from existential
-  obtain ⟨I, hI_tendsto, hI_bound⟩ := hconv
-
-  -- The bound is ‖I‖ ≤ 1/(1/10) = 10, which is what lem_integralAnalytic expects
-  have hI_bound_10 : ‖I‖ ≤ 10 := by
-    convert hI_bound
-    norm_num
-
-  -- Use analyticity of integral
-  have h_integral : AnalyticAt ℂ (fun z => ∫ u in Ioi (1 : ℝ), (Int.fract u : ℝ) * (u : ℂ) ^ (-z - 1)) s := by
-    apply lem_integralAnalytic s hs_re_correct
-
-  -- Part 3: z * integral is analytic at s
-  have h2 : AnalyticAt ℂ (fun z => z * ∫ u in Ioi (1 : ℝ), (Int.fract u : ℝ) * (u : ℂ) ^ (-z - 1)) s := by
+    · rwa [sub_ne_zero]
+  have hs_re_correct : (1 : ℝ) / 10 < s.re := by
+    simpa [one_div] using hs_re
+  have h_integral :
+      AnalyticAt ℂ
+        (fun z => ∫ u in Ioi (1 : ℝ), (Int.fract u : ℝ) * (u : ℂ) ^ (-z - 1)) s :=
+    lem_integralAnalytic s hs_re_correct
+  have h2 :
+      AnalyticAt ℂ
+        (fun z => z *
+          ∫ u in Ioi (1 : ℝ), (Int.fract u : ℝ) * (u : ℂ) ^ (-z - 1)) s := by
     exact analyticAt_id.mul h_integral
-
-  -- Final: F = first part - second part is analytic at s
   exact h1.sub h2
 
 /-- Lemma: Algebraic identity for complex division. -/
@@ -3125,8 +3102,8 @@ lemma lem_div_eq_one_plus_one_div (z : ℂ) (hz : z ≠ 1) : z / (z - 1) = 1 + 1
     _ = (z - 1) / (z - 1) + 1 / (z - 1) := by rw [add_div]
     _ = 1 + 1 / (z - 1) := by simp [div_self h]
 
-/-- Lemma: Analytic continuation identity on `T = { s ≠ 1, Re(s) > 0 }`. -/
-lemma lem_zetaAnalyticContinuation :
+/-- The Abel-summation continuation formula agrees with `ζ` on the right half-plane. -/
+lemma riemannZeta_eq_zetaContinuationAux :
     (let S := {s : ℂ | s ≠ 1}
      let T := {s : ℂ | s ∈ S ∧ 1/10 < s.re}
      ∀ s ∈ T,
@@ -3164,9 +3141,7 @@ lemma lem_zetaAnalyticContinuation :
   have h_zeta_analyticOnNhd_T : AnalyticOnNhd ℂ riemannZeta T := by
     rwa [← h_T_open.analyticOn_iff_analyticOnNhd]
 
-  -- F is analytic on T (from lem_zetaFormulaAC and lem_div_eq_one_plus_one_div)
-  have h_F_orig_analytic := lem_zetaFormulaAC
-  -- The function from lem_zetaFormulaAC uses z/(z-1), which equals our 1+1/(z-1)
+  have h_F_orig_analytic := analyticOn_zetaContinuationAux
   have h_F_eq : EqOn F (fun z => z / (z - 1) - z * ∫ u in Ioi (1 : ℝ), (Int.fract u : ℝ) * (u : ℂ) ^ (-z - 1)) T := by
     intro z hz
     simp only [F]
@@ -3217,7 +3192,7 @@ lemma lem_zetaBound1 (s : ℂ) (hs_re : 1/10 < s.re) (hs_ne : s ≠ 1) : ‖riem
     have hsS : s ∈ S := by simpa [S, Set.mem_setOf_eq] using hs_ne
     simpa [T, Set.mem_setOf_eq] using And.intro hsS hs_re
   have hAC : ∀ z ∈ T, riemannZeta z = 1 + 1 / (z - 1) - z * ∫ u in Ioi (1 : ℝ), (Int.fract u : ℝ) * (u : ℂ) ^ (-z - 1) := by
-    simpa [S, T] using lem_zetaAnalyticContinuation
+    simpa [S, T] using riemannZeta_eq_zetaContinuationAux
   have hzeta : riemannZeta s = 1 + 1 / (s - 1) - s * Iint := by
     simpa [Iint] using hAC s hT
   have h1 : ‖riemannZeta s‖ ≤ ‖1 + 1 / (s - 1)‖ + ‖-s * Iint‖ := by

@@ -93,6 +93,29 @@ lemma divisorZeroIndex₀_norm_le_finite {f : ℂ → ℂ} {U : Set ℂ} (B : �
 ## Uniform convergence on compact sets
 -/
 
+lemma norm_div_le_half_of_norm_le_of_two_mul_lt {z a : ℂ} {R : ℝ}
+    (hR : 0 < R) (hz : ‖z‖ ≤ R) (ha : (2 * R : ℝ) < ‖a‖) :
+    ‖z / a‖ ≤ (1 / 2 : ℝ) := by
+  have h2R_pos : 0 < (2 * R : ℝ) := by nlinarith [hR]
+  have hinv : ‖a‖⁻¹ < (2 * R)⁻¹ := by
+    simpa [one_div] using one_div_lt_one_div_of_lt h2R_pos ha
+  have hmul_le : ‖z‖ * ‖a‖⁻¹ ≤ R * ‖a‖⁻¹ :=
+    mul_le_mul_of_nonneg_right hz (inv_nonneg.2 (norm_nonneg a))
+  have hmul_lt : R * ‖a‖⁻¹ < R * (2 * R)⁻¹ :=
+    mul_lt_mul_of_pos_left hinv hR
+  have hRhalf : R * (2 * R)⁻¹ = (1 / 2 : ℝ) := by
+    have hRne : (R : ℝ) ≠ 0 := hR.ne'
+    rw [show R * (2 * R)⁻¹ = R / (2 * R) by simp [div_eq_mul_inv]]
+    field_simp [hRne]
+  have hnorm : ‖z / a‖ = ‖z‖ * ‖a‖⁻¹ := by
+    simp [div_eq_mul_inv]
+  exact le_of_lt <| by
+    calc
+      ‖z / a‖ = ‖z‖ * ‖a‖⁻¹ := hnorm
+      _ ≤ R * ‖a‖⁻¹ := hmul_le
+      _ < R * (2 * R)⁻¹ := hmul_lt
+      _ = (1 / 2 : ℝ) := hRhalf
+
 theorem hasProdUniformlyOn_divisorCanonicalProduct_univ
     (m : ℕ) (f : ℂ → ℂ) {K : Set ℂ} (hK : IsCompact K)
     (h_sum : Summable (fun p : divisorZeroIndex₀ f (Set.univ : Set ℂ) =>
@@ -128,29 +151,7 @@ theorem hasProdUniformlyOn_divisorCanonicalProduct_univ
     filter_upwards [h_big] with p hp z hzK
     have hzle : ‖z‖ ≤ R := hnormK z hzK
     have hz_div : ‖z / divisorZeroIndex₀_val p‖ ≤ (1 / 2 : ℝ) := by
-      have h2R_pos : 0 < (2 * R : ℝ) := by nlinarith [hRpos]
-      have hinv : ‖divisorZeroIndex₀_val p‖⁻¹ < (2 * R)⁻¹ := by
-        simpa [one_div] using (one_div_lt_one_div_of_lt h2R_pos hp)
-      have hmul_le : ‖z‖ * ‖divisorZeroIndex₀_val p‖⁻¹ ≤ R * ‖divisorZeroIndex₀_val p‖⁻¹ := by
-        refine mul_le_mul_of_nonneg_right hzle ?_
-        exact inv_nonneg.2 (norm_nonneg _)
-      have hmul_lt : R * ‖divisorZeroIndex₀_val p‖⁻¹ < R * (2 * R)⁻¹ :=
-        mul_lt_mul_of_pos_left hinv hRpos
-      have hlt : ‖z‖ * ‖divisorZeroIndex₀_val p‖⁻¹ < R * (2 * R)⁻¹ :=
-        lt_of_le_of_lt hmul_le hmul_lt
-      have hRhalf : R * (2 * R)⁻¹ = (1 / 2 : ℝ) := by
-        have hRne : (R : ℝ) ≠ 0 := hRpos.ne'
-        have : R * (2 * R)⁻¹ = R / (2 * R) := by simp [div_eq_mul_inv]
-        rw [this]
-        field_simp [hRne]
-      have hnorm : ‖z / divisorZeroIndex₀_val p‖ = ‖z‖ * ‖divisorZeroIndex₀_val p‖⁻¹ := by
-        simp [div_eq_mul_inv]
-      have hzlt : ‖z / divisorZeroIndex₀_val p‖ < (1 / 2 : ℝ) := by
-        calc
-          ‖z / divisorZeroIndex₀_val p‖ = ‖z‖ * ‖divisorZeroIndex₀_val p‖⁻¹ := hnorm
-          _ < R * (2 * R)⁻¹ := hlt
-          _ = (1 / 2 : ℝ) := hRhalf
-      exact le_of_lt hzlt
+      exact norm_div_le_half_of_norm_le_of_two_mul_lt hRpos hzle hp
     have hE :
         ‖weierstrassFactor m (z / divisorZeroIndex₀_val p) - 1‖ ≤
           4 * ‖z / divisorZeroIndex₀_val p‖ ^ (m + 1) :=
