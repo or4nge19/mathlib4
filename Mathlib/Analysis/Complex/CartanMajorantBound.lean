@@ -5,7 +5,7 @@ Authors: Matteo Cipollina
 -/
 module
 
-public import Mathlib.Topology.Algebra.InfiniteSum.Finset
+public import Mathlib.Topology.Algebra.InfiniteSum.Group
 public import Mathlib.Analysis.Complex.Divisor
 public import Mathlib.Analysis.Complex.CartanBound
 

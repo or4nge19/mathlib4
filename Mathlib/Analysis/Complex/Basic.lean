@@ -135,6 +135,14 @@ theorem equivRealProdCLM_symm_apply (p : ℝ × ℝ) :
 instance : ProperSpace ℂ := lipschitz_equivRealProd.properSpace
   equivRealProdCLM.toHomeomorph.isProperMap
 
+/-- If `z ≠ 1`, then `z / (z - 1) = 1 + (z - 1)⁻¹`. -/
+theorem div_sub_one_eq_one_add_one_div (z : ℂ) (hz : z ≠ 1) : z / (z - 1) = 1 + (z - 1)⁻¹ := by
+  have h : z - 1 ≠ 0 := sub_ne_zero.mpr hz
+  calc
+    z / (z - 1) = ((z - 1) + 1) / (z - 1) := by ring_nf
+    _ = (z - 1) / (z - 1) + 1 / (z - 1) := by rw [add_div]
+    _ = 1 + (z - 1)⁻¹ := by simp [div_eq_mul_inv, h]
+
 /-- A continuous complex-valued function is bounded on a closed ball. -/
 lemma exists_norm_bound_on_closedBall {f : ℂ → ℂ} {R : ℝ}
     (hcont : ContinuousOn f (Metric.closedBall (0 : ℂ) R)) :

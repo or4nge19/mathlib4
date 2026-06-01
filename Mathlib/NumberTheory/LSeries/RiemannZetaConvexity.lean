@@ -6,7 +6,10 @@ Authors: Matteo Cipollina
 module
 
 
+public import Mathlib.Algebra.Order.Floor.Ring
 public import Mathlib.Algebra.Order.Ring.Star
+public import Mathlib.Analysis.Complex.Basic
+public import Mathlib.Analysis.SpecialFunctions.ImproperIntegrals
 public import Mathlib.Analysis.SpecialFunctions.Log.Summable
 public import Mathlib.NumberTheory.AbelSummation
 public import Mathlib.NumberTheory.EulerProduct.DirichletLSeries
@@ -1327,16 +1330,6 @@ lemma lem_zetaNsimplified1 (s : ℂ) (N : ℕ) (hN : 1 ≤ N) : zetaPartialSum s
 /-- Lemma: Floor decomposition using fractional part. -/
 lemma lem_floorUdecomp (u : ℝ) : (Int.floor u : ℝ) = u - Int.fract u := by exact (eq_sub_iff_add_eq).2 (Int.floor_add_fract u)
 
-/-- Lemma: Fractional part bound. -/
-lemma lem_fracPartBound (u : ℝ) : 0 ≤ Int.fract u ∧ Int.fract u < 1 ∧ |Int.fract u| ≤ (1 : ℝ) := by
-  constructor
-  · exact Int.fract_nonneg u
-  · constructor
-    · exact Int.fract_lt_one u
-    · have hnonneg : 0 ≤ Int.fract u := Int.fract_nonneg u
-      have hle : Int.fract u ≤ (1 : ℝ) := le_of_lt (Int.fract_lt_one u)
-      simpa [abs_of_nonneg hnonneg] using hle
-
 /-- Helper: continuity of `u ↦ (u:ℂ)^r` on `Icc a b` when `a>0`. -/
 lemma helper_continuousOn_cpow (r : ℂ) {a b : ℝ} (ha : 0 < a) (hab : a ≤ b) :
     ContinuousOn (fun u : ℝ => (u : ℂ) ^ r) (Set.Icc a b) := by
@@ -1405,7 +1398,7 @@ lemma helper_intervalIntegrable_frac_kernel (s : ℂ) {a b : ℝ} (ha : 1 ≤ a)
     intro u hu
     -- |fract u| ≤ 1
     have hfract_le1 : ‖(Int.fract u : ℝ)‖ ≤ (1 : ℝ) := by
-      simpa using (lem_fracPartBound u).2.2
+      simpa [Complex.norm_real] using Int.fract_abs_le_one u
     -- estimate the product
     have : ‖((Int.fract u : ℝ) : ℂ) * (u : ℂ) ^ (-s - 1)‖ ≤ ‖(Int.fract u : ℝ)‖ * ‖(u : ℂ) ^ (-s - 1)‖ := by
       simp
@@ -1653,7 +1646,7 @@ lemma lem_limitTerm1 (s : ℂ) (hs : 1 < s.re) :
   set b : ℂ := (u : ℂ) ^ (-s - 1)
   -- |fract u| ≤ 1
   have hfract_le1 : ‖a‖ ≤ (1 : ℝ) := by
-    simpa [a, Complex.norm_real] using (lem_fracPartBound u).2.2
+    simpa [a, Complex.norm_real] using Int.fract_abs_le_one u
   -- from 1 ≤ u, get 0 < u
   have hu0 : 0 < u := lt_of_lt_of_le zero_lt_one hu
   -- submultiplicativity of the norm (as an equality)
@@ -1685,11 +1678,6 @@ lemma lem_limitTerm1 (s : ℂ) (hs : 1 < s.re) :
   have h2 : -s.re - 1 ≤ -1 - ε := by linarith [hs]
   have h3 : u ^ (-s.re - 1) ≤ u ^ (-1 - ε) := Real.rpow_le_rpow_of_exponent_le hu h2
   exact le_trans h1 h3
-
-/-- Lemma: Triangle inequality (scalar and integral versions). -/
-lemma lem_triangleInequality_add (z₁ z₂ : ℂ) :
-    ‖z₁ + z₂‖ ≤ ‖z₁‖ + ‖z₂‖ := by
-  exact norm_add_le z₁ z₂
 
 -- NOTE: Lemma below added hypothsis h that a leq b btw
 lemma lem_triangleInequality_integral {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
@@ -3098,19 +3086,6 @@ lemma analyticOn_zetaContinuationAux :
     exact analyticAt_id.mul h_integral
   exact h1.sub h2
 
-/-- Lemma: Algebraic identity for complex division. -/
-lemma lem_div_eq_one_plus_one_div (z : ℂ) (hz : z ≠ 1) : z / (z - 1) = 1 + 1 / (z - 1) := by
-  have h : z - 1 ≠ 0 := by
-    intro h0
-    have : z = 1 := by
-      rw [sub_eq_zero] at h0
-      exact h0
-    exact hz this
-  calc z / (z - 1)
-    = ((z - 1) + 1) / (z - 1) := by ring_nf
-    _ = (z - 1) / (z - 1) + 1 / (z - 1) := by rw [add_div]
-    _ = 1 + 1 / (z - 1) := by simp [div_self h]
-
 /-- The Abel-summation continuation formula agrees with `ζ` on the right half-plane. -/
 lemma riemannZeta_eq_zetaContinuationAux :
     (let S := {s : ℂ | s ≠ 1}
@@ -3154,7 +3129,8 @@ lemma riemannZeta_eq_zetaContinuationAux :
   have h_F_eq : EqOn F (fun z => z / (z - 1) - z * ∫ u in Ioi (1 : ℝ), (Int.fract u : ℝ) * (u : ℂ) ^ (-z - 1)) T := by
     intro z hz
     simp only [F]
-    rw [lem_div_eq_one_plus_one_div z hz.1]
+    rw [Complex.div_sub_one_eq_one_add_one_div z hz.1]
+    simp
 
   have h_F_analytic_T : AnalyticOn ℂ F T :=
     AnalyticOn.congr h_F_orig_analytic h_F_eq
@@ -3205,9 +3181,9 @@ lemma lem_zetaBound1 (s : ℂ) (hs_re : 1/10 < s.re) (hs_ne : s ≠ 1) : ‖riem
   have hzeta : riemannZeta s = 1 + 1 / (s - 1) - s * Iint := by
     simpa [Iint] using hAC s hT
   have h1 : ‖riemannZeta s‖ ≤ ‖1 + 1 / (s - 1)‖ + ‖-s * Iint‖ := by
-    simpa [hzeta, sub_eq_add_neg] using (lem_triangleInequality_add (1 + 1 / (s - 1)) (-s * Iint))
+    simpa [hzeta, sub_eq_add_neg] using norm_add_le (1 + 1 / (s - 1)) (-s * Iint)
   have hA : ‖1 + 1 / (s - 1)‖ ≤ ‖(1 : ℂ)‖ + ‖1 / (s - 1)‖ := by
-    simpa using (lem_triangleInequality_add (1 : ℂ) (1 / (s - 1)))
+    simpa using norm_add_le (1 : ℂ) (1 / (s - 1))
   have hmul : ‖-s * Iint‖ = ‖-s‖ * ‖Iint‖ := by
     simp
   have hneg : ‖-s‖ = ‖s‖ := by simp
@@ -3218,19 +3194,6 @@ lemma lem_zetaBound1 (s : ℂ) (hs_re : 1/10 < s.re) (hs_ne : s ≠ 1) : ‖riem
     le_trans h1 (add_le_add hA hB)
   have h1norm : ‖(1 : ℂ)‖ = 1 := by simp
   simpa [Iint, h1norm, add_comm, add_left_comm, add_assoc] using h2
-
-/-- Lemma: Integral bound value `∫_{1}^{∞} u^{-Re(s)-1} = 1/Re(s)`. -/
-lemma lem_integralBoundValue (s : ℂ) (hs : 0 < s.re) : ∫ u in Ioi (1 : ℝ), u ^ (-s.re - 1) = 1 / s.re := by
-  have ha : (-s.re - 1) < -1 := by linarith
-  have hc : 0 < (1 : ℝ) := by exact zero_lt_one
-  have h := integral_Ioi_rpow_of_lt (a := (-s.re - 1)) ha (c := (1 : ℝ)) hc
-  have h' : ∫ u in Ioi (1 : ℝ), u ^ (-s.re - 1) = - (1 : ℝ) ^ (-s.re) / (-s.re) := by
-    simpa [sub_eq_add_neg, add_comm, add_left_comm, add_assoc] using h
-  calc
-    ∫ u in Ioi (1 : ℝ), u ^ (-s.re - 1)
-        = - (1 : ℝ) ^ (-s.re) / (-s.re) := h'
-    _ = - (1 : ℝ) / (-s.re) := by simp [Real.one_rpow]
-    _ = 1 / s.re := by simp
 
 /-- If `1/10 < re s` and `s ≠ 1`, then `‖ζ s‖ ≤ 1 + ‖(s - 1)⁻¹‖ + ‖s‖ / re s`. -/
 theorem norm_riemannZeta_le (s : ℂ) (hs_re : 1/10 < s.re) (hs_ne : s ≠ 1) :
@@ -3260,7 +3223,7 @@ theorem norm_riemannZeta_le (s : ℂ) (hs_re : 1/10 < s.re) (hs_ne : s ≠ 1) :
     have hint0 : (∫ u, g u ∂μ) = 0 := by
       simpa using (integral_undef (μ := μ) (f := g) hnot')
     have hval : ∫ u in Ioi (1 : ℝ), g u = 1 / s.re := by
-      simpa [hgdef] using lem_integralBoundValue s (by linarith [hs_re])
+      simpa [hgdef] using integral_Ioi_rpow_neg_re_sub_one s (by linarith [hs_re])
     have hne : (1 / s.re) ≠ 0 := by exact one_div_ne_zero (ne_of_gt (by linarith [hs_re]))
     have : (∫ u in Ioi (1 : ℝ), g u) = 0 := by simpa [μ] using hint0
     exact hne (by simpa [hval] using this)
@@ -3272,7 +3235,7 @@ theorem norm_riemannZeta_le (s : ℂ) (hs_re : 1/10 < s.re) (hs_ne : s ≠ 1) :
     simpa [μ] using this
   -- Evaluate the integral of g explicitly and obtain a concrete bound
   have h_g_val : ∫ u in Ioi (1 : ℝ), g u = 1 / s.re := by
-    simpa [hgdef] using lem_integralBoundValue s (by linarith [hs_re])
+    simpa [hgdef] using integral_Ioi_rpow_neg_re_sub_one s (by linarith [hs_re])
   have h_int_bound_conc : ‖∫ u in Ioi (1 : ℝ), f u‖ ≤ 1 / s.re := by
     simpa [h_g_val] using h_int_bound
   -- Multiply by ‖s‖ ≥ 0
@@ -3296,15 +3259,9 @@ lemma lem_zetaBound2 (s : ℂ) (hs_re : 1/10 < s.re) (hs_ne : s ≠ 1) :
     ‖riemannZeta s‖ ≤ 1 + ‖1 / (s - 1)‖ + ‖s‖ / s.re :=
   norm_riemannZeta_le s hs_re hs_ne
 
-/-- Lemma: Reciprocal norm identity in ℂ. -/
-lemma lem_sOverSminus1Bound (s : ℂ) (hs : s ≠ 1) : ‖(1 / (s - 1))‖ = 1 / ‖s - 1‖ := by simp [one_div]
-
 /-- Lemma: Zeta bound 3. -/
 lemma lem_zetaBound3 (s : ℂ) (hs_re : 1/10 < s.re) (hs_ne : s ≠ 1) : ‖riemannZeta s‖ ≤ 1 + 1 / ‖s - 1‖ + ‖s‖ / s.re := by
-  simpa [lem_sOverSminus1Bound s hs_ne] using norm_riemannZeta_le s hs_re hs_ne
-
-lemma helper_normsq (z : ℂ) : ‖z‖ ^ 2 = z.re ^ 2 + z.im ^ 2 := by
-  simpa [Complex.normSq, pow_two] using (Complex.normSq_eq_norm_sq z).symm
+  simpa [one_div] using norm_riemannZeta_le s hs_re hs_ne
 
 lemma helper_three_abs_sq (t : ℝ) : (3 : ℝ) ^ 2 + t ^ 2 ≤ (3 + |t|) ^ 2 := by
   have hnonneg : 0 ≤ (6 : ℝ) * |t| := by
@@ -3330,7 +3287,7 @@ lemma lem_sBound (s : ℂ) (hs : (1/2 : ℝ) ≤ s.re ∧ s.re < (3 : ℝ)) : �
     exact (add_lt_add_iff_right (s.im ^ 2)).mpr h_re_sq_lt
   have hsq : ‖s‖ ^ 2 < (3 + |s.im|) ^ 2 := by
     have h := lt_of_lt_of_le hsumlt (helper_three_abs_sq s.im)
-    simpa [helper_normsq s] using h
+    simpa [Complex.sq_norm, Complex.normSq_apply] using h
   have hnormnn : 0 ≤ ‖s‖ := norm_nonneg _
   have hpos : 0 ≤ (3 : ℝ) + |s.im| := add_nonneg (by norm_num) (abs_nonneg _)
   exact (sq_lt_sq₀ hnormnn hpos).1 hsq

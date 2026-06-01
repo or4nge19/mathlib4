@@ -52,7 +52,8 @@ theorem exists_bound {ρ ε : ℝ} {f : ℂ → ℂ} (h : EntireOfOrderAtMost ρ
     ∃ C > 0, ∀ z : ℂ, ‖f z‖ ≤ Real.exp (C * (1 + ‖z‖) ^ (ρ + ε)) :=
   h.2 ε hε
 
-/-- A single exponential bound of order `ρ` implies Tao's ε-family order bound. -/
+/-- A single exponential bound of order `ρ` implies the `ε`-family bound defining
+`EntireOfOrderAtMost`. -/
 theorem of_norm_le_exp {ρ : ℝ} {f : ℂ → ℂ} (hf : Differentiable ℂ f)
     (hbound : ∃ C > 0, ∀ z : ℂ, ‖f z‖ ≤ Real.exp (C * (1 + ‖z‖) ^ ρ)) :
     EntireOfOrderAtMost ρ f := by

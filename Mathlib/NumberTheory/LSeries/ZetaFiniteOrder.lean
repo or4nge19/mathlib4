@@ -32,7 +32,7 @@ The key ingredients are:
 
 ## Main results
 
-* `completedRiemannZeta₀_order_one` : Tao's order-one ε-family bound for Λ₀.
+* `completedRiemannZeta₀_order_one` : `EntireOfOrderAtMost 1` for `completedRiemannZeta₀`
 * `zeta_minus_pole_entire_growth` : a coarse global bound for the removable extension of
   `(s - 1)ζ(s)`.
 -/
@@ -79,12 +79,6 @@ lemma exists_completedRiemannZeta₀_right_halfPlane (z : ℂ) :
       simpa [hw, norm_one, add_comm, add_left_comm, add_assoc] using this
     · simp [hzr]
 
-/-- The base in the standard finite-order bound is at least one. -/
-lemma one_le_one_add_norm_rpow {z : ℂ} {p : ℝ} (hp : 0 ≤ p) :
-    (1 : ℝ) ≤ (1 + ‖z‖) ^ p := by
-  have hz1 : (1 : ℝ) ≤ 1 + ‖z‖ := by linarith [norm_nonneg z]
-  simpa using Real.one_le_rpow hz1 hp
-
 /-- The reflected point `1 - z` lies well inside the right half-plane if `re z ≤ 1 / 10`. -/
 lemma nine_tenths_le_one_sub_re {z : ℂ} (hz : z.re ≤ (1 / 10 : ℝ)) :
     (9 / 10 : ℝ) ≤ (1 - z).re := by
@@ -104,23 +98,6 @@ lemma ne_neg_nat_of_re_pos {w : ℂ} (hw : 0 < w.re) : ∀ n : ℕ, w ≠ -n := 
     have := congrArg Complex.re hn
     simpa using this
   nlinarith
-
-/-- In the right half-plane, the factor `(2π)^(-w)` has norm at most one. -/
-lemma norm_two_pi_cpow_neg_le_one_of_re_nonneg {w : ℂ} (hw : 0 ≤ w.re) :
-    ‖(2 * π : ℂ) ^ (-w)‖ ≤ 1 := by
-  have hbase : (1 : ℝ) ≤ 2 * Real.pi := by
-    have : (1 : ℝ) < 2 * Real.pi := by
-      have : (3 : ℝ) < Real.pi := Real.pi_gt_three
-      nlinarith
-    exact le_of_lt this
-  have hbase_pos : (0 : ℝ) < 2 * Real.pi := by nlinarith [Real.pi_pos]
-  have hnorm :
-      ‖(2 * π : ℂ) ^ (-w)‖ = (2 * Real.pi) ^ ((-w : ℂ).re) := by
-    simpa using (norm_cpow_eq_rpow_re_of_pos (x := 2 * Real.pi) hbase_pos (-w))
-  rw [hnorm]
-  have : ((-w : ℂ).re : ℝ) ≤ 0 := by
-    simpa using neg_nonpos.mpr hw
-  exact Real.rpow_le_one_of_one_le_of_nonpos hbase this
 
 /-- The zeta functional equation written with a reflected variable `w = 1 - z`. -/
 lemma riemannZeta_eq_reflected {z w : ℂ} (hw : w = 1 - z)
@@ -228,8 +205,8 @@ lemma norm_mul_riemannZeta_le_exp_of_reflected {z w : ℂ} {A CΓ C : ℝ}
     simpa [mul_assoc] using mul_le_mul_of_nonneg_right hcoef hA2_nonneg
   exact le_trans (le_trans hprod hmul_exp) hdom
 
-/-- The completed zeta function `completedRiemannZeta₀` has order at most one: for every `ε > 0` there
-is `C > 0` with `‖Λ₀ z‖ ≤ exp (C * (1 + ‖z‖)^(1 + ε))`. -/
+/-- `completedRiemannZeta₀` has order at most one: for every `ε > 0` there exists `C > 0` with
+`‖completedRiemannZeta₀ z‖ ≤ exp (C * (1 + ‖z‖) ^ (1 + ε))`. -/
 theorem completedRiemannZeta₀_order_one :
     ∀ ε : ℝ, 0 < ε →
       ∃ C > 0, ∀ z : ℂ,
@@ -253,7 +230,7 @@ theorem completedRiemannZeta₀_order_one :
     have htransfer : ‖completedRiemannZeta₀ z‖ = ‖completedRiemannZeta₀ w‖ := by
       simp [hw_eq]
     have hz_base : (1 : ℝ) ≤ (1 + ‖z‖) ^ (1 + ε) :=
-      one_le_one_add_norm_rpow (z := z) (by linarith [le_of_lt hε])
+      Complex.one_le_one_add_norm_rpow (z := z) (by linarith [le_of_lt hε])
     by_cases hw_small : ‖w‖ ≤ 3
     · have hbw : ‖completedRiemannZeta₀ w‖ ≤ M := hM w hw_small
       have hlogC : Real.log (M + 1) ≤ C := by
@@ -595,7 +572,7 @@ theorem zeta_minus_pole_entire_growth :
         by_cases hz_re : (1 / 10 : ℝ) < z.re
         · have hζ := norm_riemannZeta_le z hz_re hz_ne1
           have hzm1_le : ‖z - 1‖ ≤ A := by
-            simpa [A] using norm_sub_one_le_one_add_norm z
+            simpa [A] using Complex.norm_sub_one_le_one_add_norm z
           have hfrac : ‖z‖ / z.re ≤ 10 * ‖z‖ :=
             norm_div_re_le_ten_mul_norm hz_re
           have hpoly :
@@ -656,7 +633,7 @@ theorem zeta_minus_pole_entire_growth :
                 2 * (2 * π) ^ (-w) * Complex.Gamma w * Complex.cos (π * w / 2) * riemannZeta w := by
             exact riemannZeta_eq_reflected (by simp [w]) hw_ne_neg hw_ne1
           have hpow_le1 : ‖(2 * π : ℂ) ^ (-w)‖ ≤ 1 :=
-            norm_two_pi_cpow_neg_le_one_of_re_nonneg hw_re0
+            Complex.norm_two_pi_cpow_neg_le_one_of_re_nonneg hw_re0
           have hw_norm_le : ‖w‖ ≤ A := by
             simpa [w, A] using norm_one_sub_le_one_add_norm z
           have hw_norm_ge1 : (1 : ℝ) ≤ ‖w‖ := by

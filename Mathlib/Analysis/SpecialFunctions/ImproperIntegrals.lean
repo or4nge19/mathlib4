@@ -183,6 +183,20 @@ theorem integral_Ioi_rpow_of_lt {a : ℝ} (ha : a < -1) {c : ℝ} (hc : 0 < c) :
   convert integral_Ioi_of_hasDerivAt_of_tendsto' hd (integrableOn_Ioi_rpow_of_lt ha hc) ht using 1
   simp only [neg_div, zero_div, zero_sub]
 
+/-- `∫_{1}^∞ u^{-re s - 1} = 1 / re s` for `0 < re s`. -/
+theorem integral_Ioi_rpow_neg_re_sub_one {s : ℂ} (hs : 0 < s.re) :
+    ∫ u in Ioi (1 : ℝ), u ^ (-s.re - 1) = 1 / s.re := by
+  have ha : (-s.re - 1) < -1 := by linarith
+  have hc : 0 < (1 : ℝ) := zero_lt_one
+  have h := integral_Ioi_rpow_of_lt (a := (-s.re - 1)) ha (c := (1 : ℝ)) hc
+  have h' : ∫ u in Ioi (1 : ℝ), u ^ (-s.re - 1) = - (1 : ℝ) ^ (-s.re) / (-s.re) := by
+    simpa [sub_eq_add_neg, add_comm, add_left_comm, add_assoc] using h
+  calc
+    ∫ u in Ioi (1 : ℝ), u ^ (-s.re - 1)
+        = - (1 : ℝ) ^ (-s.re) / (-s.re) := h'
+    _ = - (1 : ℝ) / (-s.re) := by simp [Real.one_rpow]
+    _ = 1 / s.re := by simp
+
 theorem integrableOn_Ioi_norm_cpow_of_lt {a : ℂ} (ha : a.re < -1) {c : ℝ} (hc : 0 < c) :
     IntegrableOn (fun t : ℝ ↦ ‖(t : ℂ) ^ a‖) (Ioi c) := by
   refine (integrableOn_Ioi_rpow_of_lt ha hc).congr_fun (fun x hx => ?_) measurableSet_Ioi

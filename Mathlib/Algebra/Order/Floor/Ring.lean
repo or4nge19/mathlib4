@@ -410,6 +410,10 @@ theorem fract_one : fract (1 : R) = 0 := by simp [fract]
 theorem abs_fract : |fract a| = fract a :=
   abs_eq_self.mpr <| fract_nonneg a
 
+theorem fract_abs_le_one (a : R) : |fract a| ≤ 1 := by
+  rw [abs_fract]
+  exact (fract_lt_one a).le
+
 @[simp]
 theorem abs_one_sub_fract : |1 - fract a| = 1 - fract a :=
   abs_eq_self.mpr <| sub_nonneg.mpr (fract_lt_one a).le
