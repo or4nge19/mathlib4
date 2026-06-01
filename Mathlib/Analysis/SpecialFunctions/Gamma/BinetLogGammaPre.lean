@@ -132,7 +132,8 @@ lemma Ktilde_mul_one_sub_exp_eq_integral {t : ℝ} (ht : 0 < t) :
   have hIcc :
       (∫ u in Set.Icc (0 : ℝ) 1, (1 / 2 - u) * Real.exp (-u * t)) =
         ∫ u in (0 : ℝ)..1, (1 / 2 - u) * Real.exp (-u * t) := by
-    -- `Icc` and `Ioc` have the same integral for `volume`, then use `intervalIntegral.integral_of_le`.
+    -- `Icc` and `Ioc` have the same integral for `volume`, then use
+    -- `intervalIntegral.integral_of_le`.
     have hIccIoc :
         (∫ u in Set.Icc (0 : ℝ) 1, (1 / 2 - u) * Real.exp (-u * t)) =
           ∫ u in Set.Ioc (0 : ℝ) 1, (1 / 2 - u) * Real.exp (-u * t) := by
@@ -147,7 +148,8 @@ lemma Ktilde_mul_one_sub_exp_eq_integral {t : ℝ} (ht : 0 < t) :
       simpa using
         (intervalIntegral.integral_of_le (μ := (volume : Measure ℝ))
           (a := (0 : ℝ)) (b := (1 : ℝ))
-          (f := fun u : ℝ => (1 / 2 - u) * Real.exp (-u * t)) (by norm_num : (0 : ℝ) ≤ 1)).symm
+          (f := fun u : ℝ => (1 / 2 - u) * Real.exp (-u * t))
+          (by norm_num : (0 : ℝ) ≤ 1)).symm
     exact hIccIoc.trans hIoc
   -- Compute the interval integral explicitly.
   rw [hIcc]
@@ -169,7 +171,8 @@ lemma Ktilde_mul_one_sub_exp_eq_integral {t : ℝ} (ht : 0 < t) :
     -- expand `(1/2 - u) * exp` and use linearity
     have hlin :
         (fun u : ℝ => (1 / 2 - u) * Real.exp (-u * t)) =
-          (fun u : ℝ => (1 / 2 : ℝ) * Real.exp (-u * t)) - fun u : ℝ => u * Real.exp (-u * t) := by
+          (fun u : ℝ => (1 / 2 : ℝ) * Real.exp (-u * t)) -
+            fun u : ℝ => u * Real.exp (-u * t) := by
       funext u
       simp [sub_mul]
     rw [hlin]
@@ -186,7 +189,8 @@ lemma Ktilde_mul_one_sub_exp_eq_integral {t : ℝ} (ht : 0 < t) :
       (∫ u in (0 : ℝ)..1, Real.exp (-u * t)) = (1 - Real.exp (-t)) / t := by
     -- FTC with antiderivative `u ↦ -(exp(-u*t))/t`.
     have hab : (0 : ℝ) ≤ 1 := by norm_num
-    have hcont : ContinuousOn (fun u : ℝ => -(Real.exp (-u * t) / t)) (Set.Icc (0 : ℝ) 1) := by
+    have hcont :
+        ContinuousOn (fun u : ℝ => -(Real.exp (-u * t) / t)) (Set.Icc (0 : ℝ) 1) := by
       have hcont' : Continuous (fun u : ℝ => -(Real.exp (-u * t) / t)) := by
         fun_prop
       exact hcont'.continuousOn
@@ -199,11 +203,14 @@ lemma Ktilde_mul_one_sub_exp_eq_integral {t : ℝ} (ht : 0 < t) :
         simpa [mul_assoc] using ((hasDerivAt_id u).mul_const (-t))
       have h_exp' : HasDerivAt (fun u : ℝ => Real.exp (-u * t))
           ((-t) * Real.exp (-u * t)) u := by
-        simpa [mul_assoc, mul_comm, mul_left_comm] using (Real.hasDerivAt_exp (-u * t)).comp u h_inner
+        simpa [mul_assoc, mul_comm, mul_left_comm] using
+          (Real.hasDerivAt_exp (-u * t)).comp u h_inner
       -- divide by `t` then negate
-      have : HasDerivAt (fun u : ℝ => Real.exp (-u * t) / t) (((-t) * Real.exp (-u * t)) / t) u :=
+      have : HasDerivAt (fun u : ℝ => Real.exp (-u * t) / t)
+          (((-t) * Real.exp (-u * t)) / t) u :=
         h_exp'.div_const t
-      have : HasDerivAt (fun u : ℝ => -(Real.exp (-u * t) / t)) (-(((-t) * Real.exp (-u * t)) / t)) u :=
+      have : HasDerivAt (fun u : ℝ => -(Real.exp (-u * t) / t))
+          (-(((-t) * Real.exp (-u * t)) / t)) u :=
         this.neg
       -- simplify derivative (commutativity of multiplication in ℝ)
       simpa [ht0, div_eq_mul_inv, mul_assoc, mul_left_comm, mul_comm] using this
@@ -241,7 +248,8 @@ lemma Ktilde_mul_one_sub_exp_eq_integral {t : ℝ} (ht : 0 < t) :
         simpa [mul_assoc] using ((hasDerivAt_id u).mul_const (-t))
       have h_exp' : HasDerivAt (fun u : ℝ => Real.exp (-u * t))
           ((-t) * Real.exp (-u * t)) u := by
-        simpa [mul_assoc, mul_comm, mul_left_comm] using (Real.hasDerivAt_exp (-u * t)).comp u h_inner
+        simpa [mul_assoc, mul_comm, mul_left_comm] using
+          (Real.hasDerivAt_exp (-u * t)).comp u h_inner
       have h_mul : HasDerivAt (fun u : ℝ => u * Real.exp (-u * t))
           (Real.exp (-u * t) + u * ((-t) * Real.exp (-u * t))) u := by
         simpa [mul_assoc, add_comm, add_left_comm, add_assoc] using (hasDerivAt_id u).mul h_exp'
@@ -273,7 +281,9 @@ lemma Ktilde_mul_one_sub_exp_eq_integral {t : ℝ} (ht : 0 < t) :
       have ht2 : t ^ 2 ≠ 0 := pow_ne_zero 2 ht0
       field_simp [ht0, ht2]
       ring
-    have hint : IntervalIntegrable (fun u : ℝ => u * Real.exp (-u * t)) volume (0 : ℝ) 1 := hInt_u_exp
+    have hint :
+        IntervalIntegrable (fun u : ℝ => u * Real.exp (-u * t)) volume (0 : ℝ) 1 :=
+      hInt_u_exp
     have hFTC :=
       intervalIntegral.integral_eq_sub_of_hasDerivAt_of_le hab hcont hderiv hint
     -- evaluate `F` at endpoints and simplify
@@ -282,7 +292,8 @@ lemma Ktilde_mul_one_sub_exp_eq_integral {t : ℝ} (ht : 0 < t) :
     have h_eval :
         (∫ u in (0 : ℝ)..1, u * Real.exp (-u * t)) =
           (-(Real.exp (-t) / t) - Real.exp (-t) / (t ^ 2) + 1 / (t ^ 2)) := by
-      simpa [F, ht0, pow_two, div_eq_mul_inv, sub_eq_add_neg, mul_assoc, mul_comm, mul_left_comm] using this
+      simpa [F, ht0, pow_two, div_eq_mul_inv, sub_eq_add_neg,
+        mul_assoc, mul_comm, mul_left_comm] using this
     have h_simp :
         (-(Real.exp (-t) / t) - Real.exp (-t) / (t ^ 2) + 1 / (t ^ 2)) =
           (1 - Real.exp (-t) * (t + 1)) / (t ^ 2) := by
@@ -304,4 +315,6 @@ lemma Ktilde_mul_one_sub_exp_eq_integral {t : ℝ} (ht : 0 < t) :
   ring_nf
   simp only [h_exp_mul]
   ring_nf; grind
+
+end Binet
 

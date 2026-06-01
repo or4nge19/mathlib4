@@ -5,9 +5,7 @@ Authors: A Tucker
 -/
 module
 
-
 public import Mathlib.Analysis.Calculus.Implicit
-
 
 /-!
 # Implicit function theorem — domain a product space

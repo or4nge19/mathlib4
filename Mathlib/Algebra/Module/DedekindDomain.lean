@@ -5,10 +5,8 @@ Authors: Pierre-Alexandre Bazin
 -/
 module
 
-
 public import Mathlib.Algebra.Module.Torsion.Basic
 public import Mathlib.RingTheory.DedekindDomain.Ideal.Lemmas
-
 
 /-!
 # Modules over a Dedekind domain

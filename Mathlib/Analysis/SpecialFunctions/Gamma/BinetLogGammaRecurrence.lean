@@ -36,16 +36,20 @@ theorem re_J_sub_re_J_add_one {x : ℝ} (hx : 0 < x) :
     simpa using (re_J_eq_integral_Ktilde (x := x + 1) hx1)
   -- work with the difference of integrals
   rw [hJx, hJx1]
-  have hInt_x : IntegrableOn (fun t : ℝ => BinetKernel.Ktilde t * Real.exp (-t * x)) (Set.Ioi 0) :=
+  have hInt_x :
+      IntegrableOn (fun t : ℝ => BinetKernel.Ktilde t * Real.exp (-t * x)) (Set.Ioi 0) :=
     integrable_Ktilde_mul_exp_real (x := x) hx
-  have hInt_x1 : IntegrableOn (fun t : ℝ => BinetKernel.Ktilde t * Real.exp (-t * (x + 1))) (Set.Ioi 0) :=
+  have hInt_x1 :
+      IntegrableOn (fun t : ℝ => BinetKernel.Ktilde t * Real.exp (-t * (x + 1)))
+        (Set.Ioi 0) :=
     integrable_Ktilde_mul_exp_real (x := x + 1) hx1
   -- convert to integrals w.r.t. the restricted measure and combine using `integral_sub`
   have hsub :
       (∫ t in Set.Ioi (0 : ℝ), BinetKernel.Ktilde t * Real.exp (-t * x)) -
         (∫ t in Set.Ioi (0 : ℝ), BinetKernel.Ktilde t * Real.exp (-t * (x + 1))) =
         ∫ t in Set.Ioi (0 : ℝ),
-          (BinetKernel.Ktilde t * Real.exp (-t * x) - BinetKernel.Ktilde t * Real.exp (-t * (x + 1))) := by
+          (BinetKernel.Ktilde t * Real.exp (-t * x) -
+            BinetKernel.Ktilde t * Real.exp (-t * (x + 1))) := by
     -- `integral_sub` is stated as `∫ (f-g) = ∫ f - ∫ g`, so we use the symmetric direction.
     simpa [sub_eq_add_neg] using
       (MeasureTheory.integral_sub (μ := volume.restrict (Set.Ioi (0 : ℝ)))
@@ -54,7 +58,8 @@ theorem re_J_sub_re_J_add_one {x : ℝ} (hx : 0 < x) :
   -- simplify the integrand to `Ktilde t * exp(-t*x) * (1 - exp(-t))`
   have hintegrand :
       (fun t : ℝ =>
-          BinetKernel.Ktilde t * Real.exp (-t * x) - BinetKernel.Ktilde t * Real.exp (-t * (x + 1)))
+          BinetKernel.Ktilde t * Real.exp (-t * x) -
+            BinetKernel.Ktilde t * Real.exp (-t * (x + 1)))
         = fun t : ℝ => BinetKernel.Ktilde t * Real.exp (-t * x) * (1 - Real.exp (-t)) := by
     funext t
     have : Real.exp (-t * (x + 1)) = Real.exp (-t * x) * Real.exp (-t) := by
@@ -73,9 +78,11 @@ theorem re_J_sub_re_J_add_one {x : ℝ} (hx : 0 < x) :
     exact Ktilde_mul_one_sub_exp_eq_integral (t := t) ht
   -- use the pointwise identity under the integral
   have hswap1 :
-      ∫ t in Set.Ioi (0 : ℝ), BinetKernel.Ktilde t * Real.exp (-t * x) * (1 - Real.exp (-t)) =
+      ∫ t in Set.Ioi (0 : ℝ),
+          BinetKernel.Ktilde t * Real.exp (-t * x) * (1 - Real.exp (-t)) =
         ∫ t in Set.Ioi (0 : ℝ),
-          Real.exp (-t * x) * (∫ u in Set.Icc (0 : ℝ) 1, (1 / 2 - u) * Real.exp (-u * t)) := by
+          Real.exp (-t * x) *
+            (∫ u in Set.Icc (0 : ℝ) 1, (1 / 2 - u) * Real.exp (-u * t)) := by
     refine MeasureTheory.setIntegral_congr_fun measurableSet_Ioi ?_
     intro t ht
     dsimp
@@ -106,7 +113,8 @@ theorem re_J_sub_re_J_add_one {x : ℝ} (hx : 0 < x) :
     constructor
     · -- for a.e. t, the `u`-section is integrable on `[0,1]`
       -- we are working under `volume.restrict (Ioi 0)`, so extract `0 < t`
-      refine (MeasureTheory.ae_restrict_iff' (μ := volume) (s := Set.Ioi (0 : ℝ)) measurableSet_Ioi).2 ?_
+      refine (MeasureTheory.ae_restrict_iff' (μ := volume) (s := Set.Ioi (0 : ℝ))
+        measurableSet_Ioi).2 ?_
       refine MeasureTheory.ae_of_all _ ?_
       intro t ht
       have ht0 : 0 < t := ht
@@ -130,7 +138,8 @@ theorem re_J_sub_re_J_add_one {x : ℝ} (hx : 0 < x) :
       · -- pointwise bound on norms
         -- turn an `ae` goal on the restricted measure into an `ae` goal on `volume`
         -- with an explicit membership hypothesis `u ∈ Icc 0 1`
-        refine (MeasureTheory.ae_restrict_iff' (μ := volume) (s := Set.Icc (0 : ℝ) 1) measurableSet_Icc).2 ?_
+        refine (MeasureTheory.ae_restrict_iff' (μ := volume) (s := Set.Icc (0 : ℝ) 1)
+          measurableSet_Icc).2 ?_
         refine MeasureTheory.ae_of_all _ ?_
         intro u hu
         have hu' : u ∈ Set.Icc (0 : ℝ) 1 := hu
@@ -187,7 +196,8 @@ theorem re_J_sub_re_J_add_one {x : ℝ} (hx : 0 < x) :
             (∫ u : ℝ, ‖(Function.uncurry F) (t, u)‖ ∂(volume.restrict (Set.Icc (0 : ℝ) 1)))
               ≤ (Real.exp (-t * x) / 2 : ℝ) := by
         -- extract the side condition `0 < t` from the restricted measure
-        refine (MeasureTheory.ae_restrict_iff' (μ := volume) (s := Set.Ioi (0 : ℝ)) measurableSet_Ioi).2 ?_
+        refine (MeasureTheory.ae_restrict_iff' (μ := volume) (s := Set.Ioi (0 : ℝ))
+          measurableSet_Ioi).2 ?_
         refine MeasureTheory.ae_of_all _ ?_
         intro t ht
         have ht0 : 0 < t := ht
@@ -245,13 +255,18 @@ theorem re_J_sub_re_J_add_one {x : ℝ} (hx : 0 < x) :
             (∫ u : ℝ, (Real.exp (-t * x) / 2 : ℝ) ∂(volume.restrict (Set.Icc (0 : ℝ) 1)))
               = Real.exp (-t * x) / 2 := by
           simp
-        have hF_integrable : Integrable (fun u : ℝ => F t u) (volume.restrict (Set.Icc (0 : ℝ) 1)) := by
+        have hF_integrable :
+            Integrable (fun u : ℝ => F t u) (volume.restrict (Set.Icc (0 : ℝ) 1)) := by
           apply Continuous.integrableOn_Icc
           unfold F
           fun_prop
-        have hconst_integrable : Integrable (fun _u : ℝ => (Real.exp (-t * x) / 2 : ℝ)) (volume.restrict (Set.Icc (0 : ℝ) 1)) := by
+        have hconst_integrable :
+            Integrable (fun _u : ℝ => (Real.exp (-t * x) / 2 : ℝ))
+              (volume.restrict (Set.Icc (0 : ℝ) 1)) := by
           exact integrable_const _
-        have habs_integrable : Integrable (fun u : ℝ => |F t u|) (volume.restrict (Set.Icc (0 : ℝ) 1)) := by
+        have habs_integrable :
+            Integrable (fun u : ℝ => |F t u|)
+              (volume.restrict (Set.Icc (0 : ℝ) 1)) := by
           exact hF_integrable.abs
         have hmono' :
             (fun u : ℝ => |F t u|) ≤ᵐ[volume.restrict (Set.Icc (0 : ℝ) 1)]
@@ -308,7 +323,8 @@ theorem re_J_sub_re_J_add_one {x : ℝ} (hx : 0 < x) :
           ∫ t in Set.Ioi (0 : ℝ),
             Real.exp (-t * x) * (∫ u in Set.Icc (0 : ℝ) 1, (1 / 2 - u) * Real.exp (-u * t)) := by
       refine MeasureTheory.integral_congr_ae ?_
-      refine (MeasureTheory.ae_restrict_iff' (μ := volume) (s := Set.Ioi (0 : ℝ)) measurableSet_Ioi).2 ?_
+      refine (MeasureTheory.ae_restrict_iff' (μ := volume) (s := Set.Ioi (0 : ℝ))
+        measurableSet_Ioi).2 ?_
       refine MeasureTheory.ae_of_all _ ?_
       intro t ht
       have :
@@ -438,7 +454,8 @@ theorem re_J_sub_re_J_add_one {x : ℝ} (hx : 0 < x) :
     refine (MeasureTheory.Integrable.mono' (μ := volume.restrict (Set.Icc (0 : ℝ) 1))
       (hg := MeasureTheory.integrable_const (c := ‖(x⁻¹ : ℝ)‖)) ?_ ?_)
     · exact (Measurable.inv ((measurable_const.add measurable_id))).aestronglyMeasurable
-    · refine (MeasureTheory.ae_restrict_iff' (μ := volume) (s := Set.Icc (0 : ℝ) 1) measurableSet_Icc).2 ?_
+    · refine (MeasureTheory.ae_restrict_iff' (μ := volume) (s := Set.Icc (0 : ℝ) 1)
+        measurableSet_Icc).2 ?_
       refine MeasureTheory.ae_of_all _ ?_
       intro u hu
       have hu0 : 0 ≤ u := hu.1
@@ -453,7 +470,8 @@ theorem re_J_sub_re_J_add_one {x : ℝ} (hx : 0 < x) :
         simp [Real.norm_eq_abs, abs_of_pos hxpos']
       simpa [hnorm1, hnorm2] using this
   have hInt_mul :
-      Integrable (fun u : ℝ => (x + (1 / 2 : ℝ)) * (x + u)⁻¹) (volume.restrict (Set.Icc (0 : ℝ) 1)) :=
+      Integrable (fun u : ℝ => (x + (1 / 2 : ℝ)) * (x + u)⁻¹)
+        (volume.restrict (Set.Icc (0 : ℝ) 1)) :=
     hInt_inv.const_mul (x + (1 / 2 : ℝ))
   have hInt_const :
       Integrable (fun _u : ℝ => (-1 : ℝ)) (volume.restrict (Set.Icc (0 : ℝ) 1)) :=
@@ -486,3 +504,5 @@ theorem re_J_sub_re_J_add_one {x : ℝ} (hx : 0 < x) :
         = (-1) + (x + (1 / 2 : ℝ)) * Real.log (1 + 1 / x) := by
             rw [hadd, hconst, hmul_shift]
     _ = (x + (1 / 2 : ℝ)) * Real.log (1 + 1 / x) - 1 := by ring
+
+end Binet

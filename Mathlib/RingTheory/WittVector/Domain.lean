@@ -5,9 +5,7 @@ Authors: Robert Y. Lewis
 -/
 module
 
-
 public import Mathlib.RingTheory.WittVector.Identities
-
 
 /-!
 

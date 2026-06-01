@@ -276,7 +276,9 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
           filter_upwards [eventually_gt_atTop 0] with n hn
           exact R_nat_eq_log_stirlingSeq_sub_log_pi_half hn
         have h_tendsto :
-            Tendsto (fun n : ℕ => Real.log (Stirling.stirlingSeq n) - Real.log Real.pi / 2) atTop (𝓝 0) :=
+            Tendsto
+              (fun n : ℕ => Real.log (Stirling.stirlingSeq n) - Real.log Real.pi / 2)
+              atTop (𝓝 0) :=
           by simpa [hπ, sub_eq_add_neg, add_assoc] using hlogst.sub_const (Real.log Real.pi / 2)
         exact (tendsto_congr' hR_eq).2 h_tendsto
       rw [Metric.tendsto_atTop]
@@ -335,13 +337,16 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
           have hy_n_pos : 0 < y - n := sub_pos.2 (lt_of_le_of_ne hn_le (Ne.symm hy_eq))
           have := (div_le_iff₀ hy_n_pos).1 hdiff
           have hstep :
-              Real.log (Real.Gamma ((n : ℝ) + 1)) - Real.log (Real.Gamma (n : ℝ)) = Real.log (n : ℝ) := by
+              Real.log (Real.Gamma ((n : ℝ) + 1)) - Real.log (Real.Gamma (n : ℝ)) =
+                Real.log (n : ℝ) := by
             have hn_ne : (n : ℝ) ≠ 0 := ne_of_gt hn_pos
-            have hΓ : Real.Gamma ((n : ℝ) + 1) = (n : ℝ) * Real.Gamma (n : ℝ) := Real.Gamma_add_one (s := (n : ℝ)) hn_ne
+            have hΓ : Real.Gamma ((n : ℝ) + 1) = (n : ℝ) * Real.Gamma (n : ℝ) :=
+              Real.Gamma_add_one (s := (n : ℝ)) hn_ne
             have hΓn_ne : Real.Gamma (n : ℝ) ≠ 0 := (Real.Gamma_pos_of_pos hn_pos).ne'
             calc
               Real.log (Real.Gamma ((n : ℝ) + 1)) - Real.log (Real.Gamma (n : ℝ))
-                  = (Real.log (n : ℝ) + Real.log (Real.Gamma (n : ℝ))) - Real.log (Real.Gamma (n : ℝ)) := by
+                  = (Real.log (n : ℝ) + Real.log (Real.Gamma (n : ℝ))) -
+                      Real.log (Real.Gamma (n : ℝ)) := by
                       simp [hΓ, Real.log_mul hn_ne hΓn_ne]
               _ = Real.log (n : ℝ) := by ring
           have hmul :
@@ -349,7 +354,8 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
                 Real.log (n : ℝ) * (y - n) := by
             simpa [hstep] using this
           have := add_le_add_left hmul (Real.log (Real.Gamma (n : ℝ)))
-          simpa [sub_eq_add_neg, add_assoc, add_left_comm, add_comm, mul_assoc, mul_left_comm, mul_comm] using this
+          simpa [sub_eq_add_neg, add_assoc, add_left_comm, add_comm,
+            mul_assoc, mul_left_comm, mul_comm] using this
       have h_lower :
           Real.log (Real.Gamma y) ≥
             Real.log (Real.Gamma (n : ℝ)) + (y - n) * Real.log ((n - 1 : ℕ) : ℝ) := by
@@ -408,7 +414,8 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
             simp [hnum, hden]
           have hmul := (le_div_iff₀ hy_n_pos).1 (by simpa [hleft] using hdiff)
           have := add_le_add_left hmul (Real.log (Real.Gamma (n : ℝ)))
-          simpa [sub_eq_add_neg, add_assoc, add_left_comm, add_comm, mul_assoc, mul_left_comm, mul_comm] using this
+          simpa [sub_eq_add_neg, add_assoc, add_left_comm, add_comm,
+            mul_assoc, mul_left_comm, mul_comm] using this
       have hn0' : (n : ℝ) ≠ 0 := ne_of_gt hn_pos
       have hR_upper : R y ≤ R (n : ℝ) + 1 / (n : ℝ) := by
         have hy_pos : 0 < y := lt_of_lt_of_le hn_pos hn_le
@@ -500,25 +507,34 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
             simpa [hlog_div, hrhs] using hlog
           linarith
         -- Lower bound for `log(n-1)` in terms of `log n`.
-        have hlognm1 : Real.log ((n - 1 : ℕ) : ℝ) ≥ Real.log (n : ℝ) - (2 : ℝ) / (n : ℝ) := by
+        have hlognm1 :
+            Real.log ((n - 1 : ℕ) : ℝ) ≥ Real.log (n : ℝ) - (2 : ℝ) / (n : ℝ) := by
           have hn_nat_pos : 0 < n := lt_of_lt_of_le (by norm_num : (0 : ℕ) < 2) hn2
           have hn1_pos_real : 0 < ((n - 1 : ℕ) : ℝ) := by exact_mod_cast hn1_pos
           have hn1_ne0 : ((n - 1 : ℕ) : ℝ) ≠ 0 := ne_of_gt hn1_pos_real
-          have hlognm1' : Real.log ((n - 1 : ℕ) : ℝ) ≥ Real.log (n : ℝ) - 1 / ((n - 1 : ℕ) : ℝ) := by
+          have hlognm1' :
+              Real.log ((n - 1 : ℕ) : ℝ) ≥
+                Real.log (n : ℝ) - 1 / ((n - 1 : ℕ) : ℝ) := by
             have hx_pos : 0 < (n : ℝ) / ((n - 1 : ℕ) : ℝ) := div_pos hn_pos hn1_pos_real
-            have hlog : Real.log ((n : ℝ) / ((n - 1 : ℕ) : ℝ)) ≤ (n : ℝ) / ((n - 1 : ℕ) : ℝ) - 1 :=
+            have hlog :
+                Real.log ((n : ℝ) / ((n - 1 : ℕ) : ℝ)) ≤
+                  (n : ℝ) / ((n - 1 : ℕ) : ℝ) - 1 :=
               Real.log_le_sub_one_of_pos (x := (n : ℝ) / ((n - 1 : ℕ) : ℝ)) hx_pos
             have hlog' :
                 Real.log ((n : ℝ) / ((n - 1 : ℕ) : ℝ)) =
                   Real.log (n : ℝ) - Real.log ((n - 1 : ℕ) : ℝ) := by
-              simpa using (Real.log_div (x := (n : ℝ)) (y := ((n - 1 : ℕ) : ℝ)) hn_ne hn1_ne0)
-            have hrhs : (n : ℝ) / ((n - 1 : ℕ) : ℝ) - 1 = 1 / ((n - 1 : ℕ) : ℝ) := by
+              simpa using
+                (Real.log_div (x := (n : ℝ)) (y := ((n - 1 : ℕ) : ℝ)) hn_ne hn1_ne0)
+            have hrhs :
+                (n : ℝ) / ((n - 1 : ℕ) : ℝ) - 1 = 1 / ((n - 1 : ℕ) : ℝ) := by
               field_simp [hn1_ne0]
               have hnat : (n - 1 : ℕ) + 1 = n := Nat.sub_add_cancel (Nat.succ_le_of_lt hn_nat_pos)
               have hcast : ((n : ℝ) : ℝ) = ((n - 1 : ℕ) : ℝ) + 1 := by
                 exact_mod_cast hnat.symm
               linarith [hcast]
-            have : Real.log (n : ℝ) - Real.log ((n - 1 : ℕ) : ℝ) ≤ 1 / ((n - 1 : ℕ) : ℝ) := by
+            have :
+                Real.log (n : ℝ) - Real.log ((n - 1 : ℕ) : ℝ) ≤
+                  1 / ((n - 1 : ℕ) : ℝ) := by
               have htmp := hlog
               rw [hlog'] at htmp
               rw [hrhs] at htmp
@@ -557,7 +573,10 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
             exact le_trans hhalf hy3
           exact sub_nonneg.2 this
         have ha_nonneg : 0 ≤ y - (n : ℝ) := ha0
-        have hlogGamma_lb : Real.log (Real.Gamma y) ≥ Real.log (Real.Gamma (n : ℝ)) + (y - (n : ℝ)) * Real.log ((n - 1 : ℕ) : ℝ) := by
+        have hlogGamma_lb :
+            Real.log (Real.Gamma y) ≥
+              Real.log (Real.Gamma (n : ℝ)) +
+                (y - (n : ℝ)) * Real.log ((n - 1 : ℕ) : ℝ) := by
           exact h_lower
         have hmain :
             stirlingMainReal (n : ℝ) +
@@ -565,7 +584,8 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
               - (3 / (n : ℝ)) := by
           exact stirlingMainReal_floor_lower_step hn_pos hy1 ha_nonneg ha_le hlogy_ub hlognm1
         have : Real.log (Real.Gamma y) - stirlingMainReal y ≥
-            (Real.log (Real.Gamma (n : ℝ)) - stirlingMainReal (n : ℝ)) - 3 / (n : ℝ) := by
+            (Real.log (Real.Gamma (n : ℝ)) - stirlingMainReal (n : ℝ)) -
+              3 / (n : ℝ) := by
           linarith [hlogGamma_lb, hmain]
         simpa [R] using this
       have hR_abs : |R y| ≤ |R (n : ℝ)| + 3 / (n : ℝ) := by
@@ -574,14 +594,18 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
           have h2 : -|R (n : ℝ)| - 3 / (n : ℝ) ≤ R (n : ℝ) - 3 / (n : ℝ) :=
             sub_le_sub_right (neg_abs_le (R (n : ℝ))) (3 / (n : ℝ))
           have h3 : -|R (n : ℝ)| - 3 / (n : ℝ) ≤ R y := le_trans h2 h1
-          have hneg : -(|R (n : ℝ)| + 3 / (n : ℝ)) = -|R (n : ℝ)| - 3 / (n : ℝ) := by ring
+          have hneg :
+              -(|R (n : ℝ)| + 3 / (n : ℝ)) = -|R (n : ℝ)| - 3 / (n : ℝ) := by
+            ring
           simpa [hneg] using h3
         have hupper : R y ≤ |R (n : ℝ)| + 3 / (n : ℝ) := by
           have hn_pos' : 0 < (n : ℝ) := hn_pos
           have hRn : R (n : ℝ) ≤ |R (n : ℝ)| := le_abs_self _
           have hdiv : (1 : ℝ) / (n : ℝ) ≤ (3 : ℝ) / (n : ℝ) :=
             div_le_div_of_nonneg_right (by norm_num : (1 : ℝ) ≤ 3) (le_of_lt hn_pos')
-          have hstep : R (n : ℝ) + (1 : ℝ) / (n : ℝ) ≤ |R (n : ℝ)| + (3 : ℝ) / (n : ℝ) := by
+          have hstep :
+              R (n : ℝ) + (1 : ℝ) / (n : ℝ) ≤
+                |R (n : ℝ)| + (3 : ℝ) / (n : ℝ) := by
             exact add_le_add hRn hdiv
           exact le_trans hR_upper hstep
         exact abs_le.2 ⟨hlower, hupper⟩

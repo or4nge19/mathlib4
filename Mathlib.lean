@@ -5589,6 +5589,7 @@ public import Mathlib.NumberTheory.LSeries.Nonvanishing
 public import Mathlib.NumberTheory.LSeries.Positivity
 public import Mathlib.NumberTheory.LSeries.PrimesInAP
 public import Mathlib.NumberTheory.LSeries.RiemannZeta
+public import Mathlib.NumberTheory.LSeries.RiemannZetaAbelContinuation
 public import Mathlib.NumberTheory.LSeries.RiemannZetaConvexity
 public import Mathlib.NumberTheory.LSeries.RiemannZetaStripBound
 public import Mathlib.NumberTheory.LSeries.RiemannZetaHadamard

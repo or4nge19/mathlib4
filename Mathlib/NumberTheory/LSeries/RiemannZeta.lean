@@ -7,6 +7,7 @@ module
 
 public import Mathlib.NumberTheory.LSeries.HurwitzZeta
 public import Mathlib.Analysis.PSeriesComplex
+public import Mathlib.Analysis.Complex.CauchyIntegral
 
 /-!
 # Definition of the Riemann zeta function
@@ -137,6 +138,39 @@ lemma HurwitzZeta.expZeta_zero : expZeta 0 = riemannZeta := by
 theorem differentiableAt_riemannZeta {s : ℂ} (hs' : s ≠ 1) : DifferentiableAt ℂ riemannZeta s :=
   differentiableAt_hurwitzZetaEven _ hs'
 
+/-- The Riemann zeta function is analytic on `ℂ \ {1}`. -/
+theorem analyticOn_riemannZeta_compl_one : AnalyticOn ℂ riemannZeta ({1} : Set ℂ)ᶜ := by
+  have hopen : IsOpen ({1} : Set ℂ)ᶜ := isOpen_compl_singleton
+  have hdiff : DifferentiableOn ℂ riemannZeta ({1} : Set ℂ)ᶜ := by
+    intro z hz
+    simpa [Set.mem_compl_iff, Set.mem_singleton_iff] using
+      (differentiableAt_riemannZeta
+        (by simpa [Set.mem_compl_iff, Set.mem_singleton_iff] using hz)).differentiableWithinAt
+  simpa [Complex.analyticOn_iff_differentiableOn hopen] using hdiff
+
+namespace Nat.Primes
+
+/-- For a prime `p` and `s` with real part `> 1`, `‖p^{-s}‖ < 1`. -/
+lemma norm_cpow_neg_lt_one (p : Nat.Primes) (s : ℂ) (hs : 1 < s.re) :
+    ‖((p : ℕ) : ℂ) ^ (-s)‖ < 1 := by
+  have hx1 : 1 < ((p : ℕ) : ℝ) := by
+    have h2 : (2 : ℝ) ≤ ((p : ℕ) : ℝ) := by exact_mod_cast (p.2.two_le : 2 ≤ (p : ℕ))
+    exact lt_of_lt_of_le one_lt_two h2
+  have hx0 : 0 < ((p : ℕ) : ℝ) := lt_trans zero_lt_one hx1
+  have hnorm : ‖((p : ℕ) : ℂ) ^ (-s)‖ = ((p : ℕ) : ℝ) ^ (-s.re) :=
+    Complex.norm_cpow_eq_rpow_re_of_pos hx0 (-s)
+  have hz : -s.re < 0 := neg_lt_zero.mpr (lt_trans zero_lt_one hs)
+  simpa [hnorm] using Real.rpow_lt_one_of_one_lt_of_neg hx1 hz
+
+/-- `‖p^{-s}‖ = p^{- re s}` for a prime `p`. -/
+lemma norm_cpow_neg_eq_rpow_neg_re (p : Nat.Primes) (s : ℂ) :
+    ‖((p : ℕ) : ℂ) ^ (-s)‖ = ((p : ℕ) : ℝ) ^ (-s.re) := by
+  have hx : 0 < ((p : ℕ) : ℝ) := Nat.cast_pos.mpr p.property.pos
+  simpa [Complex.ofReal_natCast, Complex.neg_re] using
+    Complex.norm_cpow_eq_rpow_re_of_pos hx (-s)
+
+end Nat.Primes
+
 /-- We have `ζ(0) = -1 / 2`. -/
 theorem riemannZeta_zero : riemannZeta 0 = -1 / 2 := by
   simp_rw [riemannZeta, hurwitzZetaEven, Function.update_self, if_true]
@@ -192,6 +226,13 @@ theorem zeta_eq_tsum_one_div_nat_add_one_cpow {s : ℂ} (hs : 1 < re s) :
   rw [Summable.tsum_eq_zero_add] at this
   · simpa [zero_cpow (Complex.ne_zero_of_one_lt_re hs)]
   · rwa [Complex.summable_one_div_nat_cpow]
+
+/-- `1 / (n : ℂ) ^ s` rewrites to `(n : ℂ) ^ (-s)` away from `n = 0`. -/
+theorem one_div_natCast_cpow_eq_ite_cpow_neg (s : ℂ) (hs : s ≠ 0) (n : ℕ) :
+    1 / (n : ℂ) ^ s = if n = 0 then 0 else (n : ℂ) ^ (-s) := by
+  by_cases h : n = 0
+  · simp [h, Complex.zero_cpow hs, one_div]
+  · simp [h, one_div, Complex.cpow_neg]
 
 /-- Special case of `zeta_eq_tsum_one_div_nat_cpow` when the argument is in `ℕ`, so the power
 function can be expressed using naïve `pow` rather than `cpow`. -/

@@ -21,8 +21,8 @@ Upgrades `hadamard_factorization_of_growth` to the finite-order formulation via
 
 ## References
 
-* [tao246bComplexAnalysis], Theorem 15 (sequence form; see
-  `tao_theorem_15_hadamard_factorization_sequence`)
+* [tao246bComplexAnalysis], Theorem 15 (sequence form;
+  see `hadamard_factorization_of_order_sequence`)
 * [MR886677] for canonical factors on disks
 -/
 
@@ -149,21 +149,5 @@ theorem hadamard_factorization_of_order_sequence {f : ℂ → ℂ} {ρ : ℝ} (h
   refine ⟨P, hdeg, ?_⟩
   intro z
   simpa [Complex.canonicalProduct_def] using hfac z
-
-/-- Same as `hadamard_factorization_of_order_sequence` (see [tao246bComplexAnalysis],
-Theorem 15). -/
-theorem tao_theorem_15_hadamard_factorization_sequence {f : ℂ → ℂ} {ρ : ℝ} (hρ : 0 ≤ ρ)
-    (hnot : ∃ z : ℂ, f z ≠ 0)
-    (horder : EntireOfOrderAtMost ρ f)
-    (e : ℕ ≃ divisorZeroIndex₀ f (Set.univ : Set ℂ)) :
-    ∃ (P : Polynomial ℂ),
-      P.degree ≤ Nat.floor ρ ∧
-      ∀ z : ℂ,
-        f z =
-          Complex.exp (Polynomial.eval z P) *
-            z ^ (analyticOrderNatAt f 0) *
-            Complex.canonicalProduct (Nat.floor ρ)
-              (fun n : ℕ => divisorZeroIndex₀_val (e n)) z :=
-  hadamard_factorization_of_order_sequence hρ hnot horder e
 
 end Complex.Hadamard

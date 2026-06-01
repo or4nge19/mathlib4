@@ -1,3 +1,8 @@
+/-
+Copyright (c) 2026 Matteo Cipollina. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Matteo Cipollina
+-/
 module
 
 public import Mathlib.Analysis.SpecialFunctions.Gamma.BinetKernel.Core
@@ -324,15 +329,7 @@ theorem Ktilde_le {t : ℝ} (ht : 0 ≤ t) : Ktilde t ≤ 1/12 := by
           rw [div_le_div_iff₀
             (by positivity : (0 : ℝ) < 2 * t ^ 2 * (Real.exp t - 1))
             (by norm_num : (0 : ℝ) < 12)]
-          -- Need: 12 * f(t) ≤ 2 * t² * (e^t - 1)
-          -- This is equivalent to g_aux(t) ≥ 0 by algebra
           have h_nonneg : 0 ≤ g_aux t := g_aux_nonneg (le_of_lt hpos)
-          -- g_aux(t) = (t² - 6t + 12)e^t - (t² + 6t + 12)
-          -- 12 * f(t) = 12(e^t(t-2) + t + 2) = 12te^t - 24e^t + 12t + 24
-          -- 2t²(e^t - 1) = 2t²e^t - 2t²
-          -- Goal: 12te^t - 24e^t + 12t + 24 ≤ 2t²e^t - 2t²
-          -- Rearranged: 0 ≤ 2t²e^t - 12te^t + 24e^t - 12t - 24 - 2t²
-          --           = 2((t² - 6t + 12)e^t - (t² + 6t + 12)) = 2 * g_aux(t)
           have hgoal : 0 ≤ 2 * g_aux t := mul_nonneg (by norm_num : (0 : ℝ) ≤ 2) h_nonneg
           unfold g_aux at hgoal
           unfold f
@@ -343,7 +340,6 @@ theorem Ktilde_lt {t : ℝ} (ht : 0 < t) : Ktilde t < 1 / 12 := by
   calc
     Ktilde t
         = f t / (2 * t ^ 2 * (Real.exp t - 1)) := by
-            -- same algebra as in `Ktilde_le`
             have hdenom : 0 < 2 * t * (Real.exp t - 1) := by positivity
             calc
               Ktilde t = (1 / (Real.exp t - 1) - 1 / t + 1 / 2) / t := Ktilde_pos ht
@@ -353,17 +349,13 @@ theorem Ktilde_lt {t : ℝ} (ht : 0 < t) : Ktilde t < 1 / 12 := by
                     unfold f
                     field_simp
     _ < 1 / 12 := by
-          -- Reduce to a strict inequality equivalent to `g_aux t > 0`.
           have hdenom : (0 : ℝ) < 2 * t ^ 2 * (Real.exp t - 1) := by positivity
           have h12 : (0 : ℝ) < (12 : ℝ) := by norm_num
-          -- Cross-multiply.
           rw [div_lt_div_iff₀ hdenom h12]
-          -- Goal is `f t * 12 < 1 * (2 * t ^ 2 * (Real.exp t - 1))`.
           have hpos_g : 0 < g_aux t := g_aux_pos ht
           have hpos : 0 < 2 * g_aux t := mul_pos (by norm_num) hpos_g
           unfold g_aux at hpos
           unfold f
-          -- This is the same algebraic rearrangement as in `Ktilde_le`, but strict.
           linarith [hpos, Real.exp_pos t, sq_nonneg t]
 
 /-! ## Section 4b: Robbins-type lower bound for `Ktilde` -/
@@ -440,9 +432,7 @@ lemma hasDerivAt_robbinsAux (t : ℝ) : HasDerivAt robbinsAux (robbinsAux' t) t 
           (Real.exp (t * (13 / 12 : ℝ)) * (13 / 12 : ℝ) * (t - 2) +
             Real.exp (t * (13 / 12 : ℝ)) * 1) t :=
       (hexp13.mul hpoly)
-    -- multiply by 12
     have h := hmul.const_mul (12 : ℝ)
-    -- normalize function and derivative values
     convert h using 1 <;> ring_nf
   have hB :
       HasDerivAt (fun x : ℝ => 12 * Real.exp (x * (1 / 12 : ℝ)) * (x + 2))
@@ -471,13 +461,10 @@ lemma hasDerivAt_robbinsAux (t : ℝ) : HasDerivAt robbinsAux (robbinsAux' t) t 
       simpa using (hasDerivAt_pow 2 t)
     have h := hpow.const_mul (2 : ℝ)
     convert h using 1; ring_nf
-  -- combine
   have h := ((hA.add hB).add (hC.add hD))
-  -- unfold the target definitions and normalize
   unfold robbinsAux robbinsAux'
   convert h using 1
   · funext x
-    -- unfold pointwise addition/multiplication of functions, then normalize
     simp [Pi.add_apply, sub_eq_add_neg, add_assoc, add_comm, mul_assoc, mul_comm]
   · ring_nf
 
@@ -501,7 +488,6 @@ lemma hasDerivAt_robbinsAux' (t : ℝ) : HasDerivAt robbinsAux' (robbinsAux'' t)
       simpa [sub_eq_add_neg, mul_assoc, mul_left_comm, mul_comm] using
         ((hasDerivAt_id t).const_mul (13 : ℝ)).sub_const 14
     have hmul := hexp13.mul hpoly
-    -- normalize the derivative value
     convert hmul using 1; ring_nf
   have hB :
       HasDerivAt (fun x : ℝ => Real.exp (x * (1 / 12 : ℝ)) * (x + 14))
@@ -514,7 +500,6 @@ lemma hasDerivAt_robbinsAux' (t : ℝ) : HasDerivAt robbinsAux' (robbinsAux'' t)
         (-2 * Real.exp t * (t ^ 2 + 4 * t + 2)) t := by
     have hexp : HasDerivAt Real.exp (Real.exp t) t := Real.hasDerivAt_exp t
     have hpoly : HasDerivAt (fun x : ℝ => x * (x + 2)) (t + (t + 2)) t := by
-      -- derivative of x*(x+2) is (x+2)+x
       have h1 : HasDerivAt (fun x : ℝ => x) 1 t := hasDerivAt_id t
       have h2 : HasDerivAt (fun x : ℝ => x + 2) 1 t := (hasDerivAt_id t).add_const 2
       have := h1.mul h2
@@ -698,23 +683,17 @@ lemma hasDerivAt_robbinsPoly (t : ℝ) : HasDerivAt robbinsPoly (robbinsPoly' t)
   · ring_nf
 
 lemma robbinsPoly'_pos (t : ℝ) : 0 < robbinsPoly' t := by
-  -- Use a discriminant computation (completing the square).
   have hderiv : deriv robbinsPoly t = robbinsPoly' t := by
     simpa using (hasDerivAt_robbinsPoly t).deriv
-  -- `robbinsPoly'` is a quadratic with negative discriminant.
-  -- We prove positivity by completing the square.
-  -- Setup coefficients.
   let a : ℝ := (28561 / 165888 : ℝ)
   let b : ℝ := (-(130765 / 124416 : ℝ))
   let c : ℝ := (29645 / 10368 : ℝ)
   have ha : 0 < a := by norm_num [a]
   have hD : b ^ 2 - 4 * a * c < 0 := by
-    -- exact rational computation
     norm_num [a, b, c]
   have hquad :
       robbinsPoly' t = a * t ^ 2 + b * t + c := by
     simp [robbinsPoly', a, b, c, pow_two, mul_assoc, mul_comm, sub_eq_add_neg]
-  -- Apply the generic completed-square argument.
   have : 0 < a * t ^ 2 + b * t + c := by
     have ha0 : a ≠ 0 := ne_of_gt ha
     have hsq :
@@ -735,7 +714,6 @@ lemma robbinsPoly'_pos (t : ℝ) : 0 < robbinsPoly' t := by
   simpa [hquad]
 
 lemma robbinsPoly_pos {t : ℝ} (_ht : 0 ≤ t) : 0 < robbinsPoly t := by
-  -- `robbinsPoly` is strictly increasing everywhere, so `robbinsPoly t ≥ robbinsPoly 0 > 0`.
   have hpos_deriv : ∀ x : ℝ, 0 < deriv robbinsPoly x := by
     intro x
     rw [(hasDerivAt_robbinsPoly x).deriv]
@@ -743,15 +721,12 @@ lemma robbinsPoly_pos {t : ℝ} (_ht : 0 ≤ t) : 0 < robbinsPoly t := by
   have hmono : StrictMono robbinsPoly := strictMono_of_deriv_pos hpos_deriv
   have h0 : 0 < robbinsPoly 0 := by
     simp [robbinsPoly]
-  -- since `0 < t`, or `t = 0`, both imply `0 < robbinsPoly t`
   have : 0 ≤ robbinsPoly 0 := le_of_lt h0
   have hle : robbinsPoly 0 ≤ robbinsPoly t := by
     exact (hmono.monotone (by simpa using _ht))
   exact lt_of_lt_of_le h0 hle
 
 lemma robbinsAux''''_nonneg {t : ℝ} (ht : 0 ≤ t) : 0 ≤ robbinsAux'''' t := by
-  -- Rewrite `exp (t * (13/12))` as `exp t * exp (t/12)` and use a cubic lower bound for the
-  -- remaining bracket.
   have hexp13 :
       Real.exp (t * (13 / 12 : ℝ)) = Real.exp t * Real.exp (t * (1 / 12 : ℝ)) := by
     have : t * (13 / 12 : ℝ) = t + t * (1 / 12 : ℝ) := by ring
@@ -768,13 +743,11 @@ lemma robbinsAux''''_nonneg {t : ℝ} (ht : 0 ≤ t) : 0 ≤ robbinsAux'''' t :=
       robbinsPoly t ≤
         Real.exp (t * (1 / 12 : ℝ)) * ((28561 * t + 48334) / 1728) -
           2 * (t ^ 2 + 8 * t + 12) := by
-    -- use `exp u ≥ 1 + u + u^2/2` with `u = t/12`
     have hu : 0 ≤ t * (1 / 12 : ℝ) := by nlinarith [ht]
     have hexp_lb :
         1 + (t * (1 / 12 : ℝ)) + (t * (1 / 12 : ℝ)) ^ 2 / 2 ≤
           Real.exp (t * (1 / 12 : ℝ)) :=
       exp_ge_one_add_sq hu
-    -- multiply by the nonnegative scalar `((28561*t+48334)/1728)`
     have hmul :
         (1 + (t * (1 / 12 : ℝ)) + (t * (1 / 12 : ℝ)) ^ 2 / 2) *
           ((28561 * t + 48334) / 1728)
@@ -787,32 +760,27 @@ lemma robbinsAux''''_nonneg {t : ℝ} (ht : 0 ≤ t) : 0 ≤ robbinsAux'''' t :=
           ≤ Real.exp (t * (1 / 12 : ℝ)) * ((28561 * t + 48334) / 1728) -
             2 * (t ^ 2 + 8 * t + 12) :=
       sub_le_sub_right hmul _
-    -- show the LHS equals `robbinsPoly t`
     have :
         (1 + (t * (1 / 12 : ℝ)) + (t * (1 / 12 : ℝ)) ^ 2 / 2) *
           ((28561 * t + 48334) / 1728)
           - 2 * (t ^ 2 + 8 * t + 12) = robbinsPoly t := by
-      -- purely algebraic normalization
       unfold robbinsPoly
       ring
-    grind --simpa [this] using hsub
+    grind
   have hpoly_pos : 0 < robbinsPoly t := robbinsPoly_pos (t := t) ht
   have hbracket :
       0 ≤ Real.exp (t * (1 / 12 : ℝ)) * ((28561 * t + 48334) / 1728) -
         2 * (t ^ 2 + 8 * t + 12) :=
     le_of_lt (lt_of_lt_of_le hpoly_pos hExpLower)
-  -- finish: `robbinsAux''''` is `exp t * bracket + exp(t/12) * ((t+50)/1728)`
   have hterm2 : 0 ≤ Real.exp (t * (1 / 12 : ℝ)) * ((t + 50) / 1728) := by
     have : 0 ≤ (t + 50) / 1728 := by nlinarith [ht]
     exact mul_nonneg (Real.exp_pos _).le this
-  -- rewrite and conclude
   have : robbinsAux'''' t =
       Real.exp t *
         (Real.exp (t * (1 / 12 : ℝ)) * ((28561 * t + 48334) / 1728) -
           2 * (t ^ 2 + 8 * t + 12))
         + Real.exp (t * (1 / 12 : ℝ)) * ((t + 50) / 1728) := by
     unfold robbinsAux''''
-    -- use `hexp13` and `ring`
     simp [hexp13, mul_add, add_mul, mul_assoc, mul_left_comm, mul_comm, sub_eq_add_neg]
     ring
   rw [this]
@@ -852,11 +820,9 @@ lemma robbinsAux_nonneg {t : ℝ} (ht : 0 ≤ t) : 0 ≤ robbinsAux t := by
 
 theorem Ktilde_ge_one_div_twelve_mul_exp_neg_div_twelve {t : ℝ} (ht : 0 < t) :
     (1 / 12 : ℝ) * Real.exp (-t / 12) ≤ Ktilde t := by
-  -- Rewrite `Ktilde t` via the `f`-formula and reduce to `robbinsAux_nonneg`.
   have ht0 : 0 ≤ t := le_of_lt ht
   have hexp : 0 < Real.exp t - 1 := exp_sub_one_pos ht
   have hK : Ktilde t = f t / (2 * t ^ 2 * (Real.exp t - 1)) := by
-    -- same algebra as in `Ktilde_le`
     calc
       Ktilde t = (1 / (Real.exp t - 1) - 1 / t + 1 / 2) / t := Ktilde_pos ht
       _ = (Real.exp t * (t - 2) + t + 2) / (2 * t * (Real.exp t - 1)) / t := by
@@ -865,53 +831,36 @@ theorem Ktilde_ge_one_div_twelve_mul_exp_neg_div_twelve {t : ℝ} (ht : 0 < t) :
             unfold f
             field_simp
   rw [hK]
-  -- Convert to `2*t^2*(exp t - 1) ≤ 12*exp(t/12)*f t`.
   have hdenom : 0 < (2 * t ^ 2 * (Real.exp t - 1)) := by positivity
-  -- multiply the desired inequality by the positive scalar `12*exp(t/12)*(2*t^2*(exp t -1))`
   have hmain :
       2 * t ^ 2 * (Real.exp t - 1) ≤ 12 * Real.exp (t * (1 / 12 : ℝ)) * f t := by
-    -- this is exactly `robbinsAux_nonneg` after expanding `robbinsAux`
     have h0 : 0 ≤ robbinsAux t := robbinsAux_nonneg (t := t) ht0
-    -- rewrite `robbinsAux` into the target inequality
     have hrobbins :
         robbinsAux t = 12 * Real.exp (t * (1 / 12 : ℝ)) * f t - 2 * t ^ 2 * (Real.exp t - 1) := by
-      -- unfold and simplify
       unfold robbinsAux f
-      -- use `exp_add` to rewrite `exp(t + t/12)` as product
       have : t * (13 / 12 : ℝ) = t + t * (1 / 12 : ℝ) := by ring
       simp [this, Real.exp_add, mul_assoc, mul_left_comm, mul_comm, sub_eq_add_neg]
       ring
-    -- conclude
     have : 2 * t ^ 2 * (Real.exp t - 1) ≤ 12 * Real.exp (t * (1 / 12 : ℝ)) * f t := by
-      -- `0 ≤ A - B` implies `B ≤ A`
       have : 0 ≤ 12 * Real.exp (t * (1 / 12 : ℝ)) * f t - 2 * t ^ 2 * (Real.exp t - 1) := by
         simpa [hrobbins] using h0
       exact sub_nonneg.1 this
     simpa [mul_assoc, mul_left_comm, mul_comm] using this
-  -- divide both sides by the positive denominator
-  -- and rewrite `exp(-t/12)` as inverse.
   have : (1 / 12 : ℝ) * Real.exp (-t / 12) ≤ f t / (2 * t ^ 2 * (Real.exp t - 1)) := by
-    -- start from `le_div_iff₀`
     have : ((1 / 12 : ℝ) * Real.exp (-t / 12)) * (2 * t ^ 2 * (Real.exp t - 1)) ≤ f t := by
-      -- multiply `hmain` by `exp(-t/12)/12` and simplify
       have hexp' : Real.exp (-t / 12) = (Real.exp (t * (1 / 12 : ℝ)))⁻¹ := by
-        -- `exp(-a)= (exp a)⁻¹`
         have : (-t / 12 : ℝ) = -(t * (1 / 12 : ℝ)) := by ring
         simp [this, Real.exp_neg]
-      -- use `hmain` and rearrange
       have hmain' :
           ((1 / 12 : ℝ) * Real.exp (-t / 12)) * (2 * t ^ 2 * (Real.exp t - 1))
             ≤ ((1 / 12 : ℝ) * Real.exp (-t / 12)) *
               (12 * Real.exp (t * (1 / 12 : ℝ)) * f t) := by
         exact mul_le_mul_of_nonneg_left hmain (by positivity)
-      -- simplify RHS to `f t`
-      -- `((1/12)*exp(-t/12))*(12*exp(t/12)*f t) = f t`
       calc
         ((1 / 12 : ℝ) * Real.exp (-t / 12)) * (2 * t ^ 2 * (Real.exp t - 1))
             ≤ ((1 / 12 : ℝ) * Real.exp (-t / 12)) *
               (12 * Real.exp (t * (1 / 12 : ℝ)) * f t) := hmain'
         _ = f t := by
-            -- Cancel the exponential factors and `12` by a clean algebraic rearrangement.
             have hExp : Real.exp (-t / 12) * Real.exp (t * (1 / 12 : ℝ)) = 1 := by
               have : (-t / 12 : ℝ) + (t * (1 / 12 : ℝ)) = 0 := by ring
               have := congrArg Real.exp this
@@ -926,14 +875,11 @@ theorem Ktilde_ge_one_div_twelve_mul_exp_neg_div_twelve {t : ℝ} (ht : 0 < t) :
                       simp [mul_assoc]
               _ = f t := by
                       simpa [mul_assoc] using congrArg (fun z => z * f t) hExp
-    -- now conclude by dividing by the positive denominator
     have :
         (1 / 12 : ℝ) * Real.exp (-t / 12) ≤
           f t / (2 * t ^ 2 * (Real.exp t - 1)) := by
       exact (le_div_iff₀ hdenom).2 this
     exact this
-  -- and finish with the rewritten `Ktilde`
   exact this
 
 end BinetKernel
-

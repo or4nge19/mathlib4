@@ -104,6 +104,7 @@ alias HasProdUniformlyOn.tprod_eq := HasProdUniformlyOn.tprod_eqOn
 @[deprecated (since := "2025-11-23")]
 alias HasSumUniformlyOn.tsum_eq := HasSumUniformlyOn.tsum_eqOn
 
+@[to_additive]
 theorem MultipliableUniformlyOn.multipliable (h : MultipliableUniformlyOn f s) (hx : x ∈ s) :
     Multipliable (f · x) :=
   (h.exists.choose_spec.hasProd hx).multipliable

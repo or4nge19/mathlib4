@@ -5,9 +5,11 @@ Authors: Matteo Cipollina
 -/
 module
 
+public import Mathlib.Analysis.Complex.Basic
 public import Mathlib.Analysis.Complex.Norm
 public import Mathlib.Analysis.SpecialFunctions.Gamma.StripBounds
 public import Mathlib.Analysis.SpecialFunctions.Log.PosLog
+public import Mathlib.Analysis.SpecialFunctions.Pow.Real
 public import Mathlib.NumberTheory.LSeries.RiemannZeta
 public import Mathlib.NumberTheory.LSeries.HurwitzZetaValues
 public import Mathlib.Analysis.Real.Pi.Bounds
@@ -32,7 +34,10 @@ The key ingredients are:
 
 ## Main results
 
-* `completedRiemannZeta₀_order_one` : `EntireOfOrderAtMost 1` for `completedRiemannZeta₀`
+* `completedRiemannZeta₀_order_one` : growth bound implying order at most one for
+  `completedRiemannZeta₀`
+* `completedRiemannZeta₀_entireOfOrderAtMost_one` (in `RiemannZetaHadamard`) : packaged as
+  `Complex.Hadamard.EntireOfOrderAtMost`
 * `zeta_minus_pole_entire_growth` : a coarse global bound for the removable extension of
   `(s - 1)ζ(s)`.
 -/
@@ -45,6 +50,61 @@ open Complex Set Filter Topology Metric
 open scoped Real
 
 namespace Complex
+
+section ZetaNormBounds
+
+/-- Subtracting `1` is bounded by the triangle inequality. -/
+private lemma norm_sub_one_le_one_add_norm (z : ℂ) : ‖z - 1‖ ≤ 1 + ‖z‖ := by
+  have h1 : ‖(1 : ℂ)‖ = 1 := by simp
+  simpa [h1, add_comm, add_left_comm, add_assoc] using norm_sub_le z (1 : ℂ)
+
+/-- For `0 ≤ p`, one has `1 ≤ (1 + ‖z‖)^p`. -/
+private theorem one_le_one_add_norm_rpow (z : ℂ) {p : ℝ} (hp : 0 ≤ p) :
+    (1 : ℝ) ≤ (1 + ‖z‖) ^ p := by
+  have hz1 : (1 : ℝ) ≤ 1 + ‖z‖ := by linarith [norm_nonneg z]
+  exact Real.one_le_rpow hz1 hp
+
+/-- If `0 ≤ re w`, then `‖(2π)^(-w)‖ ≤ 1`. -/
+private theorem norm_two_pi_cpow_neg_le_one_of_re_nonneg {w : ℂ} (hw : 0 ≤ w.re) :
+    ‖(2 * π : ℂ) ^ (-w)‖ ≤ 1 := by
+  have hbase : (1 : ℝ) ≤ 2 * Real.pi := by
+    have : (1 : ℝ) < 2 * Real.pi := by
+      have : (3 : ℝ) < Real.pi := Real.pi_gt_three
+      nlinarith
+    exact le_of_lt this
+  have hbase_pos : (0 : ℝ) < 2 * Real.pi := by nlinarith [Real.pi_pos]
+  have hnorm : ‖(2 * π : ℂ) ^ (-w)‖ = (2 * Real.pi) ^ ((-w : ℂ).re) := by
+    simpa using norm_cpow_eq_rpow_re_of_pos (x := 2 * Real.pi) hbase_pos (-w)
+  rw [hnorm]
+  have : ((-w : ℂ).re : ℝ) ≤ 0 := neg_nonpos.mpr hw
+  exact Real.rpow_le_one_of_one_le_of_nonpos hbase this
+
+/-- The reflected point `1 - z` has norm at most `1 + ‖z‖`. -/
+private lemma norm_one_sub_le_one_add_norm (z : ℂ) : ‖1 - z‖ ≤ 1 + ‖z‖ := by
+  have h1 : ‖(1 : ℂ)‖ = 1 := by simp
+  simpa [h1, add_comm, add_left_comm, add_assoc] using norm_sub_le (1 : ℂ) z
+
+/-- If `re z > 1/10`, then `‖z‖ / re z ≤ 10 * ‖z‖`. -/
+private lemma norm_div_re_le_ten_mul_norm {z : ℂ} (hz : (1 / 10 : ℝ) < z.re) :
+    ‖z‖ / z.re ≤ 10 * ‖z‖ := by
+  have hz_re_le : (1 : ℝ) / z.re ≤ 10 := by
+    have hpos : (0 : ℝ) < 1 / 10 := by norm_num
+    have hz_ge : (1 / 10 : ℝ) ≤ z.re := le_of_lt hz
+    simpa using one_div_le_one_div_of_le hpos hz_ge
+  have : ‖z‖ / z.re ≤ ‖z‖ * 10 := by
+    simpa [div_eq_mul_inv, mul_assoc, mul_left_comm, mul_comm]
+      using mul_le_mul_of_nonneg_left hz_re_le (norm_nonneg z)
+  simpa [mul_comm] using this
+
+/-- If `‖z‖ > 3`, then the reflected point `1 - z` has norm at least `1`. -/
+private lemma one_le_norm_one_sub_of_three_lt_norm {z : ℂ} (hz : 3 < ‖z‖) :
+    (1 : ℝ) ≤ ‖1 - z‖ := by
+  have hge : (‖z‖ - 1 : ℝ) ≤ ‖1 - z‖ := by
+    have h1 : ‖(1 : ℂ)‖ = 1 := by simp
+    simpa [h1, norm_sub_rev] using norm_sub_norm_le z (1 : ℂ)
+  linarith
+
+end ZetaNormBounds
 
 /-! ### Finite order of the completed zeta function -/
 
@@ -230,7 +290,7 @@ theorem completedRiemannZeta₀_order_one :
     have htransfer : ‖completedRiemannZeta₀ z‖ = ‖completedRiemannZeta₀ w‖ := by
       simp [hw_eq]
     have hz_base : (1 : ℝ) ≤ (1 + ‖z‖) ^ (1 + ε) :=
-      Complex.one_le_one_add_norm_rpow (z := z) (by linarith [le_of_lt hε])
+      one_le_one_add_norm_rpow (z := z) (by linarith [le_of_lt hε])
     by_cases hw_small : ‖w‖ ≤ 3
     · have hbw : ‖completedRiemannZeta₀ w‖ ≤ M := hM w hw_small
       have hlogC : Real.log (M + 1) ≤ C := by
@@ -572,7 +632,7 @@ theorem zeta_minus_pole_entire_growth :
         by_cases hz_re : (1 / 10 : ℝ) < z.re
         · have hζ := norm_riemannZeta_le z hz_re hz_ne1
           have hzm1_le : ‖z - 1‖ ≤ A := by
-            simpa [A] using Complex.norm_sub_one_le_one_add_norm z
+            simpa [A] using norm_sub_one_le_one_add_norm z
           have hfrac : ‖z‖ / z.re ≤ 10 * ‖z‖ :=
             norm_div_re_le_ten_mul_norm hz_re
           have hpoly :
@@ -633,7 +693,7 @@ theorem zeta_minus_pole_entire_growth :
                 2 * (2 * π) ^ (-w) * Complex.Gamma w * Complex.cos (π * w / 2) * riemannZeta w := by
             exact riemannZeta_eq_reflected (by simp [w]) hw_ne_neg hw_ne1
           have hpow_le1 : ‖(2 * π : ℂ) ^ (-w)‖ ≤ 1 :=
-            Complex.norm_two_pi_cpow_neg_le_one_of_re_nonneg hw_re0
+            norm_two_pi_cpow_neg_le_one_of_re_nonneg hw_re0
           have hw_norm_le : ‖w‖ ≤ A := by
             simpa [w, A] using norm_one_sub_le_one_add_norm z
           have hw_norm_ge1 : (1 : ℝ) ≤ ‖w‖ := by

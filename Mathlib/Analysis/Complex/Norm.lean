@@ -122,62 +122,6 @@ lemma norm_ofNat (n : ℕ) [n.AtLeastTwo] :
 
 protected lemma norm_two : ‖(2 : ℂ)‖ = 2 := norm_ofNat 2
 
-/-- Subtracting `1` is bounded by the triangle inequality. -/
-lemma norm_sub_one_le_one_add_norm (z : ℂ) : ‖z - 1‖ ≤ 1 + ‖z‖ := by
-  have h1 : ‖(1 : ℂ)‖ = 1 := by
-    simpa using (norm_natCast 1)
-  simpa [h1, add_comm, add_left_comm, add_assoc] using (norm_sub_le z (1 : ℂ))
-
-/-- For `0 ≤ p`, one has `1 ≤ (1 + ‖z‖)^p`. -/
-theorem one_le_one_add_norm_rpow (z : ℂ) {p : ℝ} (hp : 0 ≤ p) : (1 : ℝ) ≤ (1 + ‖z‖) ^ p := by
-  have hz1 : (1 : ℝ) ≤ 1 + ‖z‖ := by linarith [norm_nonneg z]
-  exact Real.one_le_rpow hz1 hp
-
-/-- If `0 ≤ re w`, then `‖(2π)^(-w)‖ ≤ 1`. -/
-theorem norm_two_pi_cpow_neg_le_one_of_re_nonneg {w : ℂ} (hw : 0 ≤ w.re) :
-    ‖(2 * π : ℂ) ^ (-w)‖ ≤ 1 := by
-  have hbase : (1 : ℝ) ≤ 2 * Real.pi := by
-    have : (1 : ℝ) < 2 * Real.pi := by
-      have : (3 : ℝ) < Real.pi := Real.pi_gt_three
-      nlinarith
-    exact le_of_lt this
-  have hbase_pos : (0 : ℝ) < 2 * Real.pi := by nlinarith [Real.pi_pos]
-  have hnorm :
-      ‖(2 * π : ℂ) ^ (-w)‖ = (2 * Real.pi) ^ ((-w : ℂ).re) := by
-    simpa using (norm_cpow_eq_rpow_re_of_pos (x := 2 * Real.pi) hbase_pos (-w))
-  rw [hnorm]
-  have : ((-w : ℂ).re : ℝ) ≤ 0 := neg_nonpos.mpr hw
-  exact Real.rpow_le_one_of_one_le_of_nonpos hbase this
-
-/-- The reflected point `1 - z` has norm at most `1 + ‖z‖`. -/
-lemma norm_one_sub_le_one_add_norm (z : ℂ) : ‖1 - z‖ ≤ 1 + ‖z‖ := by
-  have h1 : ‖(1 : ℂ)‖ = 1 := by
-    simpa using (norm_natCast 1)
-  simpa [h1, add_comm, add_left_comm, add_assoc] using (norm_sub_le (1 : ℂ) z)
-
-/-- If `re z > 1/10`, then `‖z‖ / re z ≤ 10 * ‖z‖`. -/
-lemma norm_div_re_le_ten_mul_norm {z : ℂ} (hz : (1 / 10 : ℝ) < z.re) :
-    ‖z‖ / z.re ≤ 10 * ‖z‖ := by
-  have hz_re_le : (1 : ℝ) / z.re ≤ 10 := by
-    have hpos : (0 : ℝ) < 1 / 10 := by norm_num
-    have hz_ge : (1 / 10 : ℝ) ≤ z.re := le_of_lt hz
-    simpa using one_div_le_one_div_of_le hpos hz_ge
-  have : ‖z‖ / z.re ≤ ‖z‖ * 10 := by
-    simpa [div_eq_mul_inv, mul_assoc, mul_left_comm, mul_comm]
-      using mul_le_mul_of_nonneg_left hz_re_le (norm_nonneg z)
-  simpa [mul_comm] using this
-
-/-- If `‖z‖ > 3`, then the reflected point `1 - z` has norm at least `1`. -/
-lemma one_le_norm_one_sub_of_three_lt_norm {z : ℂ} (hz : 3 < ‖z‖) :
-    (1 : ℝ) ≤ ‖1 - z‖ := by
-  have hge : (‖z‖ - 1 : ℝ) ≤ ‖1 - z‖ := by
-    have := norm_sub_norm_le z (1 : ℂ)
-    have h1 : ‖(1 : ℂ)‖ = 1 := by
-      simpa using (norm_natCast 1)
-    simpa [h1, norm_sub_rev] using this
-  have : (2 : ℝ) < ‖z‖ - 1 := by linarith
-  linarith
-
 @[simp 1100, norm_cast]
 lemma nnnorm_natCast (n : ℕ) : ‖(n : ℂ)‖₊ = n := Subtype.ext <| by simp [norm_natCast]
 

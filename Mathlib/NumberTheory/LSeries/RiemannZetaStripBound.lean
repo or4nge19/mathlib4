@@ -11,7 +11,8 @@ public import Mathlib.NumberTheory.LSeries.RiemannZetaConvexity
 # Strip bounds for the Riemann zeta function
 
 Entry point for bounds on `riemannZeta` used in `ZetaFiniteOrder` (finite order of
-`completedRiemannZeta₀`). Proofs are in `RiemannZetaConvexity`.
+`completedRiemannZeta₀`). Proofs are in `RiemannZetaConvexity` and
+`RiemannZetaAbelContinuation`.
 
 ## Main results
 

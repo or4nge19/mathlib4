@@ -26,6 +26,40 @@ namespace Complex.Hadamard
 open scoped BigOperators
 open Filter Finset Real Topology
 
+section CartanFiniteSum
+
+variable {α : Type*}
+
+/-- A function supported on a finite set is summable. -/
+private lemma summable_ite_mem_finset [DecidableEq α] (s : Finset α) (u : α → ℝ) :
+    Summable (fun a => if a ∈ s then u a else 0) :=
+  summable_of_ne_finset_zero (s := s) fun a ha => by simp [if_neg ha]
+
+/-- The tsum of a finset-supported function is the finset sum. -/
+private lemma tsum_ite_mem_finset [DecidableEq α] (s : Finset α) (u : α → ℝ) :
+    (∑' a, if a ∈ s then u a else 0) = ∑ a ∈ s, u a := by
+  classical
+  simpa [Finset.sum_ite] using
+    (hasSum_sum_of_ne_finset_zero (s := s) (f := fun a => if a ∈ s then u a else 0)
+      fun a ha => by simp [if_neg ha]).tsum_eq
+
+/-- Split a tsum of four summable summands. -/
+private lemma tsum_add_four (u₁ u₂ u₃ u₄ : α → ℝ)
+    (h₁ : Summable u₁) (h₂ : Summable u₂) (h₃ : Summable u₃) (h₄ : Summable u₄) :
+    tsum (fun a => ((u₁ a + u₂ a) + u₃ a) + u₄ a)
+      = tsum u₁ + tsum u₂ + tsum u₃ + tsum u₄ := by
+  calc
+    tsum (fun a => ((u₁ a + u₂ a) + u₃ a) + u₄ a)
+        = tsum (fun a => (u₁ a + u₂ a) + (u₃ a + u₄ a)) := by
+          simp [add_comm, add_left_comm]
+    _ = tsum (fun a => u₁ a + u₂ a) + tsum (fun a => u₃ a + u₄ a) :=
+        Summable.tsum_add (h₁.add h₂) (h₃.add h₄)
+    _ = tsum u₁ + tsum u₂ + tsum u₃ + tsum u₄ := by
+        rw [Summable.tsum_add h₁ h₂, Summable.tsum_add h₃ h₄]
+        ring
+
+end CartanFiniteSum
+
 /-- The Cartan product constant used in the Hadamard minimum-modulus bounds. -/
 noncomputable def cartanProductConstant (m : ℕ) (τ Sτ : ℝ) : ℝ :=
   ((CartanBound.Cφ + (2 : ℝ) * m) * (4 : ℝ) ^ τ + 3) * (Sτ + 1)

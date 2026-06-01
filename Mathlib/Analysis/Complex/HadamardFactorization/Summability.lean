@@ -393,16 +393,6 @@ lemma divisorMassClosedBall₀_le_of_growth {f : ℂ → ℂ} {ρ : ℝ}
     exact (le_div_iff₀ hlog2pos).2 hx
   simpa [divisorMassClosedBall₀] using this
 
-/-- Same as `divisorMassClosedBall₀_le_of_growth` (see [tao246bComplexAnalysis], Proposition 8). -/
-theorem tao_proposition_8_divisorMass_le_of_growth {f : ℂ → ℂ} {ρ : ℝ}
-    (hf : Differentiable ℂ f)
-    (hgrowth : ∃ C > 0, ∀ z : ℂ, Real.log (1 + ‖f z‖) ≤ C * (1 + ‖z‖) ^ ρ)
-    {R : ℝ} (hR : 1 ≤ R) :
-    divisorMassClosedBall₀ f R
-      ≤ ((Classical.choose hgrowth) * (1 + |2 * R|) ^ ρ
-          + |Real.log ‖meromorphicTrailingCoeffAt f 0‖|) / (Real.log 2) :=
-  divisorMassClosedBall₀_le_of_growth hf hgrowth hR
-
 lemma divisorMassClosedBall₀_mono {f : ℂ → ℂ} (hf : Differentiable ℂ f)
     {R₁ R₂ : ℝ} (hR₁ : 0 ≤ R₁) (hR₁₂ : R₁ ≤ R₂) :
     divisorMassClosedBall₀ f R₁ ≤ divisorMassClosedBall₀ f R₂ := by

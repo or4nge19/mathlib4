@@ -174,7 +174,9 @@ theorem re_J_lt_one_div_twelve {x : ℝ} (hx : 0 < x) :
       have : h t ≠ 0 := by
         have : 0 < h t := by
           dsimp [h, f, g]
-          have hlt : BinetKernel.Ktilde t * Real.exp (-t * x) < (1 / 12 : ℝ) * Real.exp (-t * x) := by
+          have hlt :
+              BinetKernel.Ktilde t * Real.exp (-t * x) <
+                (1 / 12 : ℝ) * Real.exp (-t * x) := by
             exact mul_lt_mul_of_pos_right hK hE
           exact sub_pos.2 hlt
         exact ne_of_gt this

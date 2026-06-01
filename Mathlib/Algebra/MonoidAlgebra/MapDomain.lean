@@ -5,9 +5,7 @@ Authors: Johannes Hölzl, Yury Kudryashov, Kim Morrison
 -/
 module
 
-
 public import Mathlib.Algebra.MonoidAlgebra.Defs
-
 
 /-!
 # Maps of monoid algebras

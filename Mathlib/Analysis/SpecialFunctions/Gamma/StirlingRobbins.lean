@@ -46,15 +46,6 @@ namespace Stirling
 
 /-! ## Section 1: Setup and basic facts -/
 
-/-- For n ≥ 1, Γ(n+1) = n!. -/
-lemma Gamma_nat_eq_factorial (n : ℕ) : Real.Gamma (n + 1) = n.factorial := by
-  exact_mod_cast Real.Gamma_nat_eq_factorial n
-
-/-- log(n!) = log Γ(n+1) for n ≥ 1. -/
-lemma log_factorial_eq_log_Gamma {n : ℕ} (_hn : 0 < n) :
-    Real.log (n.factorial : ℝ) = Real.log (Real.Gamma (n + 1)) := by
-  rw [Gamma_nat_eq_factorial]
-
 /-- For `n ≥ 1`, `log(n!) = log n + log Γ(n)`. -/
 lemma log_factorial_eq_log_nat_add_log_Gamma {n : ℕ} (hn : 0 < n) :
     Real.log (n.factorial : ℝ) = Real.log (n : ℝ) + Real.log (Real.Gamma n) := by
@@ -112,8 +103,8 @@ theorem log_factorial_theta {n : ℕ} (hn : 0 < n) :
 
 /-! ## Section 3: Upper bound -/
 
-/-- Helper for exp(log x / 2) = sqrt x. -/
-lemma exp_half_log {x : ℝ} (hx : 0 < x) :
+/-- Helper for `exp(log x / 2) = sqrt x`. -/
+private lemma exp_half_log {x : ℝ} (hx : 0 < x) :
     Real.exp (Real.log x / 2) = Real.sqrt x := by
   rw [Real.sqrt_eq_rpow]
   rw [Real.rpow_def_of_pos hx]
@@ -175,7 +166,7 @@ theorem factorial_upper_robbins (n : ℕ) (hn : 0 < n) :
 /-! ## Section 4: Lower bound -/
 
 /-- Combine the two exponential factors in the Robbins lower-bound integrand. -/
-lemma exp_neg_div_twelve_mul_exp_neg_mul (x t : ℝ) :
+private lemma exp_neg_div_twelve_mul_exp_neg_mul (x t : ℝ) :
     Real.exp (-t / 12) * Real.exp (-t * x) = Real.exp (-t * (x + 1 / 12)) := by
   rw [← Real.exp_add]
   congr 1

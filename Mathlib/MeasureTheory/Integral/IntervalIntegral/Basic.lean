@@ -1186,6 +1186,16 @@ theorem integral_congr_ae (h : ∀ᵐ x ∂μ, x ∈ Ι a b → f x = g x) :
     ∫ x in a..b, f x ∂μ = ∫ x in a..b, g x ∂μ :=
   integral_congr_ae' (ae_uIoc_iff.mp h).1 (ae_uIoc_iff.mp h).2
 
+/-- If two functions agree on `Ioc a b`, their interval integrals agree. -/
+theorem integral_congr_Ioc_of_le {a b : ℝ} (hab : a ≤ b)
+    (h : ∀ u ∈ Ioc a b, f u = g u) :
+    ∫ u in a..b, f u ∂μ = ∫ u in a..b, g u ∂μ := by
+  refine integral_congr_ae' (Filter.Eventually.of_forall ?_) (Filter.Eventually.of_forall ?_) <;>
+    intro u hu
+  · exact h u hu
+  · have hempty : Ioc b a = ∅ := Ioc_eq_empty hab.not_gt
+    exact (hempty ▸ hu).elim
+
 /-- Integrals are equal for functions that agree almost everywhere for the restricted measure. -/
 theorem integral_congr_ae_restrict {a b : ℝ} {f g : ℝ → E} {μ : Measure ℝ}
     (h : f =ᵐ[μ.restrict (Ι a b)] g) :

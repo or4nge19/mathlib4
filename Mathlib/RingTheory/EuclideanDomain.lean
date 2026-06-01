@@ -5,12 +5,10 @@ Authors: Mario Carneiro, Chris Hughes
 -/
 module
 
-
 public import Mathlib.Algebra.GCDMonoid.Basic
 public import Mathlib.Algebra.EuclideanDomain.Basic
 public import Mathlib.RingTheory.Ideal.Basic
 public import Mathlib.RingTheory.PrincipalIdealDomain
-
 
 /-!
 # Lemmas about Euclidean domains

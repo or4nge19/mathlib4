@@ -175,6 +175,12 @@ lemma IntegrableOn.of_bound (hs : μ s < ∞) {f : α → E} (hf : AEStronglyMea
     (C : ℝ) (hfC : ∀ᵐ x ∂μ.restrict s, ‖f x‖ ≤ C) : IntegrableOn f s μ :=
   ⟨hf, .restrict_of_bounded C hs hfC⟩
 
+/-- If `‖f x‖ ≤ g x` a.e. on `s` and `g` is integrable on `s`, then so is `f`. -/
+lemma IntegrableOn.mono' {f : α → E} {g : α → ℝ} (hg : IntegrableOn g s μ)
+    (hf : AEStronglyMeasurable f (μ.restrict s))
+    (h : ∀ᵐ x ∂μ.restrict s, ‖f x‖ ≤ g x) : IntegrableOn f s μ := by
+  exact Integrable.mono' hg hf h
+
 theorem IntegrableOn.restrict (h : IntegrableOn f s μ) : IntegrableOn f s (μ.restrict t) := by
   dsimp only [IntegrableOn] at h ⊢
   exact h.mono_measure <| Measure.restrict_mono_measure Measure.restrict_le_self _
