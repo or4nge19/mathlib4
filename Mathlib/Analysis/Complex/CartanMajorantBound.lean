@@ -5,7 +5,7 @@ Authors: Matteo Cipollina
 -/
 module
 
-public import Mathlib.Topology.Algebra.InfiniteSum.Real
+public import Mathlib.Topology.Algebra.InfiniteSum.Finset
 public import Mathlib.Analysis.Complex.Divisor
 public import Mathlib.Analysis.Complex.CartanBound
 
@@ -26,45 +26,19 @@ namespace Complex.Hadamard
 open scoped BigOperators
 open Filter Finset Real Topology
 
-lemma summable_of_eq_zero_not_mem_finset {α : Type*} (s : Finset α) (u : α → ℝ)
-    (hu : ∀ a, a ∉ s → u a = 0) :
-    Summable u := by
-  classical
-  refine summable_of_hasFiniteSupport ?_
-  refine (Finset.finite_toSet s).subset ?_
-  intro a ha
-  by_contra hs
-  exact ha (by simp [hu a hs])
+/-- The Cartan product constant used in the Hadamard minimum-modulus bounds. -/
+noncomputable def cartanProductConstant (m : ℕ) (τ Sτ : ℝ) : ℝ :=
+  ((CartanBound.Cφ + (2 : ℝ) * m) * (4 : ℝ) ^ τ + 3) * (Sτ + 1)
 
-lemma summable_ite_mem_finset {α : Type*} [DecidableEq α] (s : Finset α) (u : α → ℝ) :
-    Summable (fun a => if a ∈ s then u a else 0) :=
-  summable_of_eq_zero_not_mem_finset s _ (by intro a ha; simp [ha])
-
-lemma tsum_ite_mem_finset {α : Type*} [DecidableEq α] (s : Finset α) (u : α → ℝ) :
-    (∑' a, if a ∈ s then u a else 0) = ∑ a ∈ s, u a := by
-  simpa using
-    (tsum_eq_sum (s := s) (f := fun a => if a ∈ s then u a else 0)
-      (by intro a ha; simp [ha]))
-
-lemma tsum_add_four {α : Type*} (u₁ u₂ u₃ u₄ : α → ℝ)
-    (h₁ : Summable u₁) (h₂ : Summable u₂) (h₃ : Summable u₃) (h₄ : Summable u₄) :
-    tsum (fun a => ((u₁ a + u₂ a) + u₃ a) + u₄ a)
-      = tsum u₁ + tsum u₂ + tsum u₃ + tsum u₄ := by
-  have h12 :
-      tsum (fun a => u₁ a + u₂ a) = tsum u₁ + tsum u₂ :=
-    Summable.tsum_add h₁ h₂
-  have h34 :
-      tsum (fun a => u₃ a + u₄ a) = tsum u₃ + tsum u₄ :=
-    Summable.tsum_add h₃ h₄
-  calc
-    tsum (fun a => ((u₁ a + u₂ a) + u₃ a) + u₄ a)
-        = tsum (fun a => (u₁ a + u₂ a) + (u₃ a + u₄ a)) := by
-            simp [add_comm, add_left_comm]
-    _ = tsum (fun a => u₁ a + u₂ a) + tsum (fun a => u₃ a + u₄ a) :=
-        Summable.tsum_add (h₁.add h₂) (h₃.add h₄)
-    _ = tsum u₁ + tsum u₂ + tsum u₃ + tsum u₄ := by
-        rw [h12, h34]
-        ring
+lemma cartanProductConstant_nonneg {m : ℕ} {τ Sτ : ℝ} (hSτ : 0 ≤ Sτ) :
+    0 ≤ cartanProductConstant m τ Sτ := by
+  have hS : 0 ≤ Sτ + 1 := by linarith
+  have hA : 0 ≤ (CartanBound.Cφ + (2 : ℝ) * m) * (4 : ℝ) ^ τ + 3 := by
+    have hCφ : 0 ≤ CartanBound.Cφ := le_of_lt CartanBound.Cφ_pos
+    have hm0 : 0 ≤ (m : ℝ) := by exact_mod_cast (Nat.zero_le m)
+    have h4τ : 0 ≤ (4 : ℝ) ^ τ := by positivity
+    nlinarith [hCφ, hm0, h4τ]
+  simpa [cartanProductConstant] using mul_nonneg hA hS
 
 lemma rpow_div_norm_divisorZeroIndex₀_eq
     {f : ℂ → ℂ} {r τ : ℝ} (hr : 0 ≤ r)
@@ -385,7 +359,7 @@ theorem cartan_sum_majorant_le
         else
           (2 : ℝ) * (r / ap p) ^ τ
     let Sτ : ℝ := ∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ), ‖divisorZeroIndex₀_val p‖⁻¹ ^ τ
-    let Cprod : ℝ := ((CartanBound.Cφ + (2 : ℝ) * m) * (4 : ℝ) ^ τ + 3) * (Sτ + 1)
+    let Cprod : ℝ := cartanProductConstant m τ Sτ
     ∀ s : Finset (divisorZeroIndex₀ f (Set.univ : Set ℂ)),
       (∑ p ∈ s, b p) ≤ Cprod * (1 + r) ^ τ := by
   classical
@@ -600,7 +574,7 @@ theorem cartan_sum_majorant_le
     have hCprod' :
         (((CartanBound.Cφ + (2 : ℝ) * m) * (4 : ℝ) ^ τ + 2) * (Sτ + 1)) * (1 + r) ^ τ
           ≤ Cprod * (1 + r) ^ τ := by
-      simpa [Cprod, mul_assoc, mul_left_comm, mul_comm] using
+      simpa [Cprod, cartanProductConstant, mul_assoc, mul_left_comm, mul_comm] using
         cartan_majorant_pad_two_to_three
           (A := (CartanBound.Cφ + (2 : ℝ) * m) * (4 : ℝ) ^ τ)
           (S := Sτ) (T := (1 + r) ^ τ) hS (by positivity)

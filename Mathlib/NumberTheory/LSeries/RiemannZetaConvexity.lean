@@ -14,11 +14,19 @@ public import Mathlib.Topology.Metrizable.Basic
 public import Mathlib.Topology.Compactness.Lindelof
 public import Mathlib.Topology.MetricSpace.Basic
 
+set_option linter.style.longFile 3700
+
 /-!
 # Bounds for the Riemann zeta function
 
-This file develops Euler product estimates, Abel summation lemmas, and strip bounds used in the
-finite-order estimates for the completed Riemann zeta function.
+Euler product estimates, Abel-summation continuation, and strip bounds for `riemannZeta`, used in
+`ZetaFiniteOrder`.
+
+## Main results
+
+* `norm_riemannZeta_le`, `norm_riemannZeta_shift_le` : strip bounds for the Λ₀ pipeline
+* `norm_riemannZeta_ratio_le_on_vertical_line` : convexity input on vertical lines
+* `riemannZeta_eq_zetaContinuationAux` : Abel formula for `1/10 < re s`, `s ≠ 1`
 -/
 
 @[expose] public section
@@ -652,9 +660,10 @@ lemma abs_zeta_ratio_eval : norm (riemannZeta 3 / riemannZeta ((3 : ℝ) / 2)) =
     _ = ∏' p : ℙ, u p := by simp [h_abs_eq_fun]
     _ = ∏' p : ℙ, (1 + ((p : ℕ) : ℝ) ^ (-((3 : ℝ) / 2)))⁻¹ := rfl
 
-theorem zeta_lower_bound (t : ℝ) :
-  norm (riemannZeta 3 / riemannZeta ((3 : ℝ) / 2)) ≤
-    norm (riemannZeta (((3 : ℝ) / 2) + t * Complex.I)) := by
+/-- For `t : ℝ`, the Euler product at `re s = 3` controls `‖ζ 3 / ζ (3/2 + it)‖`. -/
+theorem norm_riemannZeta_ratio_le_on_vertical_line (t : ℝ) :
+    ‖riemannZeta 3 / riemannZeta ((3 : ℝ) / 2)‖ ≤
+      ‖riemannZeta (((3 : ℝ) / 2) + t * Complex.I)‖ := by
   have hs : 1 < (((3 : ℝ) / 2 : ℂ) + t * Complex.I).re := by
     simp only [Complex.add_re, Complex.ofReal_re, Complex.mul_I_re, mul_zero, add_zero]
     norm_num
@@ -790,7 +799,7 @@ lemma zeta332pos : 0 < norm (riemannZeta 3 / riemannZeta ((3 : ℝ) / 2)) := by
 -- Lemma zeta_low_332
 lemma zeta_low_332 : ∃ a : ℝ, 0 < a ∧ ∀ t : ℝ, a ≤ norm (riemannZeta (((3 : ℝ) / 2) + t * Complex.I)) := by
   use norm (riemannZeta 3 / riemannZeta ((3 : ℝ) / 2))
-  exact ⟨zeta332pos, zeta_lower_bound⟩
+  exact ⟨zeta332pos, norm_riemannZeta_ratio_le_on_vertical_line⟩
 
 
 open Real Set Filter Topology MeasureTheory
@@ -3223,8 +3232,9 @@ lemma lem_integralBoundValue (s : ℂ) (hs : 0 < s.re) : ∫ u in Ioi (1 : ℝ),
     _ = - (1 : ℝ) / (-s.re) := by simp [Real.one_rpow]
     _ = 1 / s.re := by simp
 
-/-- Lemma: Zeta bound 2. -/
-lemma lem_zetaBound2 (s : ℂ) (hs_re : 1/10 < s.re) (hs_ne : s ≠ 1) : ‖riemannZeta s‖ ≤ 1 + ‖1 / (s - 1)‖ + ‖s‖ / s.re := by
+/-- If `1/10 < re s` and `s ≠ 1`, then `‖ζ s‖ ≤ 1 + ‖(s - 1)⁻¹‖ + ‖s‖ / re s`. -/
+theorem norm_riemannZeta_le (s : ℂ) (hs_re : 1/10 < s.re) (hs_ne : s ≠ 1) :
+    ‖riemannZeta s‖ ≤ 1 + ‖1 / (s - 1)‖ + ‖s‖ / s.re := by
   -- Define the integrand and its real bound
   set f : ℝ → ℂ := fun u => (Int.fract u : ℝ) * (u : ℂ) ^ (-s - 1) with hfdef
   set g : ℝ → ℝ := fun u => u ^ (-s.re - 1) with hgdef
@@ -3280,12 +3290,18 @@ lemma lem_zetaBound2 (s : ℂ) (hs_re : 1/10 < s.re) (hs_ne : s ≠ 1) : ‖riem
     le_trans hζ hsum
   simpa [div_eq_mul_inv] using hfinal1
 
+/-- Alias for `norm_riemannZeta_le` (legacy name). -/
+@[deprecated norm_riemannZeta_le (since := "2026-06-01")]
+lemma lem_zetaBound2 (s : ℂ) (hs_re : 1/10 < s.re) (hs_ne : s ≠ 1) :
+    ‖riemannZeta s‖ ≤ 1 + ‖1 / (s - 1)‖ + ‖s‖ / s.re :=
+  norm_riemannZeta_le s hs_re hs_ne
+
 /-- Lemma: Reciprocal norm identity in ℂ. -/
 lemma lem_sOverSminus1Bound (s : ℂ) (hs : s ≠ 1) : ‖(1 / (s - 1))‖ = 1 / ‖s - 1‖ := by simp [one_div]
 
 /-- Lemma: Zeta bound 3. -/
 lemma lem_zetaBound3 (s : ℂ) (hs_re : 1/10 < s.re) (hs_ne : s ≠ 1) : ‖riemannZeta s‖ ≤ 1 + 1 / ‖s - 1‖ + ‖s‖ / s.re := by
-  simpa [lem_sOverSminus1Bound s hs_ne] using lem_zetaBound2 s hs_re hs_ne
+  simpa [lem_sOverSminus1Bound s hs_ne] using norm_riemannZeta_le s hs_re hs_ne
 
 lemma helper_normsq (z : ℂ) : ‖z‖ ^ 2 = z.re ^ 2 + z.im ^ 2 := by
   simpa [Complex.normSq, pow_two] using (Complex.normSq_eq_norm_sq z).symm
@@ -3387,15 +3403,17 @@ lemma lem_finalBoundCombination (s : ℂ) (hs_re : (1/2 : ℝ) ≤ s.re ∧ s.re
 /-- Lemma: Final algebraic simplification. -/
 lemma lem_finalAlgebra (t : ℝ) : 1 + 1 + ((3 : ℝ) + |t|) * 2 = (8 : ℝ) + 2 * |t| := by ring
 
-/-- Lemma: Upper bound on zeta in the vertical strip. -/
-lemma lem_zetaUppBd (z : ℂ) (hz_re : z.re ∈ Ico (1/2 : ℝ) (3 : ℝ)) (hz_im : (1 : ℝ) ≤ |z.im|) : ‖riemannZeta z‖ < (8 : ℝ) + 2 * |z.im| := by
+/-- In the strip `1/2 ≤ re z < 3` with `1 ≤ |im z|`, `‖ζ z‖ < 8 + 2|im z|`. -/
+theorem norm_riemannZeta_lt_linear_im_on_strip (z : ℂ)
+    (hz_re : z.re ∈ Ico (1/2 : ℝ) (3 : ℝ)) (hz_im : (1 : ℝ) ≤ |z.im|) :
+    ‖riemannZeta z‖ < (8 : ℝ) + 2 * |z.im| := by
   have hz_re' : (1/2 : ℝ) ≤ z.re ∧ z.re < (3 : ℝ) := by
     simpa [Ico] using hz_re
   have h := lem_finalBoundCombination z hz_re' hz_im
   simpa [lem_finalAlgebra] using h
 
-/-- Lemma: `z` from `s` (first version). -/
-lemma lem_zfroms_calc (s : ℂ) (t : ℝ) :
+/-- For `z = s + 3/2 + it`, `z.re = s.re + 3/2` and `z.im = s.im + t`. -/
+theorem riemannZeta_shift_three_halves_re_im (s : ℂ) (t : ℝ) :
     (let z := s + (3/2 : ℝ) + Complex.I * t
      z.re = s.re + (3/2 : ℝ) ∧ z.im = s.im + t) := by
   constructor
@@ -3414,12 +3432,13 @@ lemma lem_zfroms_calc (s : ℂ) (t : ℝ) :
     rw [h1, h2]
     simp
 
-lemma lem_zfroms_conditions (s : ℂ) (t : ℝ)
+/-- If `‖s‖ ≤ 1` and `2 < |t|`, then `s + 3/2 + it` lies in the strip used for
+`norm_riemannZeta_lt_linear_im_on_strip`. -/
+theorem riemannZeta_shift_three_halves_mem_strip (s : ℂ) (t : ℝ)
     (hs : ‖s‖ ≤ (1 : ℝ)) (ht : (2 : ℝ) < |t|) :
     (let z := s + (3/2 : ℝ) + Complex.I * t
      z.re ∈ Ico (1/2 : ℝ) (3 : ℝ) ∧ (1 : ℝ) ≤ |z.im|) := by
-  -- Apply lem_zfroms_calc to get z.re and z.im formulas
-  have h_calc := lem_zfroms_calc s t
+  have h_calc := riemannZeta_shift_three_halves_re_im s t
   simp only [h_calc.1, h_calc.2]
   constructor
 
@@ -3468,30 +3487,25 @@ lemma lem_zfroms_conditions (s : ℂ) (t : ℝ)
       rw [abs_of_neg neg]
       linarith [upper_bound]
 
-/-- Helper lemma for the final bound. -/
-lemma lem_abs_im_bound (s : ℂ) (t : ℝ) (hs : ‖s‖ ≤ 1) : |s.im + t| ≤ 1 + |t| := by
+/-- If `‖s‖ ≤ 1`, then `|im s + t| ≤ 1 + |t|`. -/
+theorem abs_im_add_shift_le (s : ℂ) (t : ℝ) (hs : ‖s‖ ≤ 1) : |s.im + t| ≤ 1 + |t| := by
   have h1 : |s.im| ≤ ‖s‖ := Complex.abs_im_le_norm s
   have h2 : |s.im| ≤ 1 := le_trans h1 hs
   have h3 : |s.im + t| ≤ |s.im| + |t| := abs_add_le s.im t
   linarith
 
-/-- Lemma: Final zeta upper bound with shift. -/
-lemma lem_zetaUppBound :
-    ∀ t : ℝ, ∀ s : ℂ, ‖s‖ ≤ (1 : ℝ) → (2 : ℝ) < |t| →
-      ‖riemannZeta (s + (3/2 : ℝ) + Complex.I * t)‖ < (10 : ℝ) + 2 * |t| := by
-  intro t s hs ht
+/-- If `‖s‖ ≤ 1` and `2 < |t|`, then `‖ζ (s + 3/2 + it)‖ < 10 + 2|t|`. -/
+theorem norm_riemannZeta_shift_le (t : ℝ) (s : ℂ) (hs : ‖s‖ ≤ 1) (ht : 2 < |t|) :
+    ‖riemannZeta (s + (3 / 2 : ℝ) + Complex.I * t)‖ < 10 + 2 * |t| := by
   set z := s + (3/2 : ℝ) + Complex.I * t with hz_def
-  -- Apply lem_zfroms_conditions to get conditions on z
   have hz_cond : z.re ∈ Ico (1/2 : ℝ) (3 : ℝ) ∧ (1 : ℝ) ≤ |z.im| :=
-    lem_zfroms_conditions s t hs ht
-  -- Apply lem_zetaUppBd
+    riemannZeta_shift_three_halves_mem_strip s t hs ht
   have h_bound : ‖riemannZeta z‖ < (8 : ℝ) + 2 * |z.im| :=
-    lem_zetaUppBd z hz_cond.1 hz_cond.2
-  -- Use lem_abs_im_bound to bound |z.im|
-  have hz_im_calc : z.im = s.im + t := (lem_zfroms_calc s t).2
+    norm_riemannZeta_lt_linear_im_on_strip z hz_cond.1 hz_cond.2
+  have hz_im_calc : z.im = s.im + t := (riemannZeta_shift_three_halves_re_im s t).2
   have h_im_bound : |z.im| ≤ 1 + |t| := by
     rw [hz_im_calc]
-    exact lem_abs_im_bound s t hs
+    exact abs_im_add_shift_le s t hs
   -- Combine bounds
   have h_intermediate : ‖riemannZeta z‖ < (8 : ℝ) + 2 * (1 + |t|) := by
     calc ‖riemannZeta z‖
@@ -3504,5 +3518,41 @@ lemma lem_zetaUppBound :
     linarith [h_intermediate, h_algebra]
   -- Apply to the goal using the definition of z
   rwa [hz_def] at h_final
+
+/-- Alias for `norm_riemannZeta_shift_le` (legacy name). -/
+@[deprecated norm_riemannZeta_shift_le (since := "2026-06-01")]
+lemma lem_zetaUppBound :
+    ∀ t : ℝ, ∀ s : ℂ, ‖s‖ ≤ (1 : ℝ) → (2 : ℝ) < |t| →
+      ‖riemannZeta (s + (3/2 : ℝ) + Complex.I * t)‖ < (10 : ℝ) + 2 * |t| :=
+  fun t s hs ht => norm_riemannZeta_shift_le t s hs ht
+
+/-- Alias for `norm_riemannZeta_lt_linear_im_on_strip` (legacy name). -/
+@[deprecated norm_riemannZeta_lt_linear_im_on_strip (since := "2026-06-01")]
+lemma lem_zetaUppBd (z : ℂ) (hz_re : z.re ∈ Ico (1/2 : ℝ) (3 : ℝ)) (hz_im : (1 : ℝ) ≤ |z.im|) :
+    ‖riemannZeta z‖ < (8 : ℝ) + 2 * |z.im| :=
+  norm_riemannZeta_lt_linear_im_on_strip z hz_re hz_im
+
+@[deprecated riemannZeta_shift_three_halves_re_im (since := "2026-06-01")]
+lemma lem_zfroms_calc (s : ℂ) (t : ℝ) :
+    (let z := s + (3/2 : ℝ) + Complex.I * t
+     z.re = s.re + (3/2 : ℝ) ∧ z.im = s.im + t) :=
+  riemannZeta_shift_three_halves_re_im s t
+
+@[deprecated riemannZeta_shift_three_halves_mem_strip (since := "2026-06-01")]
+lemma lem_zfroms_conditions (s : ℂ) (t : ℝ) (hs : ‖s‖ ≤ 1) (ht : 2 < |t|) :
+    (let z := s + (3/2 : ℝ) + Complex.I * t
+     z.re ∈ Ico (1/2 : ℝ) (3 : ℝ) ∧ (1 : ℝ) ≤ |z.im|) :=
+  riemannZeta_shift_three_halves_mem_strip s t hs ht
+
+@[deprecated abs_im_add_shift_le (since := "2026-06-01")]
+lemma lem_abs_im_bound (s : ℂ) (t : ℝ) (hs : ‖s‖ ≤ 1) : |s.im + t| ≤ 1 + |t| :=
+  abs_im_add_shift_le s t hs
+
+/-- Alias for `norm_riemannZeta_ratio_le_on_vertical_line` (legacy name). -/
+@[deprecated norm_riemannZeta_ratio_le_on_vertical_line (since := "2026-06-01")]
+theorem zeta_lower_bound (t : ℝ) :
+    ‖riemannZeta 3 / riemannZeta ((3 : ℝ) / 2)‖ ≤
+      ‖riemannZeta (((3 : ℝ) / 2) + t * Complex.I)‖ :=
+  norm_riemannZeta_ratio_le_on_vertical_line t
 
 open Metric Set Filter Asymptotics BigOperators

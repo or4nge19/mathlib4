@@ -1809,7 +1809,6 @@ public import Mathlib.Analysis.Complex.Isometry
 public import Mathlib.Analysis.Complex.JensenFormula
 public import Mathlib.Analysis.Complex.Liouville
 public import Mathlib.Analysis.Complex.LocallyUniformLimit
-public import Mathlib.Analysis.Complex.LogSingularity
 public import Mathlib.Analysis.Complex.MeanValue
 public import Mathlib.Analysis.Complex.Norm
 public import Mathlib.Analysis.Complex.OpenMapping
@@ -2277,8 +2276,18 @@ public import Mathlib.Analysis.SpecialFunctions.Gamma.BohrMollerup
 public import Mathlib.Analysis.SpecialFunctions.Gamma.Deligne
 public import Mathlib.Analysis.SpecialFunctions.Gamma.Deriv
 public import Mathlib.Analysis.SpecialFunctions.Gamma.Digamma
-public import Mathlib.Analysis.SpecialFunctions.Gamma.BinetFormula
+public import Mathlib.Analysis.SpecialFunctions.Gamma.BinetKernel.Core
+public import Mathlib.Analysis.SpecialFunctions.Gamma.BinetKernel.Bounds
+public import Mathlib.Analysis.SpecialFunctions.Gamma.BinetKernel.Limit
 public import Mathlib.Analysis.SpecialFunctions.Gamma.BinetKernel
+public import Mathlib.Analysis.SpecialFunctions.Gamma.BinetIntegral
+public import Mathlib.Analysis.SpecialFunctions.Gamma.BinetRealIntegral
+public import Mathlib.Analysis.SpecialFunctions.Gamma.BinetLogGammaPre
+public import Mathlib.Analysis.SpecialFunctions.Gamma.BinetLogGammaRecurrence
+public import Mathlib.Analysis.SpecialFunctions.Gamma.BinetLogGamma
+public import Mathlib.Analysis.SpecialFunctions.Gamma.BinetRealBounds
+public import Mathlib.Analysis.SpecialFunctions.Gamma.BinetGammaBound
+public import Mathlib.Analysis.SpecialFunctions.Gamma.BinetFormula
 public import Mathlib.Analysis.SpecialFunctions.Gamma.GammaStirlingAux
 public import Mathlib.Analysis.SpecialFunctions.Gamma.LargeImaginaryBounds
 public import Mathlib.Analysis.SpecialFunctions.Gamma.PNT
@@ -5581,6 +5590,7 @@ public import Mathlib.NumberTheory.LSeries.Positivity
 public import Mathlib.NumberTheory.LSeries.PrimesInAP
 public import Mathlib.NumberTheory.LSeries.RiemannZeta
 public import Mathlib.NumberTheory.LSeries.RiemannZetaConvexity
+public import Mathlib.NumberTheory.LSeries.RiemannZetaStripBound
 public import Mathlib.NumberTheory.LSeries.RiemannZetaHadamard
 public import Mathlib.NumberTheory.LSeries.RiemannZetaValues
 public import Mathlib.NumberTheory.LSeries.SumCoeff
@@ -7286,6 +7296,7 @@ public import Mathlib.Topology.Algebra.InfiniteSum.Constructions
 public import Mathlib.Topology.Algebra.InfiniteSum.Defs
 public import Mathlib.Topology.Algebra.InfiniteSum.ENNReal
 public import Mathlib.Topology.Algebra.InfiniteSum.Field
+public import Mathlib.Topology.Algebra.InfiniteSum.Finset
 public import Mathlib.Topology.Algebra.InfiniteSum.Group
 public import Mathlib.Topology.Algebra.InfiniteSum.GroupCompletion
 public import Mathlib.Topology.Algebra.InfiniteSum.Module

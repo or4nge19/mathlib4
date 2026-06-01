@@ -5,30 +5,24 @@ Authors: Matteo Cipollina
 -/
 module
 
-public import Mathlib.Analysis.Complex.AbsMax
+public import Mathlib.Analysis.Complex.Norm
 public import Mathlib.Analysis.SpecialFunctions.Exp
 public import Mathlib.Topology.Algebra.InfiniteSum.Order
-public import Mathlib.Analysis.Complex.Divisor
 
 
 
 /-!
-## Reusable lemmas for Cartan/minimum-modulus bounds (products → exp(sum))
+## Reusable product bounds by exponentials
 
-This file collects small, reusable “algebra + infinite product” lemmas that repeatedly occur in
-Hadamard/Cartan arguments:
+This file collects small reusable algebra and infinite-product lemmas:
 
 - bounding finite products by exponentials of finite sums;
 - turning a uniform bound on finite partial products into a bound on the `HasProd` limit.
-
-These lemmas are intentionally agnostic of Hadamard factorization and can be upstreamed.
 -/
 
 @[expose] public section
 
 noncomputable section
-
-namespace Complex.Hadamard
 
 open scoped BigOperators
 open Filter Finset Real Topology
@@ -76,7 +70,13 @@ lemma hasProd_inv_unconditional {α : Type} {fac : α → ℂ} {F : ℂ}
 lemma hasProd_norm_inv_unconditional {α : Type} {fac : α → ℂ} {F : ℂ}
     (hfac : HasProd fac F (SummationFilter.unconditional α)) (hF : F ≠ 0) :
     HasProd (fun x => ‖(fac x)⁻¹‖) ‖F⁻¹‖ (SummationFilter.unconditional α) := by
-  simpa using (hasProd_inv_unconditional hfac hF).norm
+  change
+    Tendsto (fun s : Finset α => ∏ x ∈ s, ‖(fac x)⁻¹‖)
+      (SummationFilter.unconditional α).filter (𝓝 ‖F⁻¹‖)
+  have hnorm := (hasProd_inv_unconditional hfac hF).norm
+  refine hnorm.congr' (Filter.Eventually.of_forall ?_)
+  intro s
+  simp [norm_inv, Finset.prod_inv_distrib]
 
 lemma hasProd_norm_inv_le_exp_of_pointwise_le_exp {α : Type} {fac : α → ℂ} {F : ℂ}
     (hfac : HasProd fac F (SummationFilter.unconditional α))
@@ -94,12 +94,10 @@ lemma hasProd_norm_inv_le_exp_of_pointwise_le_exp {α : Type} {fac : α → ℂ}
     intro s
     have h0 : ∀ x ∈ s, 0 ≤ ‖(fac x)⁻¹‖ := by intro _ _; positivity
     have h1 : (∏ x ∈ s, ‖(fac x)⁻¹‖) ≤ Real.exp (∑ x ∈ s, b x) := by
-      refine (Finset.prod_le_exp_sum s (a := fun x => ‖(fac x)⁻¹‖) (b := b) h0 ?_)
+      refine Finset.prod_le_exp_sum s (a := fun x => ‖(fac x)⁻¹‖) (b := b) h0 ?_
       intro x hx
       simpa using hterm x
     have h2 : Real.exp (∑ x ∈ s, b x) ≤ Real.exp B :=
       Real.exp_le_exp.2 (hsum s)
     exact h1.trans h2
   exact hasProd_le_of_prod_le_exp hnorm hprod
-
-end Complex.Hadamard

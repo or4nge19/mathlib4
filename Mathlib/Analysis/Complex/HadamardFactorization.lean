@@ -13,17 +13,25 @@ public import Mathlib.Topology.MetricSpace.Annulus
 
 
 /-!
-## The Hadamard quotient (entire and zero-free)
+# The Hadamard quotient
 
-We bundle the main "quotient step": if `f` is entire, nontrivial, and we have the summability
-hypothesis for the divisor-indexed canonical product of genus `m`, then there is an entire function
-`H` with no zeros such that
+If `f` is entire, nontrivial, and the divisor-indexed canonical product of genus `m` converges,
+then there is an entire zero-free function `H` with
 
-`f z = H z * z^(ord0) * divisorCanonicalProduct m f univ z`.
+`f z = H z * z ^ (ord₀ f) * divisorCanonicalProduct m f univ z`.
 
-Internally `H` is the normal form (`toMeromorphicNFOn`) of the meromorphic quotient
-`f / (z^ord0 * divisorCanonicalProduct ...)`, so the quotient is defined through the zeros by
-removable singularities.
+The quotient `H` is obtained as the meromorphic normal form of
+`f / (z ^ (ord₀ f) * divisorCanonicalProduct ...)`.
+
+## Main results
+
+* `exists_entire_nonzero_hadamardQuotient` : existence of `H`
+* `hadamardDenom`, `differentiable_hadamardDenom`
+
+## References
+
+* [tao246bComplexAnalysis] for the disk and Blaschke viewpoint
+* [MR886677] for canonical factors; this file uses `divisorCanonicalProduct`
 -/
 
 @[expose] public section

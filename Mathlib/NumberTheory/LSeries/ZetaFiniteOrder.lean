@@ -5,13 +5,13 @@ Authors: Matteo Cipollina
 -/
 module
 
+public import Mathlib.Analysis.Complex.Norm
 public import Mathlib.Analysis.SpecialFunctions.Gamma.StripBounds
 public import Mathlib.Analysis.SpecialFunctions.Log.PosLog
 public import Mathlib.NumberTheory.LSeries.RiemannZeta
 public import Mathlib.NumberTheory.LSeries.HurwitzZetaValues
 public import Mathlib.Analysis.Real.Pi.Bounds
-public import Mathlib.Analysis.Real.Pi.Irrational
-public import Mathlib.NumberTheory.LSeries.RiemannZetaConvexity
+public import Mathlib.NumberTheory.LSeries.RiemannZetaStripBound
 
 
 /-!
@@ -28,7 +28,7 @@ The key ingredients are:
 * Mathlib's `differentiable_completedZeta₀` for entirety of Λ₀
 * The functional equation `completedRiemannZeta₀_one_sub`
 * Stirling-type bounds for `Complex.Gammaℝ`
-* Convexity bounds for zeta in the critical strip
+* `norm_riemannZeta_le` from `RiemannZetaStripBound` for strip bounds on `ζ`
 
 ## Main results
 
@@ -45,17 +45,6 @@ open Complex Set Filter Topology Metric
 open scoped Real
 
 namespace Complex
-
-/-! ### Finite order bounds -/
-
-/-- A continuous complex-valued function is bounded on a closed ball. -/
-lemma exists_norm_bound_on_closedBall {f : ℂ → ℂ} {R : ℝ}
-    (hcont : ContinuousOn f (Metric.closedBall (0 : ℂ) R)) :
-    ∃ M : ℝ, 0 ≤ M ∧ ∀ z : ℂ, ‖z‖ ≤ R → ‖f z‖ ≤ M := by
-  have hcomp : IsCompact (Metric.closedBall (0 : ℂ) R) := isCompact_closedBall 0 R
-  obtain ⟨M, hM⟩ := hcomp.exists_bound_of_continuousOn hcont
-  refine ⟨max M 0, le_max_right _ _, fun z hz => ?_⟩
-  exact (hM z (Metric.mem_closedBall.mpr (by simpa using hz))).trans (le_max_left _ _)
 
 /-! ### Finite order of the completed zeta function -/
 
@@ -96,39 +85,6 @@ lemma one_le_one_add_norm_rpow {z : ℂ} {p : ℝ} (hp : 0 ≤ p) :
   have hz1 : (1 : ℝ) ≤ 1 + ‖z‖ := by linarith [norm_nonneg z]
   simpa using Real.one_le_rpow hz1 hp
 
-/-- Combine four elementary exponential majorants. -/
-lemma mul_four_le_exp_add {a b c d A B C D : ℝ}
-    (hb0 : 0 ≤ b) (hc0 : 0 ≤ c) (hd0 : 0 ≤ d)
-    (ha : a ≤ rexp A) (hb : b ≤ rexp B) (hc : c ≤ rexp C) (hd : d ≤ rexp D) :
-    a * b * c * d ≤ rexp (A + B + C + D) := by
-  have hab : a * b ≤ rexp A * rexp B :=
-    mul_le_mul ha hb hb0 (Real.exp_pos A).le
-  have habc : (a * b) * c ≤ (rexp A * rexp B) * rexp C :=
-    mul_le_mul hab hc hc0 (by positivity)
-  have hprod : a * b * c * d ≤ rexp A * rexp B * rexp C * rexp D :=
-    mul_le_mul habc hd hd0 (by positivity)
-  calc
-    a * b * c * d ≤ rexp A * rexp B * rexp C * rexp D := hprod
-    _ = rexp (A + B + C + D) := by
-        rw [← Real.exp_add, ← Real.exp_add, ← Real.exp_add]
-
-/-- A coarse reciprocal bound in the right half-plane `1 / 10 < re z`. -/
-lemma norm_div_re_le_ten_mul_norm {z : ℂ} (hz : (1 / 10 : ℝ) < z.re) :
-    ‖z‖ / z.re ≤ 10 * ‖z‖ := by
-  have hz_re_le : (1 : ℝ) / z.re ≤ 10 := by
-    have hpos : (0 : ℝ) < 1 / 10 := by norm_num
-    have hz_ge : (1 / 10 : ℝ) ≤ z.re := le_of_lt hz
-    have := one_div_le_one_div_of_le hpos hz_ge
-    simpa using this
-  have : ‖z‖ / z.re ≤ ‖z‖ * 10 := by
-    simpa [div_eq_mul_inv, mul_assoc, mul_left_comm, mul_comm]
-      using mul_le_mul_of_nonneg_left hz_re_le (norm_nonneg z)
-  simpa [mul_comm] using this
-
-/-- Subtracting `1` is bounded by the triangle inequality. -/
-lemma norm_sub_one_le_one_add_norm (z : ℂ) : ‖z - 1‖ ≤ 1 + ‖z‖ := by
-  simpa [norm_one, add_comm, add_left_comm, add_assoc] using (norm_sub_le z (1 : ℂ))
-
 /-- The reflected point `1 - z` lies well inside the right half-plane if `re z ≤ 1 / 10`. -/
 lemma nine_tenths_le_one_sub_re {z : ℂ} (hz : z.re ≤ (1 / 10 : ℝ)) :
     (9 / 10 : ℝ) ≤ (1 - z).re := by
@@ -148,19 +104,6 @@ lemma ne_neg_nat_of_re_pos {w : ℂ} (hw : 0 < w.re) : ∀ n : ℕ, w ≠ -n := 
     have := congrArg Complex.re hn
     simpa using this
   nlinarith
-
-/-- The reflected point `1 - z` has norm at most `1 + ‖z‖`. -/
-lemma norm_one_sub_le_one_add_norm (z : ℂ) : ‖1 - z‖ ≤ 1 + ‖z‖ := by
-  simpa [norm_one, add_comm, add_left_comm, add_assoc] using (norm_sub_le (1 : ℂ) z)
-
-/-- If `‖z‖ > 3`, then the reflected point `1 - z` has norm at least `1`. -/
-lemma one_le_norm_one_sub_of_three_lt_norm {z : ℂ} (hz : 3 < ‖z‖) :
-    (1 : ℝ) ≤ ‖1 - z‖ := by
-  have hge : (‖z‖ - 1 : ℝ) ≤ ‖1 - z‖ := by
-    have := norm_sub_norm_le z (1 : ℂ)
-    simpa [norm_one, norm_sub_rev] using this
-  have : (2 : ℝ) < ‖z‖ - 1 := by linarith
-  linarith
 
 /-- In the right half-plane, the factor `(2π)^(-w)` has norm at most one. -/
 lemma norm_two_pi_cpow_neg_le_one_of_re_nonneg {w : ℂ} (hw : 0 ≤ w.re) :
@@ -199,7 +142,7 @@ lemma two_mul_le_exp_two_mul_rpow_two {x A : ℝ} (hx : x ≤ A) (hA1 : 1 ≤ A)
     have := Real.rpow_le_rpow_of_exponent_le hA1 (by norm_num : (1 : ℝ) ≤ (2 : ℝ))
     simpa [Real.rpow_one] using this
   have h2 : 2 * A ≤ 2 * A ^ (2 : ℝ) := by nlinarith [hA_le_A2]
-  exact le_trans (le_trans h1 h2) (Real.Stirling.le_exp_self _)
+  exact le_trans (le_trans h1 h2) (Real.le_exp_self _)
 
 /-- The large coefficient in the reflected zeta estimate is dominated by the chosen constant. -/
 lemma reflected_zeta_coefficient_le {C CΓ : ℝ} (hCΓ : 0 ≤ CΓ)
@@ -262,13 +205,13 @@ lemma norm_mul_riemannZeta_le_exp_of_reflected {z w : ℂ} {A CΓ C : ℝ}
       _ = (‖w‖ * 2) * ‖Complex.Gamma w‖ *
             ‖Complex.cos (π * w / 2)‖ * ‖riemannZeta w‖ := by
           ring
-  have hw2 : ‖w‖ * 2 ≤ rexp (2 * A ^ (2 : ℝ)) :=
-    two_mul_le_exp_two_mul_rpow_two hw_norm_le hA1
+  have hw2 : ‖w‖ * 2 ≤ rexp (2 * A ^ (2 : ℝ)) := by
+    simpa [Real.rpow_two, sq] using Real.two_mul_le_exp_two_mul_sq hw_norm_le hA1
   have hmul_exp :
       (‖w‖ * 2) * ‖Complex.Gamma w‖ * ‖Complex.cos (π * w / 2)‖ *
           ‖riemannZeta w‖ ≤
         rexp ((2 + CΓ + 2 + 40) * A ^ (2 : ℝ)) := by
-    have h := mul_four_le_exp_add (a := ‖w‖ * 2) (b := ‖Complex.Gamma w‖)
+    have h := Real.mul_four_le_exp_add (a := ‖w‖ * 2) (b := ‖Complex.Gamma w‖)
       (c := ‖Complex.cos (π * w / 2)‖) (d := ‖riemannZeta w‖)
       (A := 2 * A ^ (2 : ℝ)) (B := CΓ * A ^ (2 : ℝ))
       (C := 2 * A ^ (2 : ℝ)) (D := 40 * A ^ (2 : ℝ))
@@ -285,13 +228,8 @@ lemma norm_mul_riemannZeta_le_exp_of_reflected {z w : ℂ} {A CΓ C : ℝ}
     simpa [mul_assoc] using mul_le_mul_of_nonneg_right hcoef hA2_nonneg
   exact le_trans (le_trans hprod hmul_exp) hdom
 
-/-- Sharp (order-one) ε-family growth bound for the completed zeta function Λ₀.
-
-This is the standard “order at most 1” formulation (Tao 246B): for every `ε > 0` one has a bound
-`‖Λ₀ z‖ ≤ exp(Cε * (1 + ‖z‖)^(1+ε))`.  It follows from the same Stirling/convexity estimates as
-the logarithmic growth bound, keeping the natural `‖z‖ * log(1+‖z‖)` term and absorbing it into
-`(1+‖z‖)^(1+ε)` via `Real.log_le_rpow_div`.
--/
+/-- The completed zeta function `completedRiemannZeta₀` has order at most one: for every `ε > 0` there
+is `C > 0` with `‖Λ₀ z‖ ≤ exp (C * (1 + ‖z‖)^(1 + ε))`. -/
 theorem completedRiemannZeta₀_order_one :
     ∀ ε : ℝ, 0 < ε →
       ∃ C > 0, ∀ z : ℂ,
@@ -352,7 +290,7 @@ theorem completedRiemannZeta₀_order_one :
       have hGamma : ‖Complex.Gammaℝ w‖ ≤ Real.exp (CΓ * ‖w‖ * Real.log (1 + ‖w‖)) :=
         hΓ w hw_re0 hw_norm1
       have hw_re_gt : (1 / 10 : ℝ) < w.re := by linarith [hw_re]
-      have hzeta0 := lem_zetaBound2 w hw_re_gt hw_ne1
+      have hzeta0 := norm_riemannZeta_le w hw_re_gt hw_ne1
       have hdist1 : ‖1 / (w - 1)‖ ≤ 1 := by
         have hnorm : ‖w‖ ≤ ‖w - 1‖ + 1 := by
           have : ‖(w - 1) + (1 : ℂ)‖ ≤ ‖w - 1‖ + ‖(1 : ℂ)‖ := norm_add_le _ _
@@ -465,7 +403,7 @@ theorem completedRiemannZeta₀_order_one :
           have : (1 : ℝ) ≤ (1 + ε : ℝ) := by linarith [le_of_lt hε]
           simpa [Real.rpow_one] using (Real.rpow_le_rpow_of_exponent_le hbase this)
         have : (10 * (1 + ‖w‖) : ℝ) ≤ 10 * (1 + ‖w‖) ^ (1 + ε) := by nlinarith [hexp]
-        exact le_trans hlin (le_trans this (Real.Stirling.le_exp_self _))
+        exact le_trans hlin (le_trans this (Real.le_exp_self _))
       have hbig :
           ‖completedRiemannZeta₀ w‖ ≤
             Real.exp ((10 + CΓ / ε) * (1 + ‖w‖) ^ (1 + ε)) := by
@@ -593,47 +531,6 @@ theorem zetaTimesSMinusOne_entire_differentiable :
         zetaTimesSMinusOne_entire_continuousAt_one⟩
   simpa [DifferentiableOn, differentiableWithinAt_univ, zetaTimesSMinusOne_entire] using this
 
-/-! ### A simple bound for `Complex.cos` -/
-
-lemma norm_cos_le_exp_abs_im (z : ℂ) : ‖Complex.cos z‖ ≤ Real.exp |z.im| := by
-  have hcos :
-      Complex.cos z = (Complex.exp (z * Complex.I) + Complex.exp (-z * Complex.I)) / 2 := by
-    simp [Complex.cos]
-  have htri :
-      ‖Complex.exp (z * Complex.I) + Complex.exp (-z * Complex.I)‖
-        ≤ ‖Complex.exp (z * Complex.I)‖ + ‖Complex.exp (-z * Complex.I)‖ :=
-    norm_add_le _ _
-  have hdiv :
-      ‖(Complex.exp (z * Complex.I) + Complex.exp (-z * Complex.I)) / 2‖
-        ≤ (‖Complex.exp (z * Complex.I)‖ + ‖Complex.exp (-z * Complex.I)‖) / 2 := by
-    have : ‖Complex.exp (z * Complex.I) + Complex.exp (-z * Complex.I)‖ / 2
-          ≤ (‖Complex.exp (z * Complex.I)‖ + ‖Complex.exp (-z * Complex.I)‖) / 2 :=
-      div_le_div_of_nonneg_right htri (by norm_num)
-    simpa [norm_div, Complex.norm_ofNat] using this
-  have h1 : ‖Complex.exp (z * Complex.I)‖ = Real.exp (-(z.im)) := by
-    simp [Complex.norm_exp, Complex.mul_re, Complex.I_re, Complex.I_im]
-  have h2 : ‖Complex.exp (-(z * Complex.I))‖ = Real.exp (z.im) := by
-    simp [Complex.norm_exp, Complex.mul_re, Complex.I_re, Complex.I_im]
-  have habs1 : Real.exp (-(z.im)) ≤ Real.exp |z.im| :=
-    Real.exp_le_exp.mpr (neg_le_abs (z.im))
-  have habs2 : Real.exp (z.im) ≤ Real.exp |z.im| :=
-    Real.exp_le_exp.mpr (le_abs_self (z.im))
-  have hsum :
-      (‖Complex.exp (z * Complex.I)‖ + ‖Complex.exp (-(z * Complex.I))‖) / 2
-        ≤ Real.exp |z.im| := by
-    have : ‖Complex.exp (z * Complex.I)‖ + ‖Complex.exp (-(z * Complex.I))‖
-        ≤ Real.exp |z.im| + Real.exp |z.im| := by
-      simpa [h1, h2] using add_le_add habs1 habs2
-    have : (‖Complex.exp (z * Complex.I)‖ + ‖Complex.exp (-(z * Complex.I))‖) / 2
-        ≤ (Real.exp |z.im| + Real.exp |z.im|) / 2 :=
-      div_le_div_of_nonneg_right this (by norm_num)
-    simpa [two_mul] using this
-  have :
-      ‖Complex.cos z‖ ≤
-        (‖Complex.exp (z * Complex.I)‖ + ‖Complex.exp (-(z * Complex.I))‖) / 2 := by
-    simpa [hcos] using hdiv
-  exact le_trans this hsum
-
 /-- A coarse global growth bound for the removable extension of `(s - 1)ζ(s)`.
 
 The proof combines the half-plane zeta bound, the functional equation, and the Gamma strip bound. -/
@@ -696,7 +593,7 @@ theorem zeta_minus_pole_entire_growth :
       have hmain :
           ‖zetaTimesSMinusOne_entire z‖ ≤ Real.exp (C * A ^ (2 : ℝ)) := by
         by_cases hz_re : (1 / 10 : ℝ) < z.re
-        · have hζ := lem_zetaBound2 z hz_re hz_ne1
+        · have hζ := norm_riemannZeta_le z hz_re hz_ne1
           have hzm1_le : ‖z - 1‖ ≤ A := by
             simpa [A] using norm_sub_one_le_one_add_norm z
           have hfrac : ‖z‖ / z.re ≤ 10 * ‖z‖ :=
@@ -742,7 +639,7 @@ theorem zeta_minus_pole_entire_growth :
           have hle : (40 : ℝ) * A ^ (2 : ℝ) ≤ C * A ^ (2 : ℝ) := by
             simpa [mul_assoc] using (mul_le_mul_of_nonneg_right hC_ge hA2_nonneg)
           have : ‖(z - 1) * riemannZeta z‖ ≤ Real.exp (C * A ^ (2 : ℝ)) :=
-            le_trans (le_trans hpoly hle) (Real.Stirling.le_exp_self _)
+            le_trans (le_trans hpoly hle) (Real.le_exp_self _)
           simpa [hzeta_def] using this
         · have hz_re_le : z.re ≤ (1 / 10 : ℝ) := le_of_not_gt hz_re
           let w : ℂ := 1 - z
@@ -814,7 +711,7 @@ theorem zeta_minus_pole_entire_growth :
               exact le_trans him1 him2
             exact le_trans h1 (Real.exp_le_exp.mpr him)
           have hζw : ‖riemannZeta w‖ ≤ Real.exp (40 * A ^ (2 : ℝ)) := by
-            have hζ0 := lem_zetaBound2 w hw_re1 hw_ne1
+            have hζ0 := norm_riemannZeta_le w hw_re1 hw_ne1
             have hfrac : ‖w‖ / w.re ≤ 10 * ‖w‖ :=
               norm_div_re_le_ten_mul_norm hw_re1
             have hpoly : ‖riemannZeta w‖ ≤ (40 : ℝ) * A ^ (2 : ℝ) := by
@@ -838,7 +735,7 @@ theorem zeta_minus_pole_entire_growth :
                 _ ≤ (40 : ℝ) * A ^ (2 : ℝ) := by
                       simp [pow_two]
                       nlinarith [hA1]
-            exact le_trans hpoly (Real.Stirling.le_exp_self _)
+            exact le_trans hpoly (Real.le_exp_self _)
           have hcoef : (2 + CΓ + 2 + 40 : ℝ) ≤ C := by
             exact reflected_zeta_coefficient_le hCΓ_pos.le (le_max_right _ _)
           have : ‖(z - 1) * riemannZeta z‖ ≤ rexp (C * A ^ (2 : ℝ)) :=

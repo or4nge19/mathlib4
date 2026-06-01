@@ -14,10 +14,26 @@ public import Mathlib.Analysis.SpecialFunctions.Log.Summable
 public import Mathlib.MeasureTheory.Integral.CircleAverage
 
 /-!
-## Divisor summability from logarithmic growth
+# Divisor summability from logarithmic growth
 
-This file proves the dyadic shell summability estimates for the divisor of an entire function
-satisfying a logarithmic growth bound.
+Dyadic shell summability for the zero divisor of an entire function with a logarithmic growth
+bound. This is the Jensen-counting step in the intrinsic Hadamard pipeline
+(`divisorCanonicalProduct`, `hadamard_factorization_of_growth`).
+
+## Main results
+
+* `divisorMassClosedBall₀_le_of_growth` : zero mass in a ball is `O((1 + R)^ρ)` under
+  log-growth of order `ρ`
+* `summable_norm_inv_pow_divisorZeroIndex₀_of_growth` : growth implies convergence of the
+  canonical product
+* `jensen_formula_logCounting_eq_circleAverage_sub_log_trailingCoeff` : Jensen's formula for
+  `logCounting`
+
+## References
+
+* [tao246bComplexAnalysis], Theorem 2 and Proposition 8 (disk formulation; compare
+  `divisorMassClosedBall₀` and `logCounting`)
+* [MR886677], §1 for disk automorphisms and canonical factors
 -/
 
 @[expose] public section
@@ -30,11 +46,10 @@ open scoped BigOperators Topology
 namespace Complex.Hadamard
 
 /-!
-## Lindelöf summability: growth implies summability of divisor-indexed powers
+### Lindelöf summability
 
-This is the Jensen-counting step in Hadamard factorization. A growth bound for
-`log (1 + ‖f z‖)` controls the logarithmic counting function of the divisor, and hence gives the
-summability needed for the divisor-indexed canonical product.
+A bound on `log (1 + ‖f z‖)` controls `logCounting` of the divisor and yields summability of
+`‖a‖⁻¹^(m+1)` for the divisor-indexed canonical product.
 -/
 
 open scoped Real
@@ -59,6 +74,15 @@ lemma logCounting_divisor_univ_eq_circleAverage_sub_log_trailingCoeff {f : ℂ �
   simpa [top_eq_univ] using
     (Function.locallyFinsuppWithin.logCounting_divisor_eq_circleAverage_sub_const (f := f)
       (h := hmero) (hR := hR))
+
+/-- Jensen's formula: on the disk of radius `R`, log-counting of the divisor equals the circle
+average of `log ‖f‖` minus `log` of the trailing coefficient at the center. -/
+theorem jensen_formula_logCounting_eq_circleAverage_sub_log_trailingCoeff {f : ℂ → ℂ}
+    (hf : Differentiable ℂ f) {R : ℝ} (hR : R ≠ 0) :
+    (Function.locallyFinsuppWithin.logCounting (MeromorphicOn.divisor f (Set.univ : Set ℂ)) R)
+      = Real.circleAverage (fun z : ℂ => Real.log ‖f z‖) 0 R
+        - Real.log ‖meromorphicTrailingCoeffAt f 0‖ :=
+  logCounting_divisor_univ_eq_circleAverage_sub_log_trailingCoeff hf hR
 
 lemma log_norm_le_log_one_add_norm {E : Type*} [SeminormedAddCommGroup E] (w : E) :
     Real.log ‖w‖ ≤ Real.log (1 + ‖w‖) := by
@@ -368,6 +392,16 @@ lemma divisorMassClosedBall₀_le_of_growth {f : ℂ → ℂ} {ρ : ℝ}
       simpa [mul_assoc, mul_left_comm, mul_comm] using this
     exact (le_div_iff₀ hlog2pos).2 hx
   simpa [divisorMassClosedBall₀] using this
+
+/-- Same as `divisorMassClosedBall₀_le_of_growth` (see [tao246bComplexAnalysis], Proposition 8). -/
+theorem tao_proposition_8_divisorMass_le_of_growth {f : ℂ → ℂ} {ρ : ℝ}
+    (hf : Differentiable ℂ f)
+    (hgrowth : ∃ C > 0, ∀ z : ℂ, Real.log (1 + ‖f z‖) ≤ C * (1 + ‖z‖) ^ ρ)
+    {R : ℝ} (hR : 1 ≤ R) :
+    divisorMassClosedBall₀ f R
+      ≤ ((Classical.choose hgrowth) * (1 + |2 * R|) ^ ρ
+          + |Real.log ‖meromorphicTrailingCoeffAt f 0‖|) / (Real.log 2) :=
+  divisorMassClosedBall₀_le_of_growth hf hgrowth hR
 
 lemma divisorMassClosedBall₀_mono {f : ℂ → ℂ} (hf : Differentiable ℂ f)
     {R₁ R₂ : ℝ} (hR₁ : 0 ≤ R₁) (hR₁₂ : R₁ ≤ R₂) :

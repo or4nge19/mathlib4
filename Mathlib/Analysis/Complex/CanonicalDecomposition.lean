@@ -17,8 +17,10 @@ as `(∏ᶠ u, (· - u) ^ divisor f U u) • g`, where `g` is analytic without z
 Product* that replaces the factors `(· - u)` by canonical factors that take only values of norm
 one on the boundary of the circle. This file introduces the canonical factors.
 
-See Page 160f of [Lang, *Introduction to Complex Hyperbolic Spaces*][MR886677] for a detailed
-discussion.
+## References
+
+* [MR886677], §1 for canonical factors on the disk
+* [tao246bComplexAnalysis], (5) and Exercise 12 for Blaschke factors
 
 TODO: Formulate the canonical decomposition.
 -/
@@ -45,6 +47,13 @@ setting where `w ∈ ball 0 R`.
 -/
 noncomputable def canonicalFactor (R : ℝ) (w : ℂ) : ℂ → ℂ :=
   fun z ↦ (R ^ 2 - (conj w) * z) / (R * (z - w))
+
+/-- Blaschke factor on the disk of radius `R` with a zero at `w`; equal to `canonicalFactor`. -/
+noncomputable abbrev blaschkeFactor (R : ℝ) (w : ℂ) : ℂ → ℂ := canonicalFactor R w
+
+@[simp] lemma blaschkeFactor_def (R : ℝ) (w : ℂ) :
+    blaschkeFactor R w = canonicalFactor R w :=
+  rfl
 
 lemma canonicalFactor_def (R : ℝ) (w : ℂ) :
     canonicalFactor R w = fun z ↦ (R ^ 2 - (conj w) * z) / (R * (z - w)) :=

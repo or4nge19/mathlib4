@@ -8,19 +8,22 @@ module
 public import Mathlib.MeasureTheory.Integral.Average
 public import Mathlib.Analysis.SpecialFunctions.Pow.Integral
 public import Mathlib.Analysis.SpecialFunctions.Log.PosLog
-public import Mathlib.Analysis.Complex.LogSingularity
 
 
 /-!
-## Cartan / minimum-modulus infrastructure for Hadamard factorization
+# Cartan bounds for Hadamard factorization
 
-This file provides the “probabilistic radius” / averaging lemmas used in Tao’s proof of Hadamard
-factorization. The key analytic input is the pointwise bound
+Probabilistic-radius and averaging lemmas for the minimum-modulus step in the intrinsic Hadamard
+pipeline. The basic pointwise input is
 
-`log⁺ (1 / |1 - t|) ≤ sqrt (2 / |1 - t|)`,
+`log⁺ (1 / |1 - t|) ≤ √(2 / |1 - t|)`,
 
-which yields an integrable majorant for the logarithmic singularity when averaging on dyadic
-intervals.
+which majorizes the logarithmic singularity on dyadic intervals.
+
+## References
+
+* [tao246bComplexAnalysis] for the disk and averaging viewpoint
+* [MR886677] for canonical factors on the unit disk
 -/
 
 @[expose] public section
@@ -32,6 +35,91 @@ namespace CartanBound
 
 open Real MeasureTheory intervalIntegral
 open scoped Topology ENNReal
+
+/-!
+### Pointwise bound for the logarithmic singularity
+
+Used as an integrable majorant when averaging `log⁺ (1 / |1 - t|)` on dyadic intervals.
+-/
+
+private lemma neg_log_le_sqrt_two_div {x : ℝ} (hx : 0 < x) (hxle : x ≤ 1) :
+    -Real.log x ≤ Real.sqrt (2 / x) := by
+  have hx0 : 0 ≤ x := le_of_lt hx
+  have ht : 0 ≤ -Real.log x := by
+    have : Real.log x ≤ 0 := Real.log_nonpos hx0 hxle
+    linarith
+  have hsq_div_two_le_exp : ∀ {t : ℝ}, 0 ≤ t → t ^ 2 / 2 ≤ Real.exp t := by
+    intro t ht
+    let g : ℝ → ℝ := fun u => Real.exp u - u ^ 2 / 2
+    have hg_cont : ContinuousOn g (Set.Ici (0 : ℝ)) := by
+      have : Continuous g := by fun_prop
+      simpa using this.continuousOn
+    have hg_diff : DifferentiableOn ℝ g (interior (Set.Ici (0 : ℝ))) := by
+      intro u hu
+      have : DifferentiableAt ℝ g u := by fun_prop
+      exact this.differentiableWithinAt
+    have hg'_nonneg : ∀ u ∈ interior (Set.Ici (0 : ℝ)), 0 ≤ deriv g u := by
+      intro u hu
+      have hu0 : 0 < u := by simpa [interior_Ici] using hu
+      have hderiv : deriv g u = Real.exp u - u := by
+        have hExp : HasDerivAt Real.exp (Real.exp u) u := Real.hasDerivAt_exp u
+        have hpow2 : HasDerivAt (fun z : ℝ => z ^ 2) (2 * u) u := by
+          simpa using ((hasDerivAt_id u).pow 2)
+        have hpow2_div : HasDerivAt (fun z : ℝ => z ^ 2 / 2) u u := by
+          simpa using (hpow2.div_const (2 : ℝ))
+        have hG : HasDerivAt g (Real.exp u - u) u := by
+          simpa [g] using hExp.sub hpow2_div
+        exact hG.deriv
+      have hu_le : u ≤ Real.exp u := by
+        have h1 : u + 1 ≤ Real.exp u := Real.add_one_le_exp u
+        exact (le_trans (le_add_of_nonneg_right (by norm_num)) h1)
+      have : 0 ≤ Real.exp u - u := sub_nonneg.2 hu_le
+      simpa [hderiv] using this
+    have hg_mono : MonotoneOn g (Set.Ici (0 : ℝ)) :=
+      monotoneOn_of_deriv_nonneg (D := Set.Ici (0 : ℝ)) (hD := convex_Ici 0)
+        hg_cont hg_diff hg'_nonneg
+    have hg0 : g 0 = 1 := by simp [g]
+    have hle : g 0 ≤ g t := hg_mono (by simp) (by simpa [Set.mem_Ici] using ht) ht
+    have : (1 : ℝ) ≤ Real.exp t - t ^ 2 / 2 := by simpa [g, hg0] using hle
+    linarith
+  have hmain : (-Real.log x) ^ 2 / 2 ≤ Real.exp (-Real.log x) := hsq_div_two_le_exp ht
+  have hexp : Real.exp (-Real.log x) = x⁻¹ := by simp [Real.exp_neg, Real.exp_log hx]
+  have hsq2 : (-Real.log x) ^ 2 ≤ 2 * Real.exp (-Real.log x) := by nlinarith [hmain]
+  have hsq' : (-Real.log x) ^ 2 ≤ 2 / x := by simpa [hexp, div_eq_mul_inv, mul_assoc] using hsq2
+  have hy : 0 ≤ 2 / x := div_nonneg (by norm_num) (le_of_lt hx)
+  exact (Real.le_sqrt ht hy).2 hsq'
+
+lemma posLog_log_one_div_abs_one_sub_le_sqrt {t : ℝ} :
+    Real.posLog (1 / |1 - t|) ≤ Real.sqrt (2 / |1 - t|) := by
+  by_cases ht : |1 - t| ≤ 1
+  · by_cases h0 : |1 - t| = 0
+    · have : t = 1 := by
+        have : 1 - t = 0 := by simpa [abs_eq_zero] using h0
+        linarith
+      subst this
+      simp
+    · have hpos : 0 < |1 - t| := lt_of_le_of_ne (abs_nonneg _) (Ne.symm h0)
+      have hle : -Real.log |1 - t| ≤ Real.sqrt (2 / |1 - t|) :=
+        neg_log_le_sqrt_two_div (x := |1 - t|) hpos ht
+      have hlog : Real.log (1 / |1 - t|) = -Real.log |1 - t| := by simp [Real.log_inv]
+      have hnonneg : 0 ≤ Real.log (1 / |1 - t|) := by
+        exact Real.log_nonneg ((one_le_div hpos).2 ht)
+      have hmax : Real.posLog (1 / |1 - t|) = Real.log (1 / |1 - t|) :=
+        max_eq_right hnonneg
+      calc
+        Real.posLog (1 / |1 - t|) = Real.log (1 / |1 - t|) := hmax
+        _ = -Real.log |1 - t| := hlog
+        _ ≤ Real.sqrt (2 / |1 - t|) := hle
+  · have hlt : 1 < |1 - t| := lt_of_not_ge ht
+    have hle0 : Real.log (1 / |1 - t|) ≤ 0 := by
+      have hpos : 0 < |1 - t| := lt_trans (by norm_num) hlt
+      have : (1 / |1 - t| : ℝ) ≤ 1 := (div_le_one hpos).2 (le_of_lt hlt)
+      exact le_trans (Real.log_le_log (by positivity) this) (by simp)
+    have hmax : Real.posLog (1 / |1 - t|) = 0 := max_eq_left hle0
+    have hrhs : 0 ≤ Real.sqrt (2 / |1 - t|) := by
+      exact Real.sqrt_nonneg _
+    rw [hmax]
+    exact hrhs
 
 /-! ### A radial majorant for the logarithmic singularity on a circle -/
 
@@ -104,7 +192,7 @@ lemma φ_nonneg (t : ℝ) : 0 ≤ φ t := by
 
 lemma φ_le_sqrt (t : ℝ) : φ t ≤ Real.sqrt (2 / |1 - t|) := by
   simpa [φ, Real.posLog] using
-    Complex.Hadamard.posLog_log_one_div_abs_one_sub_le_sqrt (t := t)
+    posLog_log_one_div_abs_one_sub_le_sqrt (t := t)
 
 lemma ae_restrict_norm_phi_le_of_forall_mem {A B : ℝ} (hAB : A ≤ B) {g : ℝ → ℝ}
     (hg : ∀ t, 0 ≤ g t) (h : ∀ t ∈ Set.Icc A B, φ t ≤ g t) :
@@ -127,7 +215,7 @@ lemma ae_restrict_norm_phi_le_of_forall_mem {A B : ℝ} (hAB : A ≤ B) {g : ℝ
 ### Bridge lemma: from the 1D singularity `φ` to a complex lower bound
 
 On a circle `‖u‖ = r`, the quantity `log ‖1 - u/a‖` is bounded below in terms of `φ(r/‖a‖)`.
-This is the local estimate used in Tao's probabilistic-radius argument.
+This is the local estimate in the probabilistic-radius argument.
 -/
 
 lemma log_norm_one_sub_div_ge_neg_phi {u a : ℂ} {r : ℝ}

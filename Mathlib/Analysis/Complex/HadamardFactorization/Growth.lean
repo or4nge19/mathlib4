@@ -13,10 +13,22 @@ public import Mathlib.Analysis.Complex.CartanProductBound
 public import Mathlib.Analysis.Complex.ExpPoly.Growth
 
 /-!
-## Hadamard factorization from a logarithmic growth bound
+# Hadamard factorization from a logarithmic growth bound
 
-This file contains the theorem-layer argument which turns the Hadamard quotient and divisor
-summability machinery from `HadamardFactorization` into the growth-form Hadamard factorization.
+Assembles the Hadamard quotient, divisor summability, Cartan bounds, and exponential-polynomial
+growth into `hadamard_factorization_of_growth`.
+
+## Main results
+
+* `hadamard_factorization_of_growth` : entire `f` with log-growth of order `ρ` is a Weierstrass
+  product times `exp(P)`
+* `zero_free_polynomial_growth_is_exp_poly` : the Hadamard quotient is of the form `exp(P)`
+
+## References
+
+* [tao246bComplexAnalysis] for the disk formulation; this file uses the intrinsic
+  `divisorCanonicalProduct` API
+* [MR886677] for canonical factors
 -/
 
 @[expose] public section
@@ -252,7 +264,7 @@ theorem norm_inv_hadamardDenominator_le_exp_on_cartan_circle
       ‖divisorZeroIndex₀_val p‖⁻¹ ^ τ)) :
     let Sτ : ℝ :=
       ∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ), ‖divisorZeroIndex₀_val p‖⁻¹ ^ τ
-    let Cprod : ℝ := ((CartanBound.Cφ + (2 : ℝ) * m) * (4 : ℝ) ^ τ + 3) * (Sτ + 1)
+    let Cprod : ℝ := cartanProductConstant m τ Sτ
     ∀ {R r : ℝ}, 0 < R → 1 ≤ R → R ≤ r → r ≤ 2 * R →
       ∀ (smallSet : Set (divisorZeroIndex₀ f (Set.univ : Set ℂ)))
         (hsmall_fin : smallSet.Finite),
@@ -400,7 +412,7 @@ theorem hadamardQuotient_norm_le_exp_on_cartan_circle
           divisorCanonicalProduct m f (Set.univ : Set ℂ) z) :
     let Sτ : ℝ :=
       ∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ), ‖divisorZeroIndex₀_val p‖⁻¹ ^ τ
-    let Cprod : ℝ := ((CartanBound.Cφ + (2 : ℝ) * m) * (4 : ℝ) ^ τ + 3) * (Sτ + 1)
+    let Cprod : ℝ := cartanProductConstant m τ Sτ
     ∀ {R r : ℝ}, 0 < R → 1 ≤ R → R ≤ r → r ≤ 2 * R → 0 < r →
       ∀ (smallSet : Set (divisorZeroIndex₀ f (Set.univ : Set ℂ)))
         (hsmall_fin : smallSet.Finite),
@@ -515,15 +527,9 @@ theorem hadamardQuotient_norm_le_exp_rpow_of_growth {f H : ℂ → ℂ} {ρ τ :
   let Sτ : ℝ := ∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ), ‖divisorZeroIndex₀_val p‖⁻¹ ^ τ
   have hSτ_nonneg : 0 ≤ Sτ := tsum_nonneg fun _ =>
     Real.rpow_nonneg (inv_nonneg.2 (norm_nonneg _)) _
-  let Cprod : ℝ := ((CartanBound.Cφ + (2 : ℝ) * m) * (4 : ℝ) ^ τ + 3) * (Sτ + 1)
+  let Cprod : ℝ := cartanProductConstant m τ Sτ
   have hCprod_nonneg : 0 ≤ Cprod := by
-    have hS : 0 ≤ Sτ + 1 := by linarith [hSτ_nonneg]
-    have hA : 0 ≤ (CartanBound.Cφ + (2 : ℝ) * m) * (4 : ℝ) ^ τ + 3 := by
-      have hCφ : 0 ≤ CartanBound.Cφ := le_of_lt CartanBound.Cφ_pos
-      have hm0 : 0 ≤ (m : ℝ) := by exact_mod_cast (Nat.zero_le m)
-      have h4τ : 0 ≤ (4 : ℝ) ^ τ := by positivity
-      nlinarith [hCφ, hm0, h4τ]
-    simpa [Cprod] using mul_nonneg hA hS
+    simpa [Cprod] using cartanProductConstant_nonneg (m := m) (τ := τ) hSτ_nonneg
   have hf_boundτ : ∀ z : ℂ, ‖f z‖ ≤ Real.exp (Cf * (1 + ‖z‖) ^ τ) :=
     norm_le_exp_mul_rpow_of_log_growth
       (f := f) (r := fun z : ℂ => 1 + ‖z‖) (C := Cf) (ρ := ρ) (τ := τ)

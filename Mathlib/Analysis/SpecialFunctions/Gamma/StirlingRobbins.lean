@@ -187,23 +187,11 @@ lemma integrable_one_div_twelve_mul_exp_neg_div_mul_exp_neg_mul {x : ℝ} (hx : 
       (fun t : ℝ => (1 / 12 : ℝ) * Real.exp (-t / 12) * Real.exp (-t * x))
       (Ioi (0 : ℝ)) volume := by
   have hx' : 0 < x + 1 / 12 := by linarith [hx]
-  have hExp :
-      IntegrableOn (fun t : ℝ => Real.exp (-(x + 1 / 12) * t)) (Ioi (0 : ℝ))
-        volume := by
-    apply integrableOn_exp_mul_Ioi (a := -(x + 1 / 12)) (c := 0)
-    nlinarith [hx']
-  have hConst :
-      IntegrableOn (fun t : ℝ => (1 / 12 : ℝ) * Real.exp (-(x + 1 / 12) * t))
-        (Ioi (0 : ℝ)) volume := by
-    simpa [IntegrableOn] using
-      (MeasureTheory.Integrable.const_mul (μ := volume.restrict (Ioi (0 : ℝ)))
-        (h := hExp) (c := (1 / 12 : ℝ)))
+  have hConst := Binet.integrable_const_mul_exp (x := x + 1 / 12) hx'
   refine hConst.congr_fun ?_ measurableSet_Ioi
   intro t _ht
-  have harg : -(x + 1 / 12) * t = -t * (x + 1 / 12) := by ring
   calc
-    (1 / 12 : ℝ) * Real.exp (-(x + 1 / 12) * t)
-        = (1 / 12 : ℝ) * Real.exp (-t * (x + 1 / 12)) := by rw [harg]
+    (1 / 12 : ℝ) * Real.exp (-t * (x + 1 / 12))
     _ = (1 / 12 : ℝ) * (Real.exp (-t / 12) * Real.exp (-t * x)) := by
         rw [exp_neg_div_twelve_mul_exp_neg_mul]
     _ = (1 / 12 : ℝ) * Real.exp (-t / 12) * Real.exp (-t * x) := by
@@ -256,7 +244,7 @@ lemma J_lower_bound (n : ℕ) :
         ∫ t in Ioi 0, BinetKernel.Ktilde t * Real.exp (-t * x) := by
     refine MeasureTheory.setIntegral_mono_ae_restrict
       (integrable_one_div_twelve_mul_exp_neg_div_mul_exp_neg_mul hx)
-      (Binet.integrable_Ktilde_mul_exp_neg_mul hx) ?_
+      (Binet.integrable_Ktilde_mul_exp_real hx) ?_
     filter_upwards [self_mem_ae_restrict (measurableSet_Ioi)] with t ht
     gcongr
     exact h_bound t ht

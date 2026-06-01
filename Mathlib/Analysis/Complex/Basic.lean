@@ -11,6 +11,7 @@ public import Mathlib.Data.Complex.BigOperators
 public import Mathlib.LinearAlgebra.Complex.Module
 public import Mathlib.Topology.Algebra.Algebra.Equiv
 public import Mathlib.Topology.Algebra.InfiniteSum.Module
+public import Mathlib.Analysis.Normed.Group.Bounded
 public import Mathlib.Topology.Instances.RealVectorSpace
 
 /-!
@@ -133,6 +134,15 @@ theorem equivRealProdCLM_symm_apply (p : ℝ × ℝ) :
 
 instance : ProperSpace ℂ := lipschitz_equivRealProd.properSpace
   equivRealProdCLM.toHomeomorph.isProperMap
+
+/-- A continuous complex-valued function is bounded on a closed ball. -/
+lemma exists_norm_bound_on_closedBall {f : ℂ → ℂ} {R : ℝ}
+    (hcont : ContinuousOn f (Metric.closedBall (0 : ℂ) R)) :
+    ∃ M : ℝ, 0 ≤ M ∧ ∀ z : ℂ, ‖z‖ ≤ R → ‖f z‖ ≤ M := by
+  have hcomp : IsCompact (Metric.closedBall (0 : ℂ) R) := isCompact_closedBall 0 R
+  obtain ⟨M, hM⟩ := hcomp.exists_bound_of_continuousOn hcont
+  refine ⟨max M 0, le_max_right _ _, fun z hz => ?_⟩
+  exact (hM z (Metric.mem_closedBall.mpr (by simpa using hz))).trans (le_max_left _ _)
 
 /-- The `normSq` function on `ℂ` is proper. -/
 theorem tendsto_normSq_cocompact_atTop : Tendsto normSq (cocompact ℂ) atTop := by
