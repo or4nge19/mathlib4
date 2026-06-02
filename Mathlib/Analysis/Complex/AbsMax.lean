@@ -69,6 +69,9 @@ are continuous on its closure. We prove the following theorems.
   `‖f z‖ ≤ C` for all `z ∈ s`; note that this theorem does not require `E` to be a
   finite-dimensional space.
 
+- `Complex.norm_le_of_mem_ball_of_forall_sphere_norm_le`: if `f` is holomorphic on the disk
+  `‖·‖ < r` and `‖f u‖ ≤ C` on the circle `‖u‖ = r`, then `‖f z‖ ≤ C` for all `z` in the disk.
+
 - `Complex.eqOn_closure_of_eqOn_frontier`: if `f x = g x` on the frontier of `s`, then `f x = g x`
   on `closure s`;
 
@@ -417,6 +420,24 @@ theorem norm_le_of_forall_mem_frontier_norm_le {f : E → F} {U : Set E} (hU : I
     ‖f z‖ = ‖f (e 0)‖ := by simp only [e, lineMap_apply_zero]
     _ ≤ ‖f (e ζ)‖ := hζ (subset_closure h₀)
     _ ≤ C := hC _ (hde.continuous.frontier_preimage_subset _ hζU)
+
+/-- If `f` is holomorphic on the disk `‖·‖ < r` and bounded by `C` on the circle `‖·‖ = r`, then
+`‖f z‖ ≤ C` for every `z` in the disk. -/
+theorem norm_le_of_mem_ball_of_forall_sphere_norm_le {f : ℂ → F} {r C : ℝ} {z : ℂ}
+    (hd : Differentiable ℂ f) (hrpos : 0 < r)
+    (hz : z ∈ Metric.ball (0 : ℂ) r) (hsphere : ∀ u : ℂ, ‖u‖ = r → ‖f u‖ ≤ C) :
+    ‖f z‖ ≤ C := by
+  let U : Set ℂ := Metric.ball (0 : ℂ) r
+  have hfront : ∀ u ∈ frontier U, ‖f u‖ ≤ C := by
+    intro u hu
+    have hur : ‖u‖ = r := by
+      have hfront' : frontier (Metric.ball (0 : ℂ) r) = Metric.sphere (0 : ℂ) r := by
+        simpa using (frontier_ball (x := (0 : ℂ)) (r := r) (ne_of_gt hrpos))
+      have : u ∈ Metric.sphere (0 : ℂ) r := by simpa [U, hfront'] using hu
+      simpa [Metric.mem_sphere, dist_zero_right] using this
+    exact hsphere u hur
+  exact norm_le_of_forall_mem_frontier_norm_le (f := f) (U := U) Metric.isBounded_ball
+    hd.diffContOnCl hfront (subset_closure hz)
 
 /-- If two complex differentiable functions `f g : E → F` are equal on the boundary of a bounded set
 `U`, then they are equal on `closure U`. -/

@@ -11,12 +11,29 @@ public import Mathlib.NumberTheory.LSeries.RiemannZetaValues
 
 
 /-!
-## Hadamard factorization for the completed Riemann zeta function
+# Hadamard factorization for the completed Riemann zeta function
 
-This file applies Hadamard factorization to the entire completed zeta function
-`completedRiemannZeta₀`. The analytic input is the order-one bound proved in
-`ZetaFiniteOrder.lean`; the product is the divisor-indexed canonical product, so multiplicities are
-those of `completedRiemannZeta₀` itself.
+This file specializes Tao's Hadamard factorization theorem ([tao246bComplexAnalysis], Thm. 15)
+to the entire completed zeta function `completedRiemannZeta₀` (Λ₀). The analytic input is the
+order-one bound `completedRiemannZeta₀_order_one` from `ZetaFiniteOrder`; the product is the
+divisor-indexed canonical Weierstrass product at genus `⌊ρ⌋ = 1`, with multiplicities from
+`MeromorphicOn.divisor`.
+
+Note: `completedRiemannZeta` (Λ with simple poles at `0` and `1`) is a different object; Hadamard
+applies to Λ₀.
+
+## Main results
+
+* `completedRiemannZeta₀_entireOfOrderAtMost_one` : Λ₀ has order at most one
+* `completedRiemannZeta₀_hadamard_factorization` : canonical product form over divisor indices
+* `completedRiemannZeta₀_hadamard_factorization_reindex`, `_sequence` : reindexed enumerations
+
+The analytic chain is `ZetaFiniteOrder` (order-one bound) → `HadamardFactorization/Order`
+(`hadamard_factorization_of_order`) → this file.
+
+## Tags
+
+Riemann zeta function, Hadamard factorization, canonical product, entire function of finite order
 -/
 
 @[expose] public section
@@ -29,14 +46,6 @@ namespace Riemann
 
 open scoped BigOperators
 
-/-!
-## Zeta specialization: Hadamard factorization for `completedRiemannZeta₀`
-
-The sharp order-one estimate for Λ₀ is recorded as
-`Complex.Hadamard.EntireOfOrderAtMost`; Hadamard factorization then gives the product
-over its divisor.
--/
-
 /-- The completed zeta function `Λ₀` has order at most one. -/
 theorem completedRiemannZeta₀_entireOfOrderAtMost_one :
     Complex.Hadamard.EntireOfOrderAtMost (1 : ℝ) completedRiemannZeta₀ := by
@@ -45,7 +54,7 @@ theorem completedRiemannZeta₀_entireOfOrderAtMost_one :
   simpa [add_comm, add_left_comm, add_assoc] using
     (Complex.completedRiemannZeta₀_order_one ε hε)
 
-/-- Hadamard factorization for the completed zeta function `Λ₀`. -/
+/-- Hadamard factorization for `completedRiemannZeta₀` (Λ₀) at genus one. -/
 theorem completedRiemannZeta₀_hadamard_factorization :
     ∃ (P : Polynomial ℂ), P.degree ≤ 1 ∧ ∀ z : ℂ, completedRiemannZeta₀ z =
         Complex.exp (Polynomial.eval z P) * z ^ (analyticOrderNatAt completedRiemannZeta₀ 0) *
@@ -56,8 +65,7 @@ theorem completedRiemannZeta₀_hadamard_factorization :
       (by norm_num) completedRiemannZeta₀_nontrivial
       completedRiemannZeta₀_entireOfOrderAtMost_one)
 
-/-- Reindexed Hadamard factorization for Λ₀, for any type equivalent to its nonzero divisor
-indices. -/
+/-- Reindexed divisor Hadamard factorization for Λ₀. -/
 theorem completedRiemannZeta₀_hadamard_factorization_reindex
     {ι : Type*}
     (e : ι ≃ Complex.Hadamard.divisorZeroIndex₀ completedRiemannZeta₀ (Set.univ : Set ℂ)) :
@@ -71,8 +79,7 @@ theorem completedRiemannZeta₀_hadamard_factorization_reindex
       (by norm_num) completedRiemannZeta₀_nontrivial
       completedRiemannZeta₀_entireOfOrderAtMost_one e)
 
-/-- Sequence-indexed Hadamard factorization for Λ₀, for an enumeration of its nonzero divisor
-indices by `ℕ`. -/
+/-- Sequence-indexed Hadamard factorization for Λ₀. -/
 theorem completedRiemannZeta₀_hadamard_factorization_sequence
     (e : ℕ ≃ Complex.Hadamard.divisorZeroIndex₀ completedRiemannZeta₀ (Set.univ : Set ℂ)) :
     ∃ (P : Polynomial ℂ), P.degree ≤ 1 ∧ ∀ z : ℂ, completedRiemannZeta₀ z =

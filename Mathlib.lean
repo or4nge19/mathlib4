@@ -1844,6 +1844,7 @@ public import Mathlib.Analysis.Complex.ValueDistribution.CharacteristicFunction
 public import Mathlib.Analysis.Complex.ValueDistribution.FirstMainTheorem
 public import Mathlib.Analysis.Complex.ValueDistribution.LogCounting.Asymptotic
 public import Mathlib.Analysis.Complex.ValueDistribution.LogCounting.Basic
+public import Mathlib.Analysis.Complex.ValueDistribution.LogCounting.Growth
 public import Mathlib.Analysis.Complex.ValueDistribution.Proximity.Basic
 public import Mathlib.Analysis.Complex.WeierstrassFactor
 public import Mathlib.Analysis.ConstantSpeed
@@ -2028,6 +2029,7 @@ public import Mathlib.Analysis.MellinTransform
 public import Mathlib.Analysis.Meromorphic.Basic
 public import Mathlib.Analysis.Meromorphic.Complex
 public import Mathlib.Analysis.Meromorphic.Divisor
+public import Mathlib.Analysis.Meromorphic.DivisorHolomorphic
 public import Mathlib.Analysis.Meromorphic.DivisorSupport
 public import Mathlib.Analysis.Meromorphic.FactorizedRational
 public import Mathlib.Analysis.Meromorphic.IsolatedZeros
@@ -2312,6 +2314,7 @@ public import Mathlib.Analysis.SpecialFunctions.Log.Deriv
 public import Mathlib.Analysis.SpecialFunctions.Log.Dyadic
 public import Mathlib.Analysis.SpecialFunctions.Log.ENNRealLog
 public import Mathlib.Analysis.SpecialFunctions.Log.ENNRealLogExp
+public import Mathlib.Analysis.SpecialFunctions.Log.ExpGrowth
 public import Mathlib.Analysis.SpecialFunctions.Log.ERealExp
 public import Mathlib.Analysis.SpecialFunctions.Log.InvLog
 public import Mathlib.Analysis.SpecialFunctions.Log.Monotone

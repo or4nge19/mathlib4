@@ -13,6 +13,9 @@ public import Mathlib.Analysis.Complex.HadamardFactorization.Growth
 Upgrades `hadamard_factorization_of_growth` to the finite-order formulation via
 `EntireOfOrderAtMost` and sequence- or divisor-indexed canonical products.
 
+The growth input is routed through a midpoint exponent `τ` with `⌊τ⌋ = ⌊ρ⌋` so genus
+`⌊ρ⌋` matches Tao's Weierstrass factor degree.
+
 ## Main results
 
 * `hadamard_factorization_of_order` : `f = exp(P) · z^k · ∏' E_m(z/a)`
@@ -61,7 +64,7 @@ theorem of_norm_le_exp {ρ : ℝ} {f : ℂ → ℂ} (hf : Differentiable ℂ f)
   rintro ε hε
   rcases hbound with ⟨C, hC, hCbound⟩
   refine ⟨C, hC, ?_⟩
-  exact norm_le_exp_mul_rpow_of_exponent_le (f := f)
+  exact Real.norm_le_exp_mul_rpow_of_exponent_le (f := f)
     (r := fun z : ℂ => 1 + ‖z‖) hC.le
     (fun z => by linarith [norm_nonneg z]) (by linarith : ρ ≤ ρ + ε) hCbound
 
@@ -73,7 +76,7 @@ theorem exists_log_growth {ρ τ : ℝ} {f : ℂ → ℂ} (h : EntireOfOrderAtMo
   have hnorm : ∀ z : ℂ, ‖f z‖ ≤ Real.exp (C * (1 + ‖z‖) ^ τ) := by
     intro z
     simpa [sub_add_cancel] using (hC z)
-  exact log_growth_of_norm_le_exp_mul_rpow (f := f)
+  exact Real.log_growth_of_norm_le_exp_mul_rpow (f := f)
     (r := fun z : ℂ => 1 + ‖z‖) hCpos hτ_nonneg
     (fun z => by linarith [norm_nonneg z]) hnorm
 
@@ -92,7 +95,7 @@ theorem hadamard_factorization_of_order {f : ℂ → ℂ} {ρ : ℝ} (hρ : 0 �
   classical
   let hentire : Differentiable ℂ f := horder.differentiable
   set m : ℕ := Nat.floor ρ
-  rcases exists_between_self_and_floor_add_one_same_floor hρ with
+  rcases Real.exists_between_self_and_floor_add_one_same_floor hρ with
     ⟨τ, hτ, hτ_lt, hτ_nonneg, hfloorτ'⟩
   have hfloorτ : Nat.floor τ = m := by
     simpa [m] using hfloorτ'

@@ -218,6 +218,25 @@ theorem HasDerivAt.cpow_const (hf : HasDerivAt f f' x) (h0 : f x ∈ slitPlane) 
     HasDerivAt (fun x => f x ^ c) (c * f x ^ (c - 1) * f') x :=
   (Complex.hasStrictDerivAt_cpow_const h0).hasDerivAt.comp x hf
 
+/-- If `u > 0`, then `w ↦ a * (u : ℂ) ^ (-w - 1)` has derivative
+`-a * log u * (u : ℂ) ^ (-z - 1)` at `z`. -/
+theorem HasDerivAt.const_mul_ofReal_cpow_neg_sub_one (a : ℂ) {u : ℝ} (hu : 0 < u) (z : ℂ) :
+    HasDerivAt (fun w => a * (u : ℂ) ^ (-w - 1))
+      (-a * (Complex.log u) * (u : ℂ) ^ (-z - 1)) z := by
+  set huC : (u : ℂ) ≠ 0 := Complex.ofReal_ne_zero.mpr hu.ne'
+  have hf : HasDerivAt (fun w => -w - 1) (-1) z := by
+    simpa [sub_eq_add_neg, add_comm, add_left_comm, add_assoc] using
+      (hasDerivAt_id z).neg.sub_const (1 : ℂ)
+  have hbase : HasDerivAt (fun w => (u : ℂ) ^ (-w - 1))
+      ((u : ℂ) ^ (-z - 1) * Complex.log (u : ℂ) * (-1)) z :=
+    HasDerivAt.const_cpow (c := (u : ℂ)) hf (Or.inl huC)
+  have hbase' : HasDerivAt (fun w => (u : ℂ) ^ (-w - 1))
+      (-(Complex.log (u : ℂ)) * (u : ℂ) ^ (-z - 1)) z := by
+    simpa [mul_comm, mul_left_comm, mul_assoc] using hbase
+  have hlog : (Real.log u : ℂ) = Complex.log (u : ℂ) := by
+    simpa using (Complex.ofReal_log (x := u) (hx := le_of_lt hu))
+  simpa [hlog, mul_comm, mul_left_comm, mul_assoc] using hbase'.const_mul a
+
 theorem HasDerivWithinAt.cpow (hf : HasDerivWithinAt f f' s x) (hg : HasDerivWithinAt g g' s x)
     (h0 : f x ∈ slitPlane) : HasDerivWithinAt (fun x => f x ^ g x)
       (g x * f x ^ (g x - 1) * f' + f x ^ g x * Complex.log (f x) * g') s x := by

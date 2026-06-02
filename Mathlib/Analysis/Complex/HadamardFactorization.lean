@@ -23,10 +23,15 @@ then there is an entire zero-free function `H` with
 The quotient `H` is obtained as the meromorphic normal form of
 `f / (z ^ (ord₀ f) * divisorCanonicalProduct ...)`.
 
+Products and divisor indices are centered at `0`; a general center is not yet API.
+
 ## Main results
 
 * `exists_entire_nonzero_hadamardQuotient` : existence of `H`
 * `hadamardDenom`, `differentiable_hadamardDenom`
+
+Downstream: `HadamardFactorization/Summability` (Jensen counting), `Growth`, and `Order`
+assemble the full factorization `hadamard_factorization_of_order`.
 
 ## References
 

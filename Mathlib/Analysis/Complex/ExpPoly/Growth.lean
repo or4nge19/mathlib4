@@ -7,6 +7,7 @@ Authors: Matteo Cipollina
 module
 
 public import Mathlib.Analysis.Complex.ExpPoly
+public import Mathlib.Analysis.SpecialFunctions.Log.ExpGrowth
 
 
 /-!
@@ -19,6 +20,8 @@ satisfies a growth bound with exponent `ρ`, then `P.natDegree ≤ ⌊ρ⌋`.
 ## Main results
 
 * `Complex.Hadamard.natDegree_le_floor_of_growth_exp_eval`
+* `Complex.Hadamard.natDegree_le_floor_of_exp_eval_norm_bound` : exponential norm bound implies
+  degree bound
 
 -/
 
@@ -363,6 +366,22 @@ theorem natDegree_le_floor_of_growth_exp_eval
       have : K0 + 1 ≤ K0 := le_trans hRδ (le_trans hRδ_le' (le_rfl))
       exact (not_lt_of_ge this) (lt_add_of_pos_right _ (by norm_num : (0 : ℝ) < 1))
     exact (Nat.le_floor_iff hρ).2 hn_le_real
+
+/-- A norm bound for `exp (P z)` gives the corresponding polynomial degree bound. -/
+theorem natDegree_le_floor_of_exp_eval_norm_bound {τ : ℝ} (hτ : 0 ≤ τ) (P : Polynomial ℂ)
+    (hbound :
+      ∃ C > 0, ∀ z : ℂ,
+        ‖Complex.exp (Polynomial.eval z P)‖ ≤ Real.exp (C * (1 + ‖z‖) ^ τ)) :
+    P.natDegree ≤ Nat.floor τ := by
+  rcases hbound with ⟨C, hCpos, hC⟩
+  have hlog_growth :
+      ∃ C > 0, ∀ z : ℂ,
+        Real.log (1 + ‖Complex.exp (Polynomial.eval z P)‖) ≤ C * (1 + ‖z‖) ^ τ :=
+    Real.log_growth_of_norm_le_exp_mul_rpow
+      (f := fun z : ℂ => Complex.exp (Polynomial.eval z P))
+      (r := fun z : ℂ => 1 + ‖z‖) hCpos hτ
+      (fun z => by linarith [norm_nonneg z]) hC
+  exact natDegree_le_floor_of_growth_exp_eval (ρ := τ) hτ P hlog_growth
 
 end Hadamard
 end Complex

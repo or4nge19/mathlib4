@@ -27,26 +27,23 @@ Abel-summation continuation is in `RiemannZetaAbelContinuation`.
 
 * `norm_riemannZeta_le`, `norm_riemannZeta_shift_le` : strip bounds for the Λ₀ pipeline
 * `norm_riemannZeta_ratio_le_on_vertical_line` : convexity input on vertical lines
-* `riemannZeta_eq_zetaContinuationAux` : Abel formula for `1/10 < re s`, `s ≠ 1` (in `RiemannZetaAbelContinuation`)
+* `norm_zetaAbelContinuationFormula_le` : Abel formula bound on `zetaAbelContinuationDomain`
 -/
 
 @[expose] public section
 
 open scoped BigOperators Topology
 
-/-- The subtype of prime natural numbers, used as the Euler product index type. -/
-abbrev ℙ := Nat.Primes
-
 -- Euler product bounds
 
 private lemma abs_zeta_prod_prime (s : ℂ) (hs : 1 < s.re) :
-  norm (riemannZeta s) = ∏' p : ℙ, (norm (1 - ((p : ℕ) : ℂ) ^ (-s : ℂ)))⁻¹ := by
+  norm (riemannZeta s) = ∏' p : Nat.Primes, (norm (1 - ((p : ℕ) : ℂ) ^ (-s : ℂ)))⁻¹ := by
   calc
-    norm (riemannZeta s) = norm (∏' p : ℙ, (1 - ((p : ℕ) : ℂ) ^ (-s : ℂ))⁻¹) := by
+    norm (riemannZeta s) = norm (∏' p : Nat.Primes, (1 - ((p : ℕ) : ℂ) ^ (-s : ℂ))⁻¹) := by
       rw [riemannZeta_eulerProduct_tprod hs]
-    _ = ∏' p : ℙ, norm ((1 - ((p : ℕ) : ℂ) ^ (-s : ℂ))⁻¹) := by
+    _ = ∏' p : Nat.Primes, norm ((1 - ((p : ℕ) : ℂ) ^ (-s : ℂ))⁻¹) := by
       exact Multipliable.norm_tprod (riemannZeta_eulerProduct_hasProd hs).multipliable
-    _ = ∏' p : ℙ, (norm (1 - ((p : ℕ) : ℂ) ^ (-s : ℂ)))⁻¹ := by
+    _ = ∏' p : Nat.Primes, (norm (1 - ((p : ℕ) : ℂ) ^ (-s : ℂ)))⁻¹ := by
       congr 1; ext p
       simp [norm_inv, (isUnit_one_sub_of_norm_lt_one (Nat.Primes.norm_cpow_neg_lt_one p s hs)).ne_zero]
 
@@ -134,10 +131,10 @@ private lemma prod_of_ratios {P : Type*} (a b : P → ℂ) (ha : Multipliable a)
     exact prod_of_ratios_simplified a b ha hb h_a_zero h_b_nonzero hA_nonzero' hB_nonzero'
 
 private lemma eulerFactor_tprod_div (s : ℂ) (hs : 1 < s.re) :
-    (∏' p : ℙ, (1 - ((p : ℕ) : ℂ) ^ (-(2 * s) : ℂ))⁻¹) / (∏' p : ℙ, (1 - ((p : ℕ) : ℂ) ^ (-s : ℂ))⁻¹) =
-      ∏' p : ℙ, ((1 - ((p : ℕ) : ℂ) ^ (-(2 * s) : ℂ))⁻¹ / (1 - ((p : ℕ) : ℂ) ^ (-s : ℂ))⁻¹) := by
-  let a := fun p : ℙ => (1 - ((p : ℕ) : ℂ) ^ (-(2 * s) : ℂ))⁻¹
-  let b := fun p : ℙ => (1 - ((p : ℕ) : ℂ) ^ (-s : ℂ))⁻¹
+    (∏' p : Nat.Primes, (1 - ((p : ℕ) : ℂ) ^ (-(2 * s) : ℂ))⁻¹) / (∏' p : Nat.Primes, (1 - ((p : ℕ) : ℂ) ^ (-s : ℂ))⁻¹) =
+      ∏' p : Nat.Primes, ((1 - ((p : ℕ) : ℂ) ^ (-(2 * s) : ℂ))⁻¹ / (1 - ((p : ℕ) : ℂ) ^ (-s : ℂ))⁻¹) := by
+  let a := fun p : Nat.Primes => (1 - ((p : ℕ) : ℂ) ^ (-(2 * s) : ℂ))⁻¹
+  let b := fun p : Nat.Primes => (1 - ((p : ℕ) : ℂ) ^ (-s : ℂ))⁻¹
   have ha : Multipliable a :=
     (riemannZeta_eulerProduct_hasProd (by simp; linarith)).multipliable
   have hb : Multipliable b := (riemannZeta_eulerProduct_hasProd hs).multipliable
@@ -167,7 +164,7 @@ private lemma ratio_invs (z : ℂ) (hz : norm z < 1) :
 
 /-- `ζ(2s)/ζ(s)` equals the Euler product of `(1 + p^{-s})^{-1}`. -/
 theorem zeta_ratio_identity (s : ℂ) (hs : 1 < s.re) :
-    riemannZeta (2 * s) / riemannZeta s = ∏' p : ℙ, (1 + ((p : ℕ) : ℂ) ^ (-s : ℂ))⁻¹ := by
+    riemannZeta (2 * s) / riemannZeta s = ∏' p : Nat.Primes, (1 + ((p : ℕ) : ℂ) ^ (-s : ℂ))⁻¹ := by
   rw [← riemannZeta_eulerProduct_tprod (by simp; linarith)]
   rw [← riemannZeta_eulerProduct_tprod hs]
   rw [eulerFactor_tprod_div s hs]
@@ -182,7 +179,7 @@ theorem zeta_ratio_identity (s : ℂ) (hs : 1 < s.re) :
 
 private lemma zeta_ratio_at_real (r : ℝ) (hr : 1 < (((r : ℝ) / 2 : ℂ)).re) :
     riemannZeta (r : ℂ) / riemannZeta ((r / 2 : ℝ) : ℂ) =
-      ∏' p : ℙ, (1 + ((p : ℕ) : ℂ) ^ (-(((r : ℝ) / 2) : ℂ)))⁻¹ := by
+      ∏' p : Nat.Primes, (1 + ((p : ℕ) : ℂ) ^ (-(((r : ℝ) / 2) : ℂ)))⁻¹ := by
   have h2s : (2 : ℂ) * ((r : ℝ) / 2 : ℂ) = (r : ℂ) := by
     have hreal : (2 : ℝ) * (r / 2) = r := by ring
     calc
@@ -192,7 +189,7 @@ private lemma zeta_ratio_at_real (r : ℝ) (hr : 1 < (((r : ℝ) / 2 : ℂ)).re)
 
 end EulerProductTools
 
-private lemma abs_term_bound (p : ℙ) (t : ℝ) :
+private lemma abs_term_bound (p : Nat.Primes) (t : ℝ) :
   norm (1 - ((p : ℕ) : ℂ) ^ (-(((3 : ℝ) / 2) + t * Complex.I))) ≤ 1 + ((p : ℕ) : ℝ) ^ (-((3 : ℝ) / 2)) := by
   have h1 : norm (1 - ((p : ℕ) : ℂ) ^ (-(((3 : ℝ) / 2) + t * Complex.I))) ≤
       1 + norm (((p : ℕ) : ℂ) ^ (-(((3 : ℝ) / 2) + t * Complex.I))) := by
@@ -206,7 +203,7 @@ private lemma abs_term_bound (p : ℙ) (t : ℝ) :
   rw [h5] at h1
   exact h1
 
-private lemma condp32 (p : ℙ) (t : ℝ) : 1 - ((p : ℕ) : ℂ) ^ (-(((3 : ℝ) / 2) + t * Complex.I)) ≠ 0 := by
+private lemma condp32 (p : Nat.Primes) (t : ℝ) : 1 - ((p : ℕ) : ℂ) ^ (-(((3 : ℝ) / 2) + t * Complex.I)) ≠ 0 := by
   intro h
   have hp_eq_one : ((p : ℕ) : ℂ) ^ (-(((3 : ℝ) / 2) + t * Complex.I)) = 1 := by
     rw [sub_eq_zero] at h; exact h.symm
@@ -221,7 +218,7 @@ private lemma condp32 (p : ℙ) (t : ℝ) : 1 - ((p : ℕ) : ℂ) ^ (-(((3 : ℝ
   rw [this] at h_abs_lt
   exact lt_irrefl 1 h_abs_lt
 
-private lemma abs_term_inv_bound (p : ℙ) (t : ℝ) : (1 + ((p : ℕ) : ℝ) ^ (-((3 : ℝ) / 2)))⁻¹ ≤ (norm (1 - ((p : ℕ) : ℂ) ^ (-(((3 : ℝ) / 2) + t * Complex.I))))⁻¹ := by
+private lemma abs_term_inv_bound (p : Nat.Primes) (t : ℝ) : (1 + ((p : ℕ) : ℝ) ^ (-((3 : ℝ) / 2)))⁻¹ ≤ (norm (1 - ((p : ℕ) : ℂ) ^ (-(((3 : ℝ) / 2) + t * Complex.I))))⁻¹ := by
   have h1 := abs_term_bound p t
   have h2 := condp32 p t
   have hpos : 0 < norm (1 - ((p : ℕ) : ℂ) ^ (-(((3 : ℝ) / 2) + t * Complex.I))) :=
@@ -235,15 +232,15 @@ private lemma multipliable_complex_abs_inv {i : Type*} (g : i → ℂ)
   simpa [norm_inv] using h_norm_mult
 
 private lemma multipliable_positive_inv_powers (r : ℝ) (hr : 1 < r) :
-    Multipliable (fun p : ℙ => (1 + ((p : ℕ) : ℝ) ^ (-r))⁻¹) := by
-  have h_sum : Summable (fun p : ℙ => ((p : ℕ) : ℝ) ^ (-r)) := by
+    Multipliable (fun p : Nat.Primes => (1 + ((p : ℕ) : ℝ) ^ (-r))⁻¹) := by
+  have h_sum : Summable (fun p : Nat.Primes => ((p : ℕ) : ℝ) ^ (-r)) := by
     rw [Nat.Primes.summable_rpow]
     linarith
-  have h_log_sum : Summable (fun p : ℙ => Real.log (1 + ((p : ℕ) : ℝ) ^ (-r))) :=
+  have h_log_sum : Summable (fun p : Nat.Primes => Real.log (1 + ((p : ℕ) : ℝ) ^ (-r))) :=
     Real.summable_log_one_add_of_summable h_sum
-  have h_log_inv_sum : Summable (fun p : ℙ => Real.log ((1 + ((p : ℕ) : ℝ) ^ (-r))⁻¹)) := by
+  have h_log_inv_sum : Summable (fun p : Nat.Primes => Real.log ((1 + ((p : ℕ) : ℝ) ^ (-r))⁻¹)) := by
     simpa [Real.log_inv, neg_mul] using h_log_sum.neg
-  have h_pos : ∀ p : ℙ, 0 < (1 + ((p : ℕ) : ℝ) ^ (-r))⁻¹ := by
+  have h_pos : ∀ p : Nat.Primes, 0 < (1 + ((p : ℕ) : ℝ) ^ (-r))⁻¹ := by
     intro p
     apply inv_pos.mpr
     have h_ge : 0 ≤ ((p : ℕ) : ℝ) ^ (-r) := Real.rpow_nonneg (Nat.cast_nonneg _) _
@@ -287,48 +284,44 @@ private lemma nnreal_tprod_le_coe {i : Type*} (f g : i → NNReal) (hf : Multipl
 end PositiveTprod
 
 private lemma abs_zeta_inequality (t : ℝ) :
-  ∏' p : ℙ, (1 + ((p : ℕ) : ℝ) ^ (-((3 : ℝ) / 2)))⁻¹ ≤
-  ∏' p : ℙ, (norm (1 - ((p : ℕ) : ℂ) ^ (-(((3 : ℝ) / 2) + t * Complex.I))))⁻¹ := by
+  ∏' p : Nat.Primes, (1 + ((p : ℕ) : ℝ) ^ (-((3 : ℝ) / 2)))⁻¹ ≤
+  ∏' p : Nat.Primes, (norm (1 - ((p : ℕ) : ℂ) ^ (-(((3 : ℝ) / 2) + t * Complex.I))))⁻¹ := by
   let s := ((3 : ℝ) / 2) + t * Complex.I
   have hs : 1 < s.re := by
     simp only [s, Complex.add_re, Complex.ofReal_re, Complex.mul_re, Complex.I_re, mul_zero, add_zero]
     norm_num
-  have h_pos_left : ∀ p : ℙ, 0 < (1 + ((p : ℕ) : ℝ) ^ (-((3 : ℝ) / 2)))⁻¹ := fun p => by
+  have h_pos_left : ∀ p : Nat.Primes, 0 < (1 + ((p : ℕ) : ℝ) ^ (-((3 : ℝ) / 2)))⁻¹ := fun p => by
     exact inv_pos.mpr (add_pos zero_lt_one <| Real.rpow_pos_of_pos (Nat.cast_pos.mpr p.property.pos) _)
-  have h_pos_right : ∀ p : ℙ, 0 < (norm (1 - ((p : ℕ) : ℂ) ^ (-s)))⁻¹ := fun p => by
+  have h_pos_right : ∀ p : Nat.Primes, 0 < (norm (1 - ((p : ℕ) : ℂ) ^ (-s)))⁻¹ := fun p => by
     exact inv_pos.mpr (norm_pos_iff.mpr (condp32 p t))
-  let f : ℙ → NNReal := fun p => ⟨(1 + ((p : ℕ) : ℝ) ^ (-((3 : ℝ) / 2)))⁻¹, le_of_lt (h_pos_left p)⟩
-  let g : ℙ → NNReal := fun p => ⟨(norm (1 - ((p : ℕ) : ℂ) ^ (-s)))⁻¹, le_of_lt (h_pos_right p)⟩
+  let f : Nat.Primes → NNReal := fun p => ⟨(1 + ((p : ℕ) : ℝ) ^ (-((3 : ℝ) / 2)))⁻¹, le_of_lt (h_pos_left p)⟩
+  let g : Nat.Primes → NNReal := fun p => ⟨(norm (1 - ((p : ℕ) : ℂ) ^ (-s)))⁻¹, le_of_lt (h_pos_right p)⟩
   have hf := multipliable_real_to_nnreal _ h_pos_left <|
     multipliable_positive_inv_powers ((3 : ℝ) / 2) (by norm_num : 1 < (3 : ℝ) / 2)
   have hg := multipliable_real_to_nnreal _ h_pos_right <|
-    multipliable_complex_abs_inv (fun p : ℙ => ((p : ℕ) : ℂ) ^ (-s))
+    multipliable_complex_abs_inv (fun p : Nat.Primes => ((p : ℕ) : ℂ) ^ (-s))
       (riemannZeta_eulerProduct_hasProd hs).multipliable
   have h_nnreal : ∏' p, f p ≤ ∏' p, g p :=
     Multipliable.tprod_le_tprod (fun p => by
       simp only [f, g, ← NNReal.coe_le_coe, NNReal.coe_mk]
       exact abs_term_inv_bound p t) hf hg
   have h_convert : ∏' p, (f p : ℝ) ≤ ∏' p, (g p : ℝ) := nnreal_tprod_le_coe f g hf hg h_nnreal
-  have h_eq_f : ∏' p, (f p : ℝ) = ∏' p : ℙ, (1 + ((p : ℕ) : ℝ) ^ (-((3 : ℝ) / 2)))⁻¹ := by
+  have h_eq_f : ∏' p, (f p : ℝ) = ∏' p : Nat.Primes, (1 + ((p : ℕ) : ℝ) ^ (-((3 : ℝ) / 2)))⁻¹ := by
     simp only [f, NNReal.coe_mk]
-  have h_eq_g : ∏' p, (g p : ℝ) = ∏' p : ℙ, (norm (1 - ((p : ℕ) : ℂ) ^ (-s)))⁻¹ := by
+  have h_eq_g : ∏' p, (g p : ℝ) = ∏' p : Nat.Primes, (norm (1 - ((p : ℕ) : ℂ) ^ (-s)))⁻¹ := by
     simp only [g, NNReal.coe_mk]
   rw [h_eq_f, h_eq_g] at h_convert
   exact h_convert
 
-private lemma abs_zeta_ratio_eval : norm (riemannZeta 3 / riemannZeta ((3 : ℝ) / 2)) = ∏' p : ℙ, (1 + ((p : ℕ) : ℝ) ^ (-((3 : ℝ) / 2)))⁻¹ := by
-  -- Start from the Euler product identity at 3/2
+private lemma abs_zeta_ratio_eval : norm (riemannZeta 3 / riemannZeta ((3 : ℝ) / 2)) = ∏' p : Nat.Primes, (1 + ((p : ℕ) : ℝ) ^ (-((3 : ℝ) / 2)))⁻¹ := by
   have hratio := zeta_ratio_at_real 3 (by norm_num : 1 < (((3 : ℝ) / 2 : ℂ)).re)
   -- Define complex and real Euler factors
-  let w : ℙ → ℂ := fun p => (1 + ((p : ℕ) : ℂ) ^ (-(((3 : ℝ) / 2) : ℂ)))⁻¹
-  let u : ℙ → ℝ := fun p => (1 + ((p : ℕ) : ℝ) ^ (-((3 : ℝ) / 2)))⁻¹
-  -- Multipliability of the real factors
+  let w : Nat.Primes → ℂ := fun p => (1 + ((p : ℕ) : ℂ) ^ (-(((3 : ℝ) / 2) : ℂ)))⁻¹
+  let u : Nat.Primes → ℝ := fun p => (1 + ((p : ℕ) : ℝ) ^ (-((3 : ℝ) / 2)))⁻¹
   have hu_mult : Multipliable u :=
     multipliable_positive_inv_powers ((3 : ℝ) / 2) (by norm_num : 1 < (3 : ℝ) / 2)
-  -- Show w is the complexification of u
-  have hw_eq : w = fun p : ℙ => (u p : ℂ) := by
+  have hw_eq : w = fun p : Nat.Primes => (u p : ℂ) := by
     funext p
-    -- rewrite the complex cpow as a real rpow, using nonnegativity of the base
     have hx : 0 ≤ ((p : ℕ) : ℝ) := by exact_mod_cast (Nat.zero_le (p : ℕ))
     have hcpow : (((((p : ℕ) : ℝ) ^ (-((3 : ℝ) / 2))) : ℝ) : ℂ)
         = ((p : ℕ) : ℂ) ^ (-(((3 : ℝ) / 2) : ℂ)) := by
@@ -339,36 +332,30 @@ private lemma abs_zeta_ratio_eval : norm (riemannZeta 3 / riemannZeta ((3 : ℝ)
         simp [hcpow]
       _ = (((1 + ((p : ℕ) : ℝ) ^ (-((3 : ℝ) / 2)))⁻¹ : ℝ) : ℂ) := by
         simp [Complex.ofReal_add, Complex.ofReal_inv, Complex.ofReal_one]
-  -- Multipliability of the complex factors via mapping by ofReal
   have hw_mult : Multipliable w := by
     have hmap : Multipliable ((fun x : ℝ => (x : ℂ)) ∘ u) :=
       Multipliable.map (hf := hu_mult) Complex.ofRealHom Complex.continuous_ofReal
     simpa [hw_eq] using hmap
-  -- Take absolute values inside the product
-  have h_abs_tprod : norm (∏' p : ℙ, w p) = ∏' p : ℙ, norm (w p) :=
+  have h_abs_tprod : norm (∏' p : Nat.Primes, w p) = ∏' p : Nat.Primes, norm (w p) :=
     Multipliable.norm_tprod hw_mult
-  -- For each factor, the absolute value equals the real factor
-  have h_abs_eq_fun : (fun p : ℙ => norm (w p)) = u := by
+  have h_abs_eq_fun : (fun p : Nat.Primes => norm (w p)) = u := by
     funext p
-    -- u p ≥ 0
     have hge : 0 ≤ ((p : ℕ) : ℝ) ^ (-((3 : ℝ) / 2)) :=
       Real.rpow_nonneg (by exact_mod_cast (Nat.zero_le (p : ℕ))) _
     have hpos : 0 < 1 + ((p : ℕ) : ℝ) ^ (-((3 : ℝ) / 2)) := by linarith
     have hnonneg : 0 ≤ u p := by
       have : 0 < (1 + ((p : ℕ) : ℝ) ^ (-((3 : ℝ) / 2)))⁻¹ := inv_pos.mpr hpos
       exact this.le
-    -- conclude
     simp [hw_eq, Complex.norm_real, abs_of_nonneg hnonneg]
-  -- Rewrite the ratio using the identity, then conclude
   have h_abs_ratio : norm (riemannZeta 3 / riemannZeta ((3 : ℝ) / 2))
-      = norm (∏' p : ℙ, w p) := by
+      = norm (∏' p : Nat.Primes, w p) := by
     simpa [w] using congrArg norm hratio
   calc
     norm (riemannZeta 3 / riemannZeta ((3 : ℝ) / 2))
-        = norm (∏' p : ℙ, w p) := h_abs_ratio
-    _ = ∏' p : ℙ, norm (w p) := h_abs_tprod
-    _ = ∏' p : ℙ, u p := by simp [h_abs_eq_fun]
-    _ = ∏' p : ℙ, (1 + ((p : ℕ) : ℝ) ^ (-((3 : ℝ) / 2)))⁻¹ := rfl
+        = norm (∏' p : Nat.Primes, w p) := h_abs_ratio
+    _ = ∏' p : Nat.Primes, norm (w p) := h_abs_tprod
+    _ = ∏' p : Nat.Primes, u p := by simp [h_abs_eq_fun]
+    _ = ∏' p : Nat.Primes, (1 + ((p : ℕ) : ℝ) ^ (-((3 : ℝ) / 2)))⁻¹ := rfl
 
 /-- For `t : ℝ`, the Euler product at `re s = 3` controls `‖ζ 3 / ζ (3/2 + it)‖`. -/
 theorem norm_riemannZeta_ratio_le_on_vertical_line (t : ℝ) :
@@ -379,95 +366,26 @@ theorem norm_riemannZeta_ratio_le_on_vertical_line (t : ℝ) :
     norm_num
   calc
     norm (riemannZeta 3 / riemannZeta ((3 : ℝ) / 2))
-        = ∏' p : ℙ, (1 + ((p : ℕ) : ℝ) ^ (-((3 : ℝ) / 2)))⁻¹ := abs_zeta_ratio_eval
-    _ ≤ ∏' p : ℙ, (norm (1 - ((p : ℕ) : ℂ) ^ (-(((3 : ℝ) / 2) + t * Complex.I))))⁻¹ :=
+        = ∏' p : Nat.Primes, (1 + ((p : ℕ) : ℝ) ^ (-((3 : ℝ) / 2)))⁻¹ := abs_zeta_ratio_eval
+    _ ≤ ∏' p : Nat.Primes, (norm (1 - ((p : ℕ) : ℂ) ^ (-(((3 : ℝ) / 2) + t * Complex.I))))⁻¹ :=
           abs_zeta_inequality t
     _ = norm (riemannZeta (((3 : ℝ) / 2 : ℂ) + t * Complex.I)) := by
           simpa using (abs_zeta_prod_prime (((3 : ℝ) / 2 : ℂ) + t * Complex.I) hs).symm
 
 open Real Set Filter Topology MeasureTheory
 
-/-- If `1/10 < re s` and `s ≠ 1`, then `‖ζ s‖ ≤ 1 + ‖(s - 1)⁻¹‖ + ‖s‖ / re s`. -/
-theorem norm_riemannZeta_le (s : ℂ) (hs_re : 1/10 < s.re) (hs_ne : s ≠ 1) :
+/-- On `zetaAbelContinuationDomain`, `‖ζ s‖ ≤ 1 + ‖(s - 1)⁻¹‖ + ‖s‖ / re s`. -/
+theorem norm_riemannZeta_le (s : ℂ) (hs : s ∈ zetaAbelContinuationDomain) :
     ‖riemannZeta s‖ ≤ 1 + ‖1 / (s - 1)‖ + ‖s‖ / s.re := by
-  set f : ℝ → ℂ := fun u => (Int.fract u : ℝ) * (u : ℂ) ^ (-s - 1) with hfdef
-  set g : ℝ → ℝ := fun u => u ^ (-s.re - 1) with hgdef
-  have hζ : ‖riemannZeta s‖ ≤ 1 + ‖1 / (s - 1)‖ + ‖s‖ * ‖∫ u in Ioi (1 : ℝ), f u‖ := by
-    classical
-    set S : Set ℂ := {z : ℂ | z ≠ 1}
-    set T : Set ℂ := {z : ℂ | z ∈ S ∧ 1/10 < z.re}
-    set Iint : ℂ := ∫ u in Ioi (1 : ℝ), f u
-    have hT : s ∈ T := by
-      have hsS : s ∈ S := by simpa [S, Set.mem_setOf_eq] using hs_ne
-      simpa [T, Set.mem_setOf_eq] using And.intro hsS hs_re
-    have hAC : ∀ z ∈ T,
-        riemannZeta z = 1 + 1 / (z - 1) - z * ∫ u in Ioi (1 : ℝ), (Int.fract u : ℝ) * (u : ℂ) ^ (-z - 1) := by
-      simpa [S, T] using riemannZeta_eq_zetaContinuationAux
-    have hzeta : riemannZeta s = 1 + 1 / (s - 1) - s * Iint := by
-      simpa [Iint, hfdef] using hAC s hT
-    have h1 : ‖riemannZeta s‖ ≤ ‖1 + 1 / (s - 1)‖ + ‖-s * Iint‖ := by
-      simpa [hzeta, sub_eq_add_neg] using norm_add_le (1 + 1 / (s - 1)) (-s * Iint)
-    have hA : ‖1 + 1 / (s - 1)‖ ≤ 1 + ‖1 / (s - 1)‖ := by
-      simpa using norm_add_le (1 : ℂ) (1 / (s - 1))
-    have hB : ‖-s * Iint‖ = ‖s‖ * ‖Iint‖ := by simp
-    have h2 : ‖riemannZeta s‖ ≤ (1 + ‖1 / (s - 1)‖) + (‖s‖ * ‖Iint‖) :=
-      le_trans h1 (add_le_add hA hB.le)
-    simpa [add_assoc, add_left_comm, add_comm] using h2
-  let μ : Measure ℝ := (volume : Measure ℝ).restrict (Ioi (1 : ℝ))
-  have h_ae_bound : ∀ᵐ u ∂μ, ‖f u‖ ≤ g u := by
-    have hforall : ∀ u ∈ Ioi (1 : ℝ), ‖f u‖ ≤ g u := by
-      intro u hu
-      have := fract_kernel_norm_bound u (le_of_lt hu) s
-      simpa [hfdef, hgdef] using this
-    have hmeas : MeasurableSet (Ioi (1 : ℝ)) := measurableSet_Ioi
-    simpa [μ] using
-      (MeasureTheory.ae_restrict_of_forall_mem (μ := volume) (s := Ioi (1 : ℝ)) hmeas hforall)
-  have hg_intOn : IntegrableOn g (Ioi (1 : ℝ)) := by
-    classical
-    by_contra hnot
-    have hnot' : ¬ Integrable g μ := by simpa [μ, IntegrableOn] using hnot
-    have hint0 : (∫ u, g u ∂μ) = 0 := by
-      simpa using (integral_undef (μ := μ) (f := g) hnot')
-    have hval : ∫ u in Ioi (1 : ℝ), g u = 1 / s.re := by
-      simpa [hgdef] using integral_Ioi_rpow_neg_re_sub_one (hs := by linarith [hs_re])
-    have hne : (1 / s.re) ≠ 0 := by exact one_div_ne_zero (ne_of_gt (by linarith [hs_re]))
-    have : (∫ u in Ioi (1 : ℝ), g u) = 0 := by simpa [μ] using hint0
-    exact hne (by simpa [hval] using this)
-  have hg_int : Integrable g μ := by simpa [μ, IntegrableOn] using hg_intOn
-  have h_int_bound : ‖∫ u in Ioi (1 : ℝ), f u‖ ≤ ∫ u in Ioi (1 : ℝ), g u := by
-    have :=
-      (MeasureTheory.norm_integral_le_of_norm_le (μ := μ) (f := f) (g := g) hg_int h_ae_bound)
-    simpa [μ] using this
-  have h_g_val : ∫ u in Ioi (1 : ℝ), g u = 1 / s.re := by
-    simpa [hgdef] using integral_Ioi_rpow_neg_re_sub_one (hs := by linarith [hs_re])
-  have h_int_bound_conc : ‖∫ u in Ioi (1 : ℝ), f u‖ ≤ 1 / s.re := by
-    simpa [h_g_val] using h_int_bound
-  have hmul : ‖s‖ * ‖∫ u in Ioi (1 : ℝ), f u‖ ≤ ‖s‖ * (1 / s.re) := by
-    exact mul_le_mul_of_nonneg_left h_int_bound_conc (by exact norm_nonneg s)
-  have hsum0 : (1 + ‖1 / (s - 1)‖) + ‖s‖ * ‖∫ u in Ioi (1 : ℝ), f u‖
-      ≤ (1 + ‖1 / (s - 1)‖) + ‖s‖ * (1 / s.re) := by
-    exact (add_le_add_iff_left (1 + ‖1 / (s - 1)‖)).mpr hmul
-  have hsum : 1 + ‖1 / (s - 1)‖ + ‖s‖ * ‖∫ u in Ioi (1 : ℝ), f u‖
-      ≤ 1 + ‖1 / (s - 1)‖ + ‖s‖ * (1 / s.re) := by
-    simpa [add_assoc] using hsum0
-  have hfinal1 : ‖riemannZeta s‖ ≤ 1 + ‖1 / (s - 1)‖ + ‖s‖ * (1 / s.re) :=
-    le_trans hζ hsum
-  simpa [div_eq_mul_inv] using hfinal1
+  rw [riemannZeta_eq_zetaAbelContinuationFormula s hs]
+  exact norm_zetaAbelContinuationFormula_le s hs
 
-private lemma helper_three_abs_sq (t : ℝ) : (3 : ℝ) ^ 2 + t ^ 2 ≤ (3 + |t|) ^ 2 := by
-  have hnonneg : 0 ≤ (6 : ℝ) * |t| := by
-    have h6 : (0 : ℝ) ≤ 6 := by norm_num
-    exact mul_nonneg h6 (abs_nonneg t)
-  have hmul : |t| * |t| = t * t := by
-    simp
-  calc
-    (3 : ℝ) ^ 2 + t ^ 2 = (3 : ℝ) ^ 2 + t * t := by simp [pow_two]
-    _ = (3 : ℝ) ^ 2 + |t| * |t| := by simp [hmul]
-    _ ≤ (3 : ℝ) ^ 2 + |t| * |t| + (6 : ℝ) * |t| := by exact le_add_of_nonneg_right hnonneg
-    _ = (3 + |t|) ^ 2 := by ring
+private lemma three_sq_add_sq_le_sq_add_abs (t : ℝ) : (3 : ℝ) ^ 2 + t ^ 2 ≤ (3 + |t|) ^ 2 := by
+  nlinarith [abs_nonneg t, sq_abs t, sq_nonneg (3 + |t|)]
 
 /-- Lemma: Bound on `‖s‖` when `1/2 ≤ Re(s) < 3`. -/
-private lemma lem_sBound (s : ℂ) (hs : (1/2 : ℝ) ≤ s.re ∧ s.re < (3 : ℝ)) : ‖s‖ < (3 : ℝ) + |s.im| := by
+private lemma norm_lt_three_add_abs_im (s : ℂ) (hs : (1/2 : ℝ) ≤ s.re ∧ s.re < (3 : ℝ)) :
+    ‖s‖ < (3 : ℝ) + |s.im| := by
   have hnegthree_lt_re : (- (3 : ℝ)) < s.re := by
     have hlt : (- (3 : ℝ)) < (1 / 2 : ℝ) := by norm_num
     exact lt_of_lt_of_le hlt hs.1
@@ -478,7 +396,7 @@ private lemma lem_sBound (s : ℂ) (hs : (1/2 : ℝ) ≤ s.re ∧ s.re < (3 : �
     exact (add_lt_add_iff_right (s.im ^ 2)).mpr h_re_sq_lt
   have hsq : ‖s‖ ^ 2 < (3 + |s.im|) ^ 2 := by
     have hnormSq : Complex.normSq s < (3 + |s.im|) ^ 2 := by
-      have h := lt_of_lt_of_le hsumlt (helper_three_abs_sq s.im)
+      have h := lt_of_lt_of_le hsumlt (three_sq_add_sq_le_sq_add_abs s.im)
       simpa [Complex.normSq_apply, pow_two] using h
     rw [Complex.sq_norm]
     exact hnormSq
@@ -487,18 +405,16 @@ private lemma lem_sBound (s : ℂ) (hs : (1/2 : ℝ) ≤ s.re ∧ s.re < (3 : �
   exact (sq_lt_sq₀ hnormnn hpos).1 hsq
 
 /-- Lemma: Bound on `1 / Re(s)` under `1/2 ≤ Re(s) < 3`. -/
-private lemma lem_invReSbound (s : ℂ) (hs : (1/2 : ℝ) ≤ s.re ∧ s.re < (3 : ℝ)) :
+private lemma one_div_re_le_two (s : ℂ) (hs : (1/2 : ℝ) ≤ s.re ∧ s.re < (3 : ℝ)) :
     1 / s.re ≤ (2 : ℝ) := by
-  have h_pos : (0 : ℝ) < s.re := by
-    linarith [hs.1]
-  have h_half_pos : (0 : ℝ) < (1/2 : ℝ) := by norm_num
-  have h_recip : 1 / s.re ≤ 1 / (1/2 : ℝ) := one_div_le_one_div_of_le h_half_pos hs.1
-  have h_simplify : 1 / (1/2 : ℝ) = (2 : ℝ) := by norm_num
-  rw [h_simplify] at h_recip
-  exact h_recip
+  have h_pos : 0 < s.re := by linarith [hs.1]
+  calc
+    1 / s.re ≤ 1 / (1 / 2 : ℝ) := one_div_le_one_div_of_le (by norm_num) hs.1
+    _ = 2 := by norm_num
 
 /-- Lemma: Lower bound on `‖s - 1‖` when `1/2 ≤ Re(s) < 3` and `|Im(s)| ≥ 1`. -/
-private lemma lem_invSminus1bound (s : ℂ) (hs_re : (1/2 : ℝ) ≤ s.re ∧ s.re < (3 : ℝ)) (hs_im : (1 : ℝ) ≤ |s.im|) : (1 : ℝ) ≤ ‖s - 1‖ := by
+private lemma one_le_norm_sub_one (s : ℂ) (hs_re : (1/2 : ℝ) ≤ s.re ∧ s.re < (3 : ℝ))
+    (hs_im : (1 : ℝ) ≤ |s.im|) : (1 : ℝ) ≤ ‖s - 1‖ := by
   have h2 : |s.im| ≤ ‖s - 1‖ := by
     have : (s - (1 : ℂ)).im = s.im := by
       simp [Complex.sub_im, Complex.one_im]
@@ -506,39 +422,34 @@ private lemma lem_invSminus1bound (s : ℂ) (hs_re : (1/2 : ℝ) ≤ s.re ∧ s.
   exact le_trans hs_im h2
 
 /-- Final bound combination for the strip `1/2 ≤ re s < 3`, `1 ≤ |im s|`. -/
-private lemma lem_finalBoundCombination (s : ℂ) (hs_re : (1/2 : ℝ) ≤ s.re ∧ s.re < (3 : ℝ)) (hs_im : (1 : ℝ) ≤ |s.im|) : ‖riemannZeta s‖ < 1 + 1 + ((3 : ℝ) + |s.im|) * 2 := by
+private lemma zeta_norm_lt_linear_im_aux (s : ℂ) (hs_re : (1/2 : ℝ) ≤ s.re ∧ s.re < (3 : ℝ))
+    (hs_im : (1 : ℝ) ≤ |s.im|) :
+    ‖riemannZeta s‖ < 1 + 1 + ((3 : ℝ) + |s.im|) * 2 := by
   have hs_ne : s ≠ 1 := by
-    intro h
-    rw [h] at hs_im
-    simp at hs_im
-    linarith
-  have hs_re_pos : 0 < s.re := by linarith [hs_re.1]
-  have h1 : ‖riemannZeta s‖ ≤ 1 + 1 / ‖s - 1‖ + ‖s‖ / s.re := by
-    simpa [one_div] using norm_riemannZeta_le s (by linarith [hs_re_pos]) hs_ne
-  have h2 : (1 : ℝ) ≤ ‖s - 1‖ := lem_invSminus1bound s hs_re hs_im
-  have h3 : 1 / ‖s - 1‖ ≤ 1 := by
-    simpa [one_div, norm_inv] using inv_le_one_of_one_le₀ (a := ‖s - 1‖) h2
-  have h4 : ‖s‖ < (3 : ℝ) + |s.im| := lem_sBound s hs_re
-  have h5 : 1 / s.re ≤ (2 : ℝ) := lem_invReSbound s hs_re
-  calc ‖riemannZeta s‖
-    ≤ 1 + 1 / ‖s - 1‖ + ‖s‖ / s.re := h1
-    _ ≤ 1 + 1 + ‖s‖ / s.re := by linarith [h3]
+    intro h; rw [h] at hs_im; simp at hs_im; linarith
+  calc
+    ‖riemannZeta s‖
+        ≤ 1 + 1 / ‖s - 1‖ + ‖s‖ / s.re := by
+          simpa [one_div] using norm_riemannZeta_le s
+            (mem_zetaAbelContinuationDomain_of_re hs_ne
+              (lt_of_lt_of_le zetaAbelContinuationReLower_lt_half (by simpa using hs_re.1)))
+    _ ≤ 1 + 1 + ‖s‖ / s.re := by
+      gcongr
+      simpa [one_div] using inv_le_one_of_one_le₀ (one_le_norm_sub_one s hs_re hs_im)
     _ ≤ 1 + 1 + ‖s‖ * 2 := by
-      have s_nonneg : 0 ≤ ‖s‖ := norm_nonneg _
-      have h6 : ‖s‖ / s.re ≤ ‖s‖ * 2 := by
-        rw [div_eq_mul_one_div]
-        exact mul_le_mul_of_nonneg_left h5 s_nonneg
-      linarith
-    _ < 1 + 1 + ((3 : ℝ) + |s.im|) * 2 := by linarith [h4]
+      gcongr
+      rw [div_eq_mul_one_div]
+      exact mul_le_mul_of_nonneg_left (one_div_re_le_two s hs_re) (norm_nonneg s)
+    _ < 1 + 1 + ((3 : ℝ) + |s.im|) * 2 := by linarith [norm_lt_three_add_abs_im s hs_re]
 
 /-- In the strip `1/2 ≤ re z < 3` with `1 ≤ |im z|`, `‖ζ z‖ < 8 + 2|im z|`. -/
 theorem norm_riemannZeta_lt_linear_im_on_strip (z : ℂ)
-    (hz_re : z.re ∈ Ico (1/2 : ℝ) (3 : ℝ)) (hz_im : (1 : ℝ) ≤ |z.im|) :
+    (hz_re : z.re ∈ Ico (1 / 2 : ℝ) (3 : ℝ)) (hz_im : (1 : ℝ) ≤ |z.im|) :
     ‖riemannZeta z‖ < (8 : ℝ) + 2 * |z.im| := by
   have hz_re' : (1/2 : ℝ) ≤ z.re ∧ z.re < (3 : ℝ) := by
     simpa [Ico] using hz_re
   calc ‖riemannZeta z‖
-      < 1 + 1 + ((3 : ℝ) + |z.im|) * 2 := lem_finalBoundCombination z hz_re' hz_im
+      < 1 + 1 + ((3 : ℝ) + |z.im|) * 2 := zeta_norm_lt_linear_im_aux z hz_re' hz_im
     _ = (8 : ℝ) + 2 * |z.im| := by ring
 
 /-- For `z = s + 3/2 + it`, `z.re = s.re + 3/2` and `z.im = s.im + t`. -/

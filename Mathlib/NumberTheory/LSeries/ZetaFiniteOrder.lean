@@ -40,6 +40,14 @@ The key ingredients are:
   `Complex.Hadamard.EntireOfOrderAtMost`
 * `zeta_minus_pole_entire_growth` : a coarse global bound for the removable extension of
   `(s - 1)ζ(s)`.
+
+## References
+
+* [tao246bComplexAnalysis] for order-one growth of `completedRiemannZeta₀` (Λ₀)
+
+## Tags
+
+Riemann zeta function, completed zeta function, finite order, Hadamard factorization
 -/
 
 @[expose] public section
@@ -50,61 +58,6 @@ open Complex Set Filter Topology Metric
 open scoped Real
 
 namespace Complex
-
-section ZetaNormBounds
-
-/-- Subtracting `1` is bounded by the triangle inequality. -/
-private lemma norm_sub_one_le_one_add_norm (z : ℂ) : ‖z - 1‖ ≤ 1 + ‖z‖ := by
-  have h1 : ‖(1 : ℂ)‖ = 1 := by simp
-  simpa [h1, add_comm, add_left_comm, add_assoc] using norm_sub_le z (1 : ℂ)
-
-/-- For `0 ≤ p`, one has `1 ≤ (1 + ‖z‖)^p`. -/
-private theorem one_le_one_add_norm_rpow (z : ℂ) {p : ℝ} (hp : 0 ≤ p) :
-    (1 : ℝ) ≤ (1 + ‖z‖) ^ p := by
-  have hz1 : (1 : ℝ) ≤ 1 + ‖z‖ := by linarith [norm_nonneg z]
-  exact Real.one_le_rpow hz1 hp
-
-/-- If `0 ≤ re w`, then `‖(2π)^(-w)‖ ≤ 1`. -/
-private theorem norm_two_pi_cpow_neg_le_one_of_re_nonneg {w : ℂ} (hw : 0 ≤ w.re) :
-    ‖(2 * π : ℂ) ^ (-w)‖ ≤ 1 := by
-  have hbase : (1 : ℝ) ≤ 2 * Real.pi := by
-    have : (1 : ℝ) < 2 * Real.pi := by
-      have : (3 : ℝ) < Real.pi := Real.pi_gt_three
-      nlinarith
-    exact le_of_lt this
-  have hbase_pos : (0 : ℝ) < 2 * Real.pi := by nlinarith [Real.pi_pos]
-  have hnorm : ‖(2 * π : ℂ) ^ (-w)‖ = (2 * Real.pi) ^ ((-w : ℂ).re) := by
-    simpa using norm_cpow_eq_rpow_re_of_pos (x := 2 * Real.pi) hbase_pos (-w)
-  rw [hnorm]
-  have : ((-w : ℂ).re : ℝ) ≤ 0 := neg_nonpos.mpr hw
-  exact Real.rpow_le_one_of_one_le_of_nonpos hbase this
-
-/-- The reflected point `1 - z` has norm at most `1 + ‖z‖`. -/
-private lemma norm_one_sub_le_one_add_norm (z : ℂ) : ‖1 - z‖ ≤ 1 + ‖z‖ := by
-  have h1 : ‖(1 : ℂ)‖ = 1 := by simp
-  simpa [h1, add_comm, add_left_comm, add_assoc] using norm_sub_le (1 : ℂ) z
-
-/-- If `re z > 1/10`, then `‖z‖ / re z ≤ 10 * ‖z‖`. -/
-private lemma norm_div_re_le_ten_mul_norm {z : ℂ} (hz : (1 / 10 : ℝ) < z.re) :
-    ‖z‖ / z.re ≤ 10 * ‖z‖ := by
-  have hz_re_le : (1 : ℝ) / z.re ≤ 10 := by
-    have hpos : (0 : ℝ) < 1 / 10 := by norm_num
-    have hz_ge : (1 / 10 : ℝ) ≤ z.re := le_of_lt hz
-    simpa using one_div_le_one_div_of_le hpos hz_ge
-  have : ‖z‖ / z.re ≤ ‖z‖ * 10 := by
-    simpa [div_eq_mul_inv, mul_assoc, mul_left_comm, mul_comm]
-      using mul_le_mul_of_nonneg_left hz_re_le (norm_nonneg z)
-  simpa [mul_comm] using this
-
-/-- If `‖z‖ > 3`, then the reflected point `1 - z` has norm at least `1`. -/
-private lemma one_le_norm_one_sub_of_three_lt_norm {z : ℂ} (hz : 3 < ‖z‖) :
-    (1 : ℝ) ≤ ‖1 - z‖ := by
-  have hge : (‖z‖ - 1 : ℝ) ≤ ‖1 - z‖ := by
-    have h1 : ‖(1 : ℂ)‖ = 1 := by simp
-    simpa [h1, norm_sub_rev] using norm_sub_norm_le z (1 : ℂ)
-  linarith
-
-end ZetaNormBounds
 
 /-! ### Finite order of the completed zeta function -/
 
@@ -139,25 +92,19 @@ lemma exists_completedRiemannZeta₀_right_halfPlane (z : ℂ) :
       simpa [hw, norm_one, add_comm, add_left_comm, add_assoc] using this
     · simp [hzr]
 
-/-- The reflected point `1 - z` lies well inside the right half-plane if `re z ≤ 1 / 10`. -/
-lemma nine_tenths_le_one_sub_re {z : ℂ} (hz : z.re ≤ (1 / 10 : ℝ)) :
-    (9 / 10 : ℝ) ≤ (1 - z).re := by
-  simp
-  linarith
-
-/-- The reflected point `1 - z` is not `1` if `z` is nonzero. -/
-lemma one_sub_ne_one_of_norm_pos {z : ℂ} (hz : 0 < ‖z‖) : 1 - z ≠ 1 := by
-  intro h
-  have : z = 0 := by simpa using (sub_eq_self.mp h)
-  simpa [this] using hz.ne'
-
-/-- A point with positive real part is not a nonpositive integer. -/
-lemma ne_neg_nat_of_re_pos {w : ℂ} (hw : 0 < w.re) : ∀ n : ℕ, w ≠ -n := by
-  intro n hn
-  have hre : w.re = -(n : ℝ) := by
-    have := congrArg Complex.re hn
-    simpa using this
-  nlinarith
+/-- If `re z ≤ σ₀`, then `1 - σ₀ ≤ re (1 - z)` for `σ₀ = zetaAbelContinuationReLower`. -/
+lemma one_sub_re_ge_one_sub_zetaAbelContinuationReLower_of_re_le {z : ℂ}
+    (hz : z.re ≤ zetaAbelContinuationReLower) :
+    (1 - zetaAbelContinuationReLower) ≤ (1 - z).re := by
+  have hz' : z.re ≤ (1 / 10 : ℝ) := by
+    unfold zetaAbelContinuationReLower at hz
+    exact hz
+  have h : (9 / 10 : ℝ) ≤ 1 - z.re := by linarith [hz']
+  calc (1 - zetaAbelContinuationReLower : ℝ)
+      = (9 / 10 : ℝ) := by
+        norm_num [zetaAbelContinuationReLower, one_sub_zetaAbelContinuationReLower]
+    _ ≤ 1 - z.re := h
+    _ = (1 - z).re := by simp [Complex.sub_re]
 
 /-- The zeta functional equation written with a reflected variable `w = 1 - z`. -/
 lemma riemannZeta_eq_reflected {z w : ℂ} (hw : w = 1 - z)
@@ -170,16 +117,6 @@ lemma riemannZeta_eq_reflected {z w : ℂ} (hw : w = 1 - z)
     rw [hw]
     ring
   simpa [hsub, mul_assoc, mul_left_comm, mul_comm] using h
-
-/-- A coarse exponential majorant for `2x` once `x ≤ A` and `1 ≤ A`. -/
-lemma two_mul_le_exp_two_mul_rpow_two {x A : ℝ} (hx : x ≤ A) (hA1 : 1 ≤ A) :
-    x * 2 ≤ rexp (2 * A ^ (2 : ℝ)) := by
-  have h1 : x * 2 ≤ 2 * A := by nlinarith [hx]
-  have hA_le_A2 : A ≤ A ^ (2 : ℝ) := by
-    have := Real.rpow_le_rpow_of_exponent_le hA1 (by norm_num : (1 : ℝ) ≤ (2 : ℝ))
-    simpa [Real.rpow_one] using this
-  have h2 : 2 * A ≤ 2 * A ^ (2 : ℝ) := by nlinarith [hA_le_A2]
-  exact le_trans (le_trans h1 h2) (Real.le_exp_self _)
 
 /-- The large coefficient in the reflected zeta estimate is dominated by the chosen constant. -/
 lemma reflected_zeta_coefficient_le {C CΓ : ℝ} (hCΓ : 0 ≤ CΓ)
@@ -326,8 +263,9 @@ theorem completedRiemannZeta₀_order_one :
         linarith [hw_large]
       have hGamma : ‖Complex.Gammaℝ w‖ ≤ Real.exp (CΓ * ‖w‖ * Real.log (1 + ‖w‖)) :=
         hΓ w hw_re0 hw_norm1
-      have hw_re_gt : (1 / 10 : ℝ) < w.re := by linarith [hw_re]
-      have hzeta0 := norm_riemannZeta_le w hw_re_gt hw_ne1
+      have hw_dom := mem_zetaAbelContinuationDomain_of_re hw_ne1
+        (lt_of_lt_of_le zetaAbelContinuationReLower_lt_half hw_re)
+      have hzeta0 := norm_riemannZeta_le w hw_dom
       have hdist1 : ‖1 / (w - 1)‖ ≤ 1 := by
         have hnorm : ‖w‖ ≤ ‖w - 1‖ + 1 := by
           have : ‖(w - 1) + (1 : ℂ)‖ ≤ ‖w - 1‖ + ‖(1 : ℂ)‖ := norm_add_le _ _
@@ -629,12 +567,13 @@ theorem zeta_minus_pole_entire_growth :
         exact zetaTimesSMinusOne_entire_eq_mul_riemannZeta hz_ne1
       have hmain :
           ‖zetaTimesSMinusOne_entire z‖ ≤ Real.exp (C * A ^ (2 : ℝ)) := by
-        by_cases hz_re : (1 / 10 : ℝ) < z.re
-        · have hζ := norm_riemannZeta_le z hz_re hz_ne1
+        by_cases hz_re : zetaAbelContinuationReLower < z.re
+        · have hs_dom := mem_zetaAbelContinuationDomain_of_re hz_ne1
+            (by simpa [zetaAbelContinuationReLower] using hz_re)
+          have hζ := norm_riemannZeta_le z hs_dom
           have hzm1_le : ‖z - 1‖ ≤ A := by
             simpa [A] using norm_sub_one_le_one_add_norm z
-          have hfrac : ‖z‖ / z.re ≤ 10 * ‖z‖ :=
-            norm_div_re_le_ten_mul_norm hz_re
+          have hfrac : ‖z‖ / z.re ≤ 10 * ‖z‖ := norm_div_re_le_ten_mul_norm_of_mem hs_dom
           have hpoly :
               ‖(z - 1) * riemannZeta z‖ ≤ (40 : ℝ) * A ^ (2 : ℝ) := by
             have hz0 : 0 ≤ ‖z‖ := norm_nonneg z
@@ -678,26 +617,32 @@ theorem zeta_minus_pole_entire_growth :
           have : ‖(z - 1) * riemannZeta z‖ ≤ Real.exp (C * A ^ (2 : ℝ)) :=
             le_trans (le_trans hpoly hle) (Real.le_exp_self _)
           simpa [hzeta_def] using this
-        · have hz_re_le : z.re ≤ (1 / 10 : ℝ) := le_of_not_gt hz_re
+        · have hz_re_le : z.re ≤ zetaAbelContinuationReLower := le_of_not_gt hz_re
           let w : ℂ := 1 - z
-          have hw_re_ge : (9 / 10 : ℝ) ≤ w.re := by
-            simpa [w] using nine_tenths_le_one_sub_re hz_re_le
-          have hw_re0 : 0 ≤ w.re := le_trans (by norm_num : (0 : ℝ) ≤ 9 / 10) hw_re_ge
-          have hw_re1 : (1 / 10 : ℝ) < w.re := lt_of_lt_of_le (by norm_num) hw_re_ge
+          have hw_re_ge : (1 - zetaAbelContinuationReLower) ≤ w.re :=
+            one_sub_re_ge_one_sub_zetaAbelContinuationReLower_of_re_le hz_re_le
+          have hw_re0 : 0 ≤ w.re := by
+            have : (0 : ℝ) < 1 - zetaAbelContinuationReLower := by
+              rw [one_sub_zetaAbelContinuationReLower]; norm_num
+            linarith [hw_re_ge]
+          have hw_re1 : zetaAbelContinuationReLower < w.re :=
+            lt_of_lt_of_le
+              (by norm_num [zetaAbelContinuationReLower, one_sub_zetaAbelContinuationReLower])
+              hw_re_ge
           have hw_ne1 : w ≠ 1 := by
-            simpa [w] using one_sub_ne_one_of_norm_pos (lt_trans (by norm_num) hz_large)
+            simpa [w] using Complex.one_sub_ne_one_of_norm_pos (lt_trans (by norm_num) hz_large)
           have hw_ne_neg : ∀ n : ℕ, w ≠ -n := by
-            exact ne_neg_nat_of_re_pos (lt_trans (by norm_num) hw_re1)
+            exact Complex.ne_neg_nat_of_re_pos (lt_trans zetaAbelContinuationReLower_pos hw_re1)
           have hzeta_fe :
               riemannZeta z =
                 2 * (2 * π) ^ (-w) * Complex.Gamma w * Complex.cos (π * w / 2) * riemannZeta w := by
             exact riemannZeta_eq_reflected (by simp [w]) hw_ne_neg hw_ne1
           have hpow_le1 : ‖(2 * π : ℂ) ^ (-w)‖ ≤ 1 :=
-            norm_two_pi_cpow_neg_le_one_of_re_nonneg hw_re0
+            Complex.Gammaℝ.Stirling.norm_cpow_two_mul_pi_neg_le_one hw_re0
           have hw_norm_le : ‖w‖ ≤ A := by
             simpa [w, A] using norm_one_sub_le_one_add_norm z
           have hw_norm_ge1 : (1 : ℝ) ≤ ‖w‖ := by
-            simpa [w] using one_le_norm_one_sub_of_three_lt_norm hz_large
+            simpa [w] using one_le_norm_one_sub_of_norm_gt_three hz_large
           have hΓw : ‖Complex.Gamma w‖ ≤ Real.exp (CΓ * A ^ (2 : ℝ)) := by
             have hΓ0 := hΓ w hw_re0 hw_norm_ge1
             have hlog_le : Real.log (1 + ‖w‖) ≤ A := by
@@ -748,9 +693,9 @@ theorem zeta_minus_pole_entire_growth :
               exact le_trans him1 him2
             exact le_trans h1 (Real.exp_le_exp.mpr him)
           have hζw : ‖riemannZeta w‖ ≤ Real.exp (40 * A ^ (2 : ℝ)) := by
-            have hζ0 := norm_riemannZeta_le w hw_re1 hw_ne1
-            have hfrac : ‖w‖ / w.re ≤ 10 * ‖w‖ :=
-              norm_div_re_le_ten_mul_norm hw_re1
+            have hw_dom := mem_zetaAbelContinuationDomain_of_re hw_ne1 (by linarith [hw_re1])
+            have hζ0 := norm_riemannZeta_le w hw_dom
+            have hfrac : ‖w‖ / w.re ≤ 10 * ‖w‖ := norm_div_re_le_ten_mul_norm_of_mem hw_dom
             have hpoly : ‖riemannZeta w‖ ≤ (40 : ℝ) * A ^ (2 : ℝ) := by
               have : ‖riemannZeta w‖ ≤ 2 + 10 * ‖w‖ := by
                 calc

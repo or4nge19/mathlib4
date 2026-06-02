@@ -183,6 +183,41 @@ theorem integral_Ioi_rpow_of_lt {a : ℝ} (ha : a < -1) {c : ℝ} (hc : 0 < c) :
   convert integral_Ioi_of_hasDerivAt_of_tendsto' hd (integrableOn_Ioi_rpow_of_lt ha hc) ht using 1
   simp only [neg_div, zero_div, zero_sub]
 
+/-- Integral of `u ^ (-1 - ε)` over `[m, n]` for `ε > 0` and `1 ≤ m ≤ n`. -/
+theorem integral_interval_rpow_neg_one_sub {ε m n : ℝ} (hε : 0 < ε) (hm : 1 ≤ m) (hmn : m ≤ n) :
+    ∫ u in m..n, u ^ (-1 - ε) = (m ^ (-ε) - n ^ (-ε)) / ε := by
+  have h0notIcc : (0 : ℝ) ∉ Set.Icc m n := by
+    intro hx
+    exact (not_le.mpr (lt_of_lt_of_le zero_lt_one hm)) hx.1
+  have h0not : (0 : ℝ) ∉ Set.uIcc m n := by simpa [uIcc_of_le hmn] using h0notIcc
+  have hrne : (-1 - ε) ≠ (-1 : ℝ) := by
+    intro h
+    exact (ne_of_gt hε) (by linarith [h])
+  have hint : ∫ u in m..n, u ^ (-1 - ε)
+      = (n ^ ((-1 - ε) + 1) - m ^ ((-1 - ε) + 1)) / ((-1 - ε) + 1) := by
+    simpa using integral_rpow (a := m) (b := n) (r := -1 - ε) (Or.inr ⟨hrne, h0not⟩)
+  calc
+    ∫ u in m..n, u ^ (-1 - ε)
+        = (n ^ ((-1 - ε) + 1) - m ^ ((-1 - ε) + 1)) / ((-1 - ε) + 1) := hint
+    _ = (n ^ (-ε) - m ^ (-ε)) / (-ε) := by
+      simp [sub_eq_add_neg, add_assoc, add_left_comm, add_comm]
+    _ = (m ^ (-ε) - n ^ (-ε)) / ε := by ring
+
+theorem integral_interval_rpow_neg_le {ε m n : ℝ} (hε : 0 < ε) (hm : 1 ≤ m) (hmn : m ≤ n) :
+    ∫ u in m..n, u ^ (-1 - ε) ≤ (1 / ε) * m ^ (-ε) := by
+  rw [integral_interval_rpow_neg_one_sub hε hm hmn, div_eq_mul_one_div, mul_comm]
+  gcongr
+  exact sub_le_self _ (Real.rpow_nonneg (le_trans zero_le_one (le_trans hm hmn)) _)
+
+theorem intervalIntegral.tendsto_integral_Ioi_of_ae_norm_le {E : Type*} [NormedAddCommGroup E]
+    [NormedSpace ℝ E] (f : ℝ → E) (g : ℝ → ℝ) {c : ℝ} (hc : 0 < c)
+    (hfm : MeasureTheory.AEStronglyMeasurable f (MeasureTheory.volume.restrict (Ioi c)))
+    (hbound : ∀ᵐ u ∂MeasureTheory.volume.restrict (Ioi c), ‖f u‖ ≤ g u)
+    (hg : MeasureTheory.IntegrableOn g (Ioi c) MeasureTheory.volume) :
+    Tendsto (fun N : ℕ => ∫ u in c..N, f u) atTop (𝓝 (∫ u in Ioi c, f u)) :=
+  intervalIntegral_tendsto_integral_Ioi c (MeasureTheory.IntegrableOn.mono' hg hfm hbound)
+    tendsto_natCast_atTop_atTop
+
 /-- `∫_{1}^∞ u^{-re s - 1} = 1 / re s` for `0 < re s`. -/
 theorem integral_Ioi_rpow_neg_re_sub_one {s : ℂ} (hs : 0 < s.re) :
     ∫ u in Ioi (1 : ℝ), u ^ (-s.re - 1) = 1 / s.re := by

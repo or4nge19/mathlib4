@@ -623,6 +623,18 @@ lemma norm_cpow_pi_neg_half_le_one {s : ℂ} (hs : 0 ≤ s.re) :
       _ < Real.pi := Real.pi_gt_three
   exact Real.rpow_le_one_of_one_le_of_nonpos (le_of_lt hpi_gt_1) h_exp
 
+/-- The norm of `(2π)^{-w}` is at most `1` when `Re(w) ≥ 0`. -/
+lemma norm_cpow_two_mul_pi_neg_le_one {w : ℂ} (hw : 0 ≤ w.re) :
+    ‖(2 * π : ℂ) ^ (-w)‖ ≤ 1 := by
+  have hbase_pos : (0 : ℝ) < 2 * Real.pi := by nlinarith [Real.pi_pos]
+  have hbase : (1 : ℝ) ≤ 2 * Real.pi := by
+    have : (1 : ℝ) < 2 * Real.pi := by nlinarith [Real.pi_gt_three, Real.pi_pos]
+    exact le_of_lt this
+  have hnorm : ‖(2 * π : ℂ) ^ (-w)‖ = (2 * Real.pi) ^ ((-w : ℂ).re) := by
+    simpa using Complex.norm_cpow_eq_rpow_re_of_pos (x := 2 * Real.pi) hbase_pos (-w)
+  rw [hnorm]
+  exact Real.rpow_le_one_of_one_le_of_nonpos hbase (neg_nonpos.mpr hw)
+
 /-- **Stirling bound for the archimedean factor** `Γ_ℝ = π^{-s/2} · Γ(s/2)`. -/
 theorem bound_re_ge_zero :
     ∃ C : ℝ, 0 < C ∧

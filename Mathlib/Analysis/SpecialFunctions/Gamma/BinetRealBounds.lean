@@ -215,4 +215,75 @@ theorem re_J_lt_one_div_twelve {x : ℝ} (hx : 0 < x) :
     simpa [hJ, f] using this
   exact this
 
+private lemma exp_neg_div_twelve_mul_exp_neg_mul (x t : ℝ) :
+    Real.exp (-t / 12) * Real.exp (-t * x) = Real.exp (-t * (x + 1 / 12)) := by
+  rw [← Real.exp_add]
+  congr 1
+  ring
+
+private lemma integrable_robbins_lower_majorant {x : ℝ} (hx : 0 < x) :
+    IntegrableOn
+      (fun t : ℝ => (1 / 12 : ℝ) * Real.exp (-t / 12) * Real.exp (-t * x))
+      (Set.Ioi 0) volume := by
+  have hx' : 0 < x + 1 / 12 := by linarith [hx]
+  have hConst := integrable_const_mul_exp (x := x + 1 / 12) hx'
+  refine hConst.congr_fun ?_ measurableSet_Ioi
+  intro t _ht
+  calc
+    (1 / 12 : ℝ) * Real.exp (-t * (x + 1 / 12))
+    _ = (1 / 12 : ℝ) * (Real.exp (-t / 12) * Real.exp (-t * x)) := by
+        rw [exp_neg_div_twelve_mul_exp_neg_mul]
+    _ = (1 / 12 : ℝ) * Real.exp (-t / 12) * Real.exp (-t * x) := by ring
+
+private lemma integral_robbins_lower_majorant {x : ℝ} (hx : 0 < x) :
+    ∫ t in Set.Ioi 0, (1 / 12 : ℝ) * Real.exp (-t / 12) * Real.exp (-t * x) =
+      (12 * x + 1)⁻¹ := by
+  have hx' : 0 < x + 1 / 12 := by linarith [hx]
+  have hbase :
+      ∫ t in Set.Ioi 0, Real.exp (-t * (x + 1 / 12)) = (x + 1 / 12)⁻¹ := by
+    simpa using integral_exp_neg_mul_Ioi (x := x + 1 / 12) hx'
+  calc
+    (∫ t in Set.Ioi 0, (1 / 12 : ℝ) * Real.exp (-t / 12) * Real.exp (-t * x))
+        = ∫ t in Set.Ioi 0, (1 / 12 : ℝ) * Real.exp (-t * (x + 1 / 12)) := by
+            refine MeasureTheory.setIntegral_congr_fun measurableSet_Ioi ?_
+            intro t _ht
+            calc
+              (1 / 12 : ℝ) * Real.exp (-t / 12) * Real.exp (-t * x)
+                  = (1 / 12 : ℝ) * (Real.exp (-t / 12) * Real.exp (-t * x)) := by ring
+              _ = (1 / 12 : ℝ) * Real.exp (-t * (x + 1 / 12)) := by
+                    rw [exp_neg_div_twelve_mul_exp_neg_mul]
+    _ = (1 / 12 : ℝ) * ∫ t in Set.Ioi 0, Real.exp (-t * (x + 1 / 12)) := by
+        simp [MeasureTheory.integral_const_mul]
+    _ = (1 / 12 : ℝ) * (x + 1 / 12)⁻¹ := by rw [hbase]
+    _ = (12 * x + 1)⁻¹ := by field_simp
+
+/-- **Robbins lower bound for the Binet integral** (real part).
+
+For `x > 0`, `(12x + 1)⁻¹ ≤ re (J x)`. This is the kernel monotonicity input for Robbins'
+lower Stirling bound; see [robbins1955]. -/
+theorem re_J_ge_one_div_twelve_add_one {x : ℝ} (hx : 0 < x) :
+    (12 * x + 1)⁻¹ ≤ (J (x : ℂ)).re := by
+  have hJ : (J (x : ℂ)).re =
+      ∫ t in Set.Ioi 0, BinetKernel.Ktilde t * Real.exp (-t * x) :=
+    re_J_eq_integral_Ktilde (x := x) hx
+  rw [hJ]
+  have h_bound : ∀ t ∈ Set.Ioi 0,
+      (1 / 12 : ℝ) * Real.exp (-t / 12) ≤ BinetKernel.Ktilde t := by
+    intro t ht
+    simpa using
+      (BinetKernel.Ktilde_ge_one_div_twelve_mul_exp_neg_div_twelve (t := t)
+        (by simpa using ht))
+  have h_int_le :
+      ∫ t in Set.Ioi 0, (1 / 12 : ℝ) * Real.exp (-t / 12) * Real.exp (-t * x) ≤
+        ∫ t in Set.Ioi 0, BinetKernel.Ktilde t * Real.exp (-t * x) := by
+    refine MeasureTheory.setIntegral_mono_ae_restrict
+      (integrable_robbins_lower_majorant hx)
+      (integrable_Ktilde_mul_exp_real hx) ?_
+    filter_upwards [self_mem_ae_restrict measurableSet_Ioi] with t ht
+    gcongr
+    exact h_bound t ht
+  have h_lhs := integral_robbins_lower_majorant hx
+  rw [h_lhs] at h_int_le
+  exact h_int_le
+
 end Binet

@@ -24,6 +24,7 @@ This module aggregates the Binet development split across:
 ## Main results
 
 * `Binet.log_Gamma_real_eq` : Binet's formula for `Real.log (Real.Gamma x)`
+* `Binet.re_J_lt_one_div_twelve`, `Binet.re_J_ge_one_div_twelve_add_one` : Robbins two-sided bounds on `(J x).re`
 * `Binet.J_norm_le_re` : `‖J z‖ ≤ 1 / (12 * re z)` for `0 < re z` (in `BinetIntegral`)
 * Robbins bounds for `n!` live in `Mathlib.Analysis.SpecialFunctions.Gamma.StirlingRobbins`.
 -/

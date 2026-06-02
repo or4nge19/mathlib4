@@ -655,6 +655,11 @@ protected theorem _root_.Differentiable.analyticAt {f : ℂ → E} (hf : Differe
     AnalyticAt ℂ f z :=
   hf.differentiableOn.analyticAt univ_mem
 
+/-- A complex differentiable function is analytic on the entire plane. -/
+protected theorem _root_.Differentiable.analyticOnNhd {f : ℂ → E} (hf : Differentiable ℂ f) :
+    AnalyticOnNhd ℂ f Set.univ :=
+  fun _ _ => hf.analyticAt _
+
 /-- A complex differentiable function `f : ℂ → E` is continuously differentiable at every point. -/
 protected theorem _root_.Differentiable.contDiff
     {f : ℂ → E} (hf : Differentiable ℂ f) {n : WithTop ℕ∞} :

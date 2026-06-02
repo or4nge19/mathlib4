@@ -6,19 +6,19 @@ Authors: Matteo Cipollina
 module
 
 public import Mathlib.Analysis.Complex.HadamardFactorization
-public import Mathlib.Analysis.Complex.ValueDistribution.LogCounting.Basic
+public import Mathlib.Analysis.Complex.ValueDistribution.LogCounting.Growth
+public import Mathlib.Analysis.Meromorphic.DivisorHolomorphic
 public import Mathlib.Analysis.Meromorphic.TrailingCoefficient
 public import Mathlib.Analysis.SpecialFunctions.Log.Dyadic
 public import Mathlib.Analysis.SpecialFunctions.Log.PosLog
 public import Mathlib.Analysis.SpecialFunctions.Log.Summable
-public import Mathlib.MeasureTheory.Integral.CircleAverage
 
 /-!
 # Divisor summability from logarithmic growth
 
 Dyadic shell summability for the zero divisor of an entire function with a logarithmic growth
-bound. This is the Jensen-counting step in the intrinsic Hadamard pipeline
-(`divisorCanonicalProduct`, `hadamard_factorization_of_growth`).
+bound. This is step 1 of the intrinsic Hadamard pipeline
+(`divisorCanonicalProduct`, `hadamard_factorization_of_growth`, `hadamard_factorization_of_order`).
 
 ## Main results
 
@@ -26,8 +26,12 @@ bound. This is the Jensen-counting step in the intrinsic Hadamard pipeline
   log-growth of order `ρ`
 * `summable_norm_inv_pow_divisorZeroIndex₀_of_growth` : growth implies convergence of the
   canonical product
-* `jensen_formula_logCounting_eq_circleAverage_sub_log_trailingCoeff` : Jensen's formula for
-  `logCounting`
+* `jensen_formula_logCounting_eq_circleAverage_sub_log_trailingCoeff` : Hadamard alias for Jensen's
+  formula (see also
+  `Function.locallyFinsuppWithin.logCounting_divisor_eq_circleAverage_sub_const_of_differentiable`)
+
+Jensen's formula and log-counting growth bounds live in
+`Analysis.Complex.ValueDistribution.LogCounting`.
 
 ## References
 
@@ -56,390 +60,44 @@ open scoped Real
 
 /-- The total multiplicity of the nonzero divisor of `f` in the closed ball of radius `R`. -/
 noncomputable def divisorMassClosedBall₀ (f : ℂ → ℂ) (R : ℝ) : ℝ :=
-  (((Function.locallyFinsuppWithin.finiteSupport
-        (Function.locallyFinsuppWithin.toClosedBall R
-          (MeromorphicOn.divisor f (Set.univ : Set ℂ)))
-        (isCompact_closedBall (0 : ℂ) |R|)).toFinset).filter
-    (fun z : ℂ => z ≠ 0)).sum
-    (fun z : ℂ => (MeromorphicOn.divisor f (Set.univ : Set ℂ) z : ℝ))
+  Function.locallyFinsuppWithin.massClosedBall₀ (MeromorphicOn.divisor f (Set.univ : Set ℂ)) R
 
-lemma logCounting_divisor_univ_eq_circleAverage_sub_log_trailingCoeff {f : ℂ → ℂ}
-    (hf : Differentiable ℂ f) {R : ℝ} (hR : R ≠ 0) :
-    (Function.locallyFinsuppWithin.logCounting (MeromorphicOn.divisor f (Set.univ : Set ℂ)) R)
-      = Real.circleAverage (fun z : ℂ => Real.log ‖f z‖) 0 R
-        - Real.log ‖meromorphicTrailingCoeffAt f 0‖ := by
-  have hmero : Meromorphic f := by
-    intro z
-    exact (hf.analyticAt z).meromorphicAt
-  simpa [top_eq_univ] using
-    (Function.locallyFinsuppWithin.logCounting_divisor_eq_circleAverage_sub_const (f := f)
-      (h := hmero) (hR := hR))
-
-/-- Jensen's formula: on the disk of radius `R`, log-counting of the divisor equals the circle
-average of `log ‖f‖` minus `log` of the trailing coefficient at the center. -/
+/-- Hadamard-facing alias for Jensen's formula on the zero divisor. -/
 theorem jensen_formula_logCounting_eq_circleAverage_sub_log_trailingCoeff {f : ℂ → ℂ}
     (hf : Differentiable ℂ f) {R : ℝ} (hR : R ≠ 0) :
-    (Function.locallyFinsuppWithin.logCounting (MeromorphicOn.divisor f (Set.univ : Set ℂ)) R)
+    Function.locallyFinsuppWithin.logCounting (MeromorphicOn.divisor f (Set.univ : Set ℂ)) R
       = Real.circleAverage (fun z : ℂ => Real.log ‖f z‖) 0 R
         - Real.log ‖meromorphicTrailingCoeffAt f 0‖ :=
-  logCounting_divisor_univ_eq_circleAverage_sub_log_trailingCoeff hf hR
-
-lemma log_norm_le_log_one_add_norm {E : Type*} [SeminormedAddCommGroup E] (w : E) :
-    Real.log ‖w‖ ≤ Real.log (1 + ‖w‖) := by
-  by_cases h0 : ‖w‖ = 0
-  · simp [h0]
-  · have hpos : 0 < ‖w‖ := lt_of_le_of_ne (norm_nonneg w) (Ne.symm h0)
-    exact Real.log_le_log hpos (by linarith [norm_nonneg w])
-
-lemma log_norm_le_growth_on_sphere {f : ℂ → ℂ} {C ρ R : ℝ}
-    (hC : ∀ z : ℂ, Real.log (1 + ‖f z‖) ≤ C * (1 + ‖z‖) ^ ρ)
-    {z : ℂ} (hz : z ∈ Metric.sphere (0 : ℂ) |R|) :
-    Real.log ‖f z‖ ≤ C * (1 + |R|) ^ ρ := by
-  have hz_norm : ‖z‖ = |R| := by
-    simpa [Metric.mem_sphere, dist_zero_right] using hz
-  simpa [hz_norm] using le_trans (log_norm_le_log_one_add_norm (f z)) (hC z)
-
-lemma logCounting_divisor_univ_le_of_growth {f : ℂ → ℂ} {ρ : ℝ}
-    (hf : Differentiable ℂ f)
-    (hgrowth : ∃ C > 0, ∀ z : ℂ, Real.log (1 + ‖f z‖) ≤ C * (1 + ‖z‖) ^ ρ)
-    {R : ℝ} (hR0 : 0 < R) :
-    Function.locallyFinsuppWithin.logCounting (MeromorphicOn.divisor f (Set.univ : Set ℂ)) R
-      ≤ (Classical.choose hgrowth) * (1 + |R|) ^ ρ
-        + |Real.log ‖meromorphicTrailingCoeffAt f 0‖| := by
-  classical
-  set C : ℝ := Classical.choose hgrowth
-  have hCpos : 0 < C := (Classical.choose_spec hgrowth).1
-  have hC : ∀ z : ℂ, Real.log (1 + ‖f z‖) ≤ C * (1 + ‖z‖) ^ ρ :=
-    (Classical.choose_spec hgrowth).2
-  have hR : R ≠ 0 := ne_of_gt hR0
-  have hEq :=
-    logCounting_divisor_univ_eq_circleAverage_sub_log_trailingCoeff (f := f) hf
-      (R := R) hR
-  have hf_sphere : MeromorphicOn f (Metric.sphere (0 : ℂ) |R|) := by
-    intro z hz
-    exact (hf.analyticAt z).meromorphicAt
-  have hInt : CircleIntegrable (fun z : ℂ => Real.log ‖f z‖) 0 R :=
-    circleIntegrable_log_norm_meromorphicOn hf_sphere
-  have hbound_circle : ∀ z ∈ Metric.sphere (0 : ℂ) |R|,
-      Real.log ‖f z‖ ≤ C * (1 + |R|) ^ ρ := by
-    intro z hz
-    exact log_norm_le_growth_on_sphere hC hz
-  have hCircleAvg_le :
-      Real.circleAverage (fun z : ℂ => Real.log ‖f z‖) 0 R ≤ C * (1 + |R|) ^ ρ :=
-    Real.circleAverage_mono_on_of_le_circle (c := (0 : ℂ)) (R := R)
-      (f := fun z => Real.log ‖f z‖) hInt hbound_circle
-  calc
-    Function.locallyFinsuppWithin.logCounting (MeromorphicOn.divisor f (Set.univ : Set ℂ)) R
-        = Real.circleAverage (fun z : ℂ => Real.log ‖f z‖) 0 R
-            - Real.log ‖meromorphicTrailingCoeffAt f 0‖ := hEq
-    _ ≤ Real.circleAverage (fun z : ℂ => Real.log ‖f z‖) 0 R
-          + |Real.log ‖meromorphicTrailingCoeffAt f 0‖| := by
-          have :
-              -Real.log ‖meromorphicTrailingCoeffAt f 0‖
-                ≤ |Real.log ‖meromorphicTrailingCoeffAt f 0‖| :=
-            neg_le_abs (Real.log ‖meromorphicTrailingCoeffAt f 0‖)
-          linarith
-    _ ≤ C * (1 + |R|) ^ ρ + |Real.log ‖meromorphicTrailingCoeffAt f 0‖| := by
-          nlinarith [hCircleAvg_le]
-
-lemma countable_divisor_support_univ {f : ℂ → ℂ} :
-    (MeromorphicOn.divisor f (Set.univ : Set ℂ)).support.Countable := by
-  classical
-  set D : Function.locallyFinsuppWithin (Set.univ : Set ℂ) ℤ :=
-    MeromorphicOn.divisor f (Set.univ : Set ℂ)
-  have hclosed : IsClosed D.support := by
-    simpa [D] using (D.closedSupport (hU := isClosed_univ))
-  have hdisc : IsDiscrete D.support := by
-    simpa [D] using (D.discreteSupport)
-  have hL : IsLindelof (Set.univ : Set ℂ) := isLindelof_univ
-  have hL' : IsLindelof D.support :=
-    IsLindelof.of_isClosed_subset hL hclosed (by simp)
-  simpa [D] using hL'.countable_of_isDiscrete hdisc
-
-lemma divisor_univ_nonneg_of_differentiable {f : ℂ → ℂ} (hf : Differentiable ℂ f) :
-    0 ≤ MeromorphicOn.divisor f (Set.univ : Set ℂ) := by
-  have hAnal : AnalyticOnNhd ℂ f (Set.univ : Set ℂ) := by
-    intro z _hz
-    simpa using (hf.analyticAt z)
-  simpa using
-    (MeromorphicOn.AnalyticOnNhd.divisor_nonneg (𝕜 := ℂ) (f := f)
-      (U := (Set.univ : Set ℂ)) hAnal)
-
-lemma norm_le_abs_radius_of_mem_toClosedBall_support
-    {D : Function.locallyFinsuppWithin (Set.univ : Set ℂ) ℤ} {R : ℝ} {z : ℂ}
-    (hz : z ∈ (Function.locallyFinsuppWithin.toClosedBall R D).support) :
-    ‖z‖ ≤ |R| := by
-  have hz_ball : z ∈ Metric.closedBall (0 : ℂ) |R| :=
-    (Function.locallyFinsuppWithin.toClosedBall R D).supportWithinDomain hz
-  simpa [Metric.mem_closedBall, dist_zero_right] using hz_ball
-
-lemma toClosedBall_eval_eq_of_norm_le_abs
-    {D : Function.locallyFinsuppWithin (Set.univ : Set ℂ) ℤ} {R : ℝ} {z : ℂ}
-    (hz : ‖z‖ ≤ |R|) :
-    (Function.locallyFinsuppWithin.toClosedBall R D) z = D z := by
-  have hz_ball : z ∈ Metric.closedBall (0 : ℂ) |R| := by
-    simpa [Metric.mem_closedBall, dist_zero_right] using hz
-  simpa using
-    (Function.locallyFinsuppWithin.toClosedBall_eval_within (r := R) (f := D)
-      (z := z) hz_ball)
-
-lemma mem_toClosedBall_support_of_mem_support_of_norm_le_abs
-    {D : Function.locallyFinsuppWithin (Set.univ : Set ℂ) ℤ} {R : ℝ} {z : ℂ}
-    (hzD : z ∈ D.support) (hzR : ‖z‖ ≤ |R|) :
-    z ∈ (Function.locallyFinsuppWithin.toClosedBall R D).support := by
-  have hEq : (Function.locallyFinsuppWithin.toClosedBall R D) z = D z :=
-    toClosedBall_eval_eq_of_norm_le_abs hzR
-  have hDz_ne : D z ≠ 0 := by
-    simpa [Function.mem_support] using hzD
-  simp [Function.mem_support, hEq, hDz_ne]
-
-lemma mem_support_of_mem_toClosedBall_support
-    {D : Function.locallyFinsuppWithin (Set.univ : Set ℂ) ℤ} {R : ℝ} {z : ℂ}
-    (hz : z ∈ (Function.locallyFinsuppWithin.toClosedBall R D).support) :
-    z ∈ D.support := by
-  have hEq : (Function.locallyFinsuppWithin.toClosedBall R D) z = D z :=
-    toClosedBall_eval_eq_of_norm_le_abs (D := D) (R := R) (z := z)
-      (norm_le_abs_radius_of_mem_toClosedBall_support hz)
-  have hz_ne : (Function.locallyFinsuppWithin.toClosedBall R D) z ≠ 0 := by
-    simpa [Function.mem_support] using hz
-  simpa [Function.mem_support, hEq] using hz_ne
-
-lemma log_nonneg_mul_inv_norm_of_norm_le {E : Type*} [NormedAddCommGroup E]
-    {z : E} {r : ℝ} (hz : ‖z‖ ≤ r) :
-    0 ≤ Real.log (r * ‖z‖⁻¹) := by
-  by_cases hz0 : z = 0
-  · simp [hz0]
-  · have hzpos : 0 < ‖z‖ := norm_pos_iff.2 hz0
-    have : 1 ≤ r * ‖z‖⁻¹ := by
-      have : 1 ≤ r / ‖z‖ := (one_le_div hzpos).2 hz
-      simpa [div_eq_mul_inv] using this
-    exact Real.log_nonneg this
-
-lemma log_two_le_log_two_mul_mul_inv_norm_of_norm_le {E : Type*} [NormedAddCommGroup E]
-    {z : E} {R : ℝ} (hz0 : z ≠ 0) (hz : ‖z‖ ≤ R) :
-    Real.log 2 ≤ Real.log ((2 * R) * ‖z‖⁻¹) := by
-  have hzpos : 0 < ‖z‖ := norm_pos_iff.2 hz0
-  have hRdiv : 1 ≤ R / ‖z‖ := (one_le_div hzpos).2 hz
-  have hle2 : (2 : ℝ) ≤ (2 * R) * ‖z‖⁻¹ := by
-    have : (2 : ℝ) ≤ 2 * (R / ‖z‖) := by nlinarith
-    simpa [div_eq_mul_inv, mul_assoc, mul_left_comm, mul_comm] using this
-  exact Real.log_le_log (by norm_num) hle2
+  Function.locallyFinsuppWithin.logCounting_divisor_eq_circleAverage_sub_const_of_differentiable
+    hf hR
 
 lemma log_two_mul_divisorMassClosedBall₀_le_logCounting_two_mul {f : ℂ → ℂ}
     (hf : Differentiable ℂ f) {R : ℝ} (hR : 1 ≤ R) :
     (Real.log 2) * divisorMassClosedBall₀ f R
       ≤ Function.locallyFinsuppWithin.logCounting
-          (MeromorphicOn.divisor f (Set.univ : Set ℂ)) (2 * R) := by
-  classical
-  have hR0 : 0 < R := lt_of_lt_of_le (by norm_num : (0 : ℝ) < 1) hR
-  set D : Function.locallyFinsuppWithin (Set.univ : Set ℂ) ℤ :=
-    MeromorphicOn.divisor f (Set.univ : Set ℂ)
-  set r : ℝ := 2 * R
-  have hrpos : 0 < r := by dsimp [r]; nlinarith
-  have hr : r ≠ 0 := ne_of_gt hrpos
-  have hDnonneg : 0 ≤ D := by
-    simpa [D] using divisor_univ_nonneg_of_differentiable (f := f) hf
-  let Dr : Function.locallyFinsuppWithin (Metric.closedBall (0 : ℂ) |r|) ℤ :=
-    Function.locallyFinsuppWithin.toClosedBall r D
-  have hDr_fin : Set.Finite Dr.support := Dr.finiteSupport (isCompact_closedBall (0 : ℂ) |r|)
-  let F : Finset ℂ := hDr_fin.toFinset
-  let SR : Finset ℂ :=
-    (Function.locallyFinsuppWithin.finiteSupport (Function.locallyFinsuppWithin.toClosedBall R D)
-          (isCompact_closedBall (0 : ℂ) |R|)).toFinset
-  let S : Finset ℂ := SR.filter fun z : ℂ => z ≠ 0
-  have hS_sub : S ⊆ F := by
-    intro z hzS
-    have hz0 : z ≠ 0 := (Finset.mem_filter.1 hzS).2
-    have hz_mem_SR : z ∈ SR := (Finset.mem_filter.1 hzS).1
-    have hzR : z ∈ (Function.locallyFinsuppWithin.toClosedBall R D).support := by
-      exact
-        (Set.Finite.mem_toFinset
-          (Function.locallyFinsuppWithin.finiteSupport
-            (Function.locallyFinsuppWithin.toClosedBall R D)
-            (isCompact_closedBall (0 : ℂ) |R|))).1 hz_mem_SR
-    have hz_norm_le_R : ‖z‖ ≤ R := by
-      have : ‖z‖ ≤ |R| := norm_le_abs_radius_of_mem_toClosedBall_support hzR
-      simpa [abs_of_pos hR0] using this
-    have hz_norm_le_r : ‖z‖ ≤ |r| := by
-      have : ‖z‖ ≤ r := le_trans hz_norm_le_R (by dsimp [r]; nlinarith)
-      simpa [abs_of_pos hrpos] using this
-    have hzD : z ∈ D.support := mem_support_of_mem_toClosedBall_support hzR
-    have : z ∈ Dr.support := by
-      simpa [Dr] using
-        mem_toClosedBall_support_of_mem_support_of_norm_le_abs (D := D) (R := r) hzD
-          hz_norm_le_r
-    exact (Set.Finite.mem_toFinset hDr_fin).2 this
-  have hlogCounting :
-      Function.locallyFinsuppWithin.logCounting D r
-        = (F.sum fun z : ℂ => (Dr z : ℝ) * Real.log (r * ‖z‖⁻¹)) + (D 0 : ℝ) * Real.log r := by
-    have hsupp :
-        Function.support (fun z : ℂ => (Dr z : ℝ) * Real.log (r * ‖z‖⁻¹)) ⊆ F := by
-      intro z hz
-      have : Dr z ≠ 0 := by
-        by_contra h0
-        simp [Function.mem_support, h0] at hz
-      have : z ∈ Dr.support := by simpa [Function.mem_support] using this
-      exact (Set.Finite.mem_toFinset hDr_fin).2 this
-    simp [Function.locallyFinsuppWithin.logCounting, D, Dr, r,
-      finsum_eq_sum_of_support_subset (f := fun z : ℂ =>
-        (Dr z : ℝ) * Real.log (r * ‖z‖⁻¹)) (s := F) hsupp]
-  have hsum_le :
-      (Real.log 2) * (S.sum fun z : ℂ => (D z : ℝ))
-        ≤ F.sum (fun z : ℂ => (Dr z : ℝ) * Real.log (r * ‖z‖⁻¹)) := by
-    have hterm_nonneg : ∀ z ∈ F, 0 ≤ (Dr z : ℝ) * Real.log (r * ‖z‖⁻¹) := by
-      intro z hzF
-      have hz_sup : z ∈ Dr.support := (Set.Finite.mem_toFinset hDr_fin).1 hzF
-      have hDz : 0 ≤ Dr z := by
-        have hDz' : 0 ≤ D z := hDnonneg z
-        have hDrz : Dr z = D z := by
-          simpa [Dr] using toClosedBall_eval_eq_of_norm_le_abs (D := D) (R := r) (z := z)
-            (norm_le_abs_radius_of_mem_toClosedBall_support hz_sup)
-        simpa [hDrz] using hDz'
-      have hlog : 0 ≤ Real.log (r * ‖z‖⁻¹) := by
-        have hzle : ‖z‖ ≤ r := by
-          have : ‖z‖ ≤ |r| := norm_le_abs_radius_of_mem_toClosedBall_support hz_sup
-          simpa [abs_of_pos hrpos] using this
-        exact log_nonneg_mul_inv_norm_of_norm_le hzle
-      exact mul_nonneg (by exact_mod_cast hDz) hlog
-    have hsumSF :
-        S.sum (fun z : ℂ => (Dr z : ℝ) * Real.log (r * ‖z‖⁻¹))
-          ≤ F.sum (fun z : ℂ => (Dr z : ℝ) * Real.log (r * ‖z‖⁻¹)) :=
-      Finset.sum_le_sum_of_subset_of_nonneg hS_sub (by
-        intro z hzF hznot; exact hterm_nonneg z hzF)
-    have hterm_ge : ∀ z ∈ S,
-        (Real.log 2) * (D z : ℝ) ≤ (Dr z : ℝ) * Real.log (r * ‖z‖⁻¹) := by
-      intro z hzS
-      have hz0 : z ≠ 0 := (Finset.mem_filter.1 hzS).2
-      have hz_norm_le_R : ‖z‖ ≤ R := by
-        have hz_mem_SR : z ∈ SR := (Finset.mem_filter.1 hzS).1
-        have hzRsup : z ∈ (Function.locallyFinsuppWithin.toClosedBall R D).support := by
-          exact
-            (Set.Finite.mem_toFinset
-              (Function.locallyFinsuppWithin.finiteSupport
-                (Function.locallyFinsuppWithin.toClosedBall R D)
-                (isCompact_closedBall (0 : ℂ) |R|))).1 hz_mem_SR
-        have : ‖z‖ ≤ |R| := norm_le_abs_radius_of_mem_toClosedBall_support hzRsup
-        simpa [abs_of_pos hR0] using this
-      have hlog_le : Real.log 2 ≤ Real.log (r * ‖z‖⁻¹) :=
-        by simpa [r] using log_two_le_log_two_mul_mul_inv_norm_of_norm_le hz0 hz_norm_le_R
-      have hDz_nonneg : 0 ≤ D z := hDnonneg z
-      have hz_in_ballr : z ∈ Metric.closedBall (0 : ℂ) |r| := by
-        have : ‖z‖ ≤ r := le_trans hz_norm_le_R (by dsimp [r]; nlinarith)
-        simpa [Metric.mem_closedBall, dist_zero_right, abs_of_pos hrpos] using this
-      have hDrz : Dr z = D z := by
-        have hz_norm_le : ‖z‖ ≤ |r| := by
-          simpa [Metric.mem_closedBall, dist_zero_right] using hz_in_ballr
-        simpa [Dr] using toClosedBall_eval_eq_of_norm_le_abs (D := D) (R := r) (z := z)
-          hz_norm_le
-      have : (Real.log 2) * (D z : ℝ) ≤ (Real.log (r * ‖z‖⁻¹)) * (D z : ℝ) :=
-        mul_le_mul_of_nonneg_right hlog_le (by exact_mod_cast hDz_nonneg)
-      simpa [hDrz, mul_assoc, mul_left_comm, mul_comm] using this
-    calc
-      (Real.log 2) * (S.sum fun z : ℂ => (D z : ℝ))
-          = S.sum (fun z : ℂ => (Real.log 2) * (D z : ℝ)) := by
-              simp [Finset.mul_sum]
-      _ ≤ S.sum (fun z : ℂ => (Dr z : ℝ) * Real.log (r * ‖z‖⁻¹)) := by
-            exact Finset.sum_le_sum fun z hz => hterm_ge z hz
-      _ ≤ F.sum (fun z : ℂ => (Dr z : ℝ) * Real.log (r * ‖z‖⁻¹)) := hsumSF
-  have hcenter_nonneg : 0 ≤ (D 0 : ℝ) * Real.log r := by
-    have hD0 : 0 ≤ D 0 := hDnonneg 0
-    have hlogr : 0 ≤ Real.log r := Real.log_nonneg (by nlinarith [hR])
-    exact mul_nonneg (by exact_mod_cast hD0) hlogr
-  have : (Real.log 2) * (S.sum fun z : ℂ => (D z : ℝ))
-      ≤ Function.locallyFinsuppWithin.logCounting D r := by
-    rw [hlogCounting]
-    nlinarith [hsum_le, hcenter_nonneg]
-  simpa [divisorMassClosedBall₀, D, r, S, SR] using this
+          (MeromorphicOn.divisor f (Set.univ : Set ℂ)) (2 * R) :=
+  Function.locallyFinsuppWithin.log_two_mul_massClosedBall₀_le_logCounting
+    (D := MeromorphicOn.divisor f (Set.univ : Set ℂ))
+    (Differentiable.divisor_nonneg hf) hR
 
-lemma divisorMassClosedBall₀_le_of_growth {f : ℂ → ℂ} {ρ : ℝ}
+lemma divisorMassClosedBall₀_le_of_growth {f : ℂ → ℂ} {ρ C : ℝ}
     (hf : Differentiable ℂ f)
-    (hgrowth : ∃ C > 0, ∀ z : ℂ, Real.log (1 + ‖f z‖) ≤ C * (1 + ‖z‖) ^ ρ)
+    (hC : ∀ z : ℂ, Real.log (1 + ‖f z‖) ≤ C * (1 + ‖z‖) ^ ρ)
     {R : ℝ} (hR : 1 ≤ R) :
     divisorMassClosedBall₀ f R
-      ≤ ((Classical.choose hgrowth) * (1 + |2 * R|) ^ ρ
-          + |Real.log ‖meromorphicTrailingCoeffAt f 0‖|) / (Real.log 2) := by
-  classical
-  have hR0 : 0 < R := lt_of_lt_of_le (by norm_num : (0 : ℝ) < 1) hR
-  have hlog2pos : 0 < Real.log 2 := by
-    have : (1 : ℝ) < 2 := by norm_num
-    exact Real.log_pos this
-  have hlow :
-      (Real.log 2) * divisorMassClosedBall₀ f R
-        ≤ Function.locallyFinsuppWithin.logCounting
-            (MeromorphicOn.divisor f (Set.univ : Set ℂ)) (2 * R) :=
-    log_two_mul_divisorMassClosedBall₀_le_logCounting_two_mul (f := f) hf (R := R) hR
-  have hupp :
-      Function.locallyFinsuppWithin.logCounting (MeromorphicOn.divisor f (Set.univ : Set ℂ)) (2 * R)
-        ≤ (Classical.choose hgrowth) * (1 + |2 * R|) ^ ρ
-          + |Real.log ‖meromorphicTrailingCoeffAt f 0‖| := by
-    have h2R0 : 0 < (2 * R) := by nlinarith [hR0]
-    simpa using
-      (logCounting_divisor_univ_le_of_growth (f := f) (ρ := ρ) hf hgrowth
-        (R := 2 * R) h2R0)
-  have :
-      (Real.log 2) * divisorMassClosedBall₀ f R
-        ≤ (Classical.choose hgrowth) * (1 + |2 * R|) ^ ρ
-          + |Real.log ‖meromorphicTrailingCoeffAt f 0‖| :=
-    le_trans hlow hupp
-  have :
-      divisorMassClosedBall₀ f R
-        ≤ ((Classical.choose hgrowth) * (1 + |2 * R|) ^ ρ
-            + |Real.log ‖meromorphicTrailingCoeffAt f 0‖|) / (Real.log 2) := by
-    have hx :
-        divisorMassClosedBall₀ f R * (Real.log 2)
-          ≤ (Classical.choose hgrowth) * (1 + |2 * R|) ^ ρ
-            + |Real.log ‖meromorphicTrailingCoeffAt f 0‖| := by
-      simpa [mul_assoc, mul_left_comm, mul_comm] using this
-    exact (le_div_iff₀ hlog2pos).2 hx
-  simpa [divisorMassClosedBall₀] using this
+      ≤ (C * (1 + |2 * R|) ^ ρ + |Real.log ‖meromorphicTrailingCoeffAt f 0‖|) /
+          Real.log 2 := by
+  simpa [divisorMassClosedBall₀] using
+    (Function.locallyFinsuppWithin.massClosedBall₀_divisor_le_of_log_growth
+      (f := f) (ρ := ρ) (C := C) hf hC hR)
 
 lemma divisorMassClosedBall₀_mono {f : ℂ → ℂ} (hf : Differentiable ℂ f)
     {R₁ R₂ : ℝ} (hR₁ : 0 ≤ R₁) (hR₁₂ : R₁ ≤ R₂) :
     divisorMassClosedBall₀ f R₁ ≤ divisorMassClosedBall₀ f R₂ := by
-  classical
-  have hR₂ : 0 ≤ R₂ := le_trans hR₁ hR₁₂
-  have habs₁ : |R₁| = R₁ := abs_of_nonneg hR₁
-  have habs₂ : |R₂| = R₂ := abs_of_nonneg hR₂
-  set U : Set ℂ := (Set.univ : Set ℂ)
-  set D : Function.locallyFinsuppWithin U ℤ := MeromorphicOn.divisor f U
-  have hDnonneg : 0 ≤ D := by
-    simpa [D, U] using divisor_univ_nonneg_of_differentiable (f := f) hf
-  let SR (R : ℝ) : Finset ℂ :=
-    (Function.locallyFinsuppWithin.finiteSupport (Function.locallyFinsuppWithin.toClosedBall R D)
-          (isCompact_closedBall (0 : ℂ) |R|)).toFinset
-  let S (R : ℝ) : Finset ℂ := (SR R).filter fun z : ℂ => z ≠ 0
-  have hsub : S R₁ ⊆ S R₂ := by
-    intro z hz
-    have hzSR₁ : z ∈ SR R₁ := (Finset.mem_filter.1 hz).1
-    have hz0 : z ≠ 0 := (Finset.mem_filter.1 hz).2
-    have hz_sup₁ :
-        z ∈ (Function.locallyFinsuppWithin.toClosedBall R₁ D).support := by
-      exact
-        (Set.Finite.mem_toFinset
-          (Function.locallyFinsuppWithin.finiteSupport
-            (Function.locallyFinsuppWithin.toClosedBall R₁ D)
-            (isCompact_closedBall (0 : ℂ) |R₁|))).1 hzSR₁
-    have hz_norm₁ : ‖z‖ ≤ R₁ := by
-      have : ‖z‖ ≤ |R₁| := norm_le_abs_radius_of_mem_toClosedBall_support hz_sup₁
-      simpa [habs₁] using this
-    have hz_norm₂ : ‖z‖ ≤ R₂ := le_trans hz_norm₁ hR₁₂
-    have hz_norm₂_abs : ‖z‖ ≤ |R₂| := by simpa [habs₂] using hz_norm₂
-    have hzD : z ∈ D.support := mem_support_of_mem_toClosedBall_support hz_sup₁
-    have hz_sup₂ : z ∈ (Function.locallyFinsuppWithin.toClosedBall R₂ D).support := by
-      exact mem_toClosedBall_support_of_mem_support_of_norm_le_abs hzD hz_norm₂_abs
-    have hzSR₂ : z ∈ SR R₂ := by
-      exact
-        (Set.Finite.mem_toFinset
-          (Function.locallyFinsuppWithin.finiteSupport
-            (Function.locallyFinsuppWithin.toClosedBall R₂ D)
-            (isCompact_closedBall (0 : ℂ) |R₂|))).2 hz_sup₂
-    exact Finset.mem_filter.2 ⟨hzSR₂, hz0⟩
-  have hterm_nonneg : ∀ z ∈ S R₂, 0 ≤ (MeromorphicOn.divisor f U z : ℝ) := by
-    intro z hz
-    have : 0 ≤ D z := hDnonneg z
-    exact_mod_cast this
-  simpa [divisorMassClosedBall₀, D, U, SR, S] using
-    Finset.sum_le_sum_of_subset_of_nonneg hsub (fun z hz₂ _hznot => hterm_nonneg z hz₂)
+  simpa [divisorMassClosedBall₀] using
+    Function.locallyFinsuppWithin.massClosedBall₀_mono
+      (D := MeromorphicOn.divisor f (Set.univ : Set ℂ))
+      (Differentiable.divisor_nonneg hf) hR₁ hR₁₂
 
 lemma exists_r0_le_norm_divisorZeroIndex₀_val {f : ℂ → ℂ}
     (hf : Differentiable ℂ f) (hnot : ∃ z : ℂ, f z ≠ 0) :
@@ -449,7 +107,7 @@ lemma exists_r0_le_norm_divisorZeroIndex₀_val {f : ℂ → ℂ}
   set U : Set ℂ := (Set.univ : Set ℂ)
   set D : Function.locallyFinsuppWithin U ℤ := MeromorphicOn.divisor f U
   have hDnonneg : 0 ≤ D := by
-    simpa [D, U] using divisor_univ_nonneg_of_differentiable (f := f) hf
+    simpa [D, U] using (Differentiable.divisor_nonneg (f := f) hf)
   have hzero : ∀ p : divisorZeroIndex₀ f U, f (divisorZeroIndex₀_val p) = 0 := by
     intro p
     set z : ℂ := divisorZeroIndex₀_val p
@@ -581,7 +239,7 @@ lemma card_ball_le_divisorMassClosedBall₀
       simpa using (finite_divisorZeroIndex₀_subtype_norm_le (f := f) (U := U) (B := R) this)
     exact Fintype.ofFinite _
   have hDnonneg : 0 ≤ D := by
-    simpa [D, U] using divisor_univ_nonneg_of_differentiable (f := f) hf
+    simpa [D, U] using (Differentiable.divisor_nonneg (f := f) hf)
   let SR : Finset ℂ :=
     (Function.locallyFinsuppWithin.finiteSupport (Function.locallyFinsuppWithin.toClosedBall R D)
           (isCompact_closedBall (0 : ℂ) |R|)).toFinset
@@ -598,7 +256,8 @@ lemma card_ball_le_divisorMassClosedBall₀
       have hz0_support : z0 ∈ (Function.locallyFinsuppWithin.toClosedBall R D).support := by
         have hz0_suppD : z0 ∈ D.support := by
           simp [z0, D]
-        exact mem_toClosedBall_support_of_mem_support_of_norm_le_abs hz0_suppD hz0_norm
+        exact Function.locallyFinsuppWithin.mem_toClosedBall_support_of_mem_support_of_norm_le_abs
+          hz0_suppD hz0_norm
       exact (Set.Finite.mem_toFinset
         (Function.locallyFinsuppWithin.finiteSupport
           (Function.locallyFinsuppWithin.toClosedBall R D)
@@ -739,9 +398,10 @@ lemma finite_divisorZeroIndex₀_dyadicShell
   exact hfin.subset hsub
 
 lemma tsum_divisorZeroIndex₀_dyadicShell_inv_rpow_le_geometric_of_growth
-    {f : ℂ → ℂ} {ρ τ r0 : ℝ}
+    {f : ℂ → ℂ} {ρ τ r0 Cgrow : ℝ}
     (hρ : 0 ≤ ρ) (hτpos : 0 < τ) (hf : Differentiable ℂ f)
-    (hgrowth : ∃ C > 0, ∀ z : ℂ, Real.log (1 + ‖f z‖) ≤ C * (1 + ‖z‖) ^ ρ)
+    (hCgrow_pos : 0 < Cgrow)
+    (hCgrow : ∀ z : ℂ, Real.log (1 + ‖f z‖) ≤ Cgrow * (1 + ‖z‖) ^ ρ)
     (hr0pos : 0 < r0)
     (hr0 : ∀ p : divisorZeroIndex₀ f (Set.univ : Set ℂ),
       r0 ≤ ‖divisorZeroIndex₀_val p‖)
@@ -749,7 +409,6 @@ lemma tsum_divisorZeroIndex₀_dyadicShell_inv_rpow_le_geometric_of_growth
     let kfun : divisorZeroIndex₀ f (Set.univ : Set ℂ) → ℕ :=
       fun p => ⌊Real.logb 2 (‖divisorZeroIndex₀_val p‖ / r0)⌋₊
     let S : Set (divisorZeroIndex₀ f (Set.univ : Set ℂ)) := {p | kfun p = k}
-    let Cgrow : ℝ := Classical.choose hgrowth
     let Ctrail : ℝ := |Real.log ‖meromorphicTrailingCoeffAt f 0‖|
     let A : ℝ := ((Cgrow / Real.log 2) * (1 + 4 * r0) ^ ρ) * (r0⁻¹) ^ τ
     let B : ℝ := ((Ctrail / Real.log 2) + 1) * (r0⁻¹) ^ τ
@@ -757,7 +416,7 @@ lemma tsum_divisorZeroIndex₀_dyadicShell_inv_rpow_le_geometric_of_growth
     let qσ : ℝ := (2 : ℝ) ^ (-τ)
     (∑' p : S, ‖divisorZeroIndex₀_val p.1‖⁻¹ ^ τ) ≤ A * q ^ k + B * qσ ^ k := by
   classical
-  intro kfun S Cgrow Ctrail A B q qσ
+  intro kfun S Ctrail A B q qσ
   let rk : ℝ := r0 * (2 : ℝ) ^ (k : ℝ)
   let Rk : ℝ := r0 * (2 : ℝ) ^ ((k : ℝ) + 1)
   have hrk_pos : 0 < rk := mul_pos hr0pos (Real.rpow_pos_of_pos (by norm_num) _)
@@ -785,8 +444,8 @@ lemma tsum_divisorZeroIndex₀_dyadicShell_inv_rpow_le_geometric_of_growth
   have hmass_le_growth :
       divisorMassClosedBall₀ f Rk
         ≤ (Cgrow * (1 + |2 * Rk|) ^ ρ + Ctrail) / (Real.log 2) := by
-    simpa [Cgrow, Ctrail, Rk] using
-      (divisorMassClosedBall₀_le_of_growth (f := f) (ρ := ρ) hf hgrowth
+    simpa [Ctrail, Rk] using
+      (divisorMassClosedBall₀_le_of_growth (f := f) (ρ := ρ) (C := Cgrow) hf hCgrow
         (R := Rk) hk_ge_one)
   have hcard_le_mass :
       (Fintype.card S : ℝ) ≤ divisorMassClosedBall₀ f Rk := by
@@ -806,13 +465,13 @@ lemma tsum_divisorZeroIndex₀_dyadicShell_inv_rpow_le_geometric_of_growth
     simpa [Rk] using
       Real.one_add_abs_two_mul_dyadicRadius_rpow_le (r0 := r0) (ρ := ρ) k hr0pos hρ
   have hlog2pos : 0 < Real.log 2 := Real.log_pos (by norm_num : (1 : ℝ) < 2)
-  simpa [A, B, q, qσ, rk, Cgrow, Ctrail, mul_assoc, mul_left_comm, mul_comm] using
+  simpa [A, B, q, qσ, rk, Ctrail, mul_assoc, mul_left_comm, mul_comm] using
     Real.dyadic_growth_mass_mul_inv_le_geometric
       (C := Cgrow) (L := Real.log 2) (M := (1 + 4 * r0) ^ ρ)
       (X := (1 + |2 * Rk|) ^ ρ)
       (T := ∑' p : S, ‖divisorZeroIndex₀_val p.1‖⁻¹ ^ τ)
       (Ctrail := Ctrail) (r0 := r0) (ρ := ρ) (τ := τ) (k := k)
-      hlog2pos (le_of_lt (Classical.choose_spec hgrowth).1) hr0pos.le hpow_bound
+      hlog2pos hCgrow_pos.le hr0pos.le hpow_bound
       (by simpa [rk] using htsum')
 
 theorem summable_norm_inv_rpow_divisorZeroIndex₀_of_growth {f : ℂ → ℂ} {ρ τ : ℝ}
@@ -820,6 +479,7 @@ theorem summable_norm_inv_rpow_divisorZeroIndex₀_of_growth {f : ℂ → ℂ} {
     (hgrowth : ∃ C > 0, ∀ z : ℂ, Real.log (1 + ‖f z‖) ≤ C * (1 + ‖z‖) ^ ρ) :
     Summable (fun p : divisorZeroIndex₀ f (Set.univ : Set ℂ) =>
       ‖divisorZeroIndex₀_val p‖⁻¹ ^ τ) := by
+  rcases hgrowth with ⟨Cgrow, hCgrow_pos, hCgrow⟩
   have hτpos : 0 < τ := lt_of_le_of_lt hρ hτ
   rcases exists_r0_le_norm_divisorZeroIndex₀_val (f := f) hf hnot with ⟨r0, hr0pos, hr0⟩
   have hr0ne : (r0 : ℝ) ≠ 0 := ne_of_gt hr0pos
@@ -859,7 +519,6 @@ theorem summable_norm_inv_rpow_divisorZeroIndex₀_of_growth {f : ℂ → ℂ} {
       summable_geometric_of_lt_one hq_nonneg hq_lt_one
     have hgeom_qσ : Summable (fun k : ℕ => qσ ^ k) :=
       summable_geometric_of_lt_one hqσ_nonneg hqσ_lt_one
-    let Cgrow : ℝ := Classical.choose hgrowth
     let Ctrail : ℝ := |Real.log ‖meromorphicTrailingCoeffAt f 0‖|
     let A : ℝ := ((Cgrow / Real.log 2) * (1 + 4 * r0) ^ ρ) * (r0⁻¹) ^ τ
     let B : ℝ := ((Ctrail / Real.log 2) + 1) * (r0⁻¹) ^ τ
@@ -885,9 +544,9 @@ theorem summable_norm_inv_rpow_divisorZeroIndex₀_of_growth {f : ℂ → ℂ} {
               Real.one_le_dyadicRadius_succ_of_inv_le_two_pow hr0pos hk0 hkk
           have hmain :
               (∑' p : S kk, ‖divisorZeroIndex₀_val p.1‖⁻¹ ^ τ) ≤ A * q ^ kk + B * qσ ^ kk := by
-            simpa [S, kfun, Cgrow, Ctrail, A, B, q, qσ] using
+            simpa [S, kfun, Ctrail, A, B, q, qσ] using
               tsum_divisorZeroIndex₀_dyadicShell_inv_rpow_le_geometric_of_growth
-                (f := f) (ρ := ρ) (τ := τ) hρ hτpos hf hgrowth hr0pos hr0 kk hRk_ge_one
+                (f := f) (ρ := ρ) (τ := τ) hρ hτpos hf hCgrow_pos hCgrow hr0pos hr0 kk hRk_ge_one
           have : A * q ^ kk + B * qσ ^ kk = A0 * q ^ k + B0 * qσ ^ k := by
             simpa [A0, B0, kk] using Real.two_geometric_shift_add A B q qσ k k0
           simpa [kk] using (hmain.trans_eq this)

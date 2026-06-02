@@ -26,7 +26,7 @@ These bounds are derived from Binet's formula and the bounds on the Binet integr
 * `Stirling.factorial_asymptotic`: n! ~ √(2πn)(n/e)^n
 
 The proof applies Binet's formula to `Γ n`, uses `Γ(n + 1) = n * Γ n`, and bounds the Binet
-correction term by the kernel estimates from `BinetFormula`.
+correction term via `Binet.re_J_lt_one_div_twelve` and `Binet.re_J_ge_one_div_twelve_add_one`.
 
 ## References
 
@@ -165,83 +165,11 @@ theorem factorial_upper_robbins (n : ℕ) (hn : 0 < n) :
 
 /-! ## Section 4: Lower bound -/
 
-/-- Combine the two exponential factors in the Robbins lower-bound integrand. -/
-private lemma exp_neg_div_twelve_mul_exp_neg_mul (x t : ℝ) :
-    Real.exp (-t / 12) * Real.exp (-t * x) = Real.exp (-t * (x + 1 / 12)) := by
-  rw [← Real.exp_add]
-  congr 1
-  ring
-
-/-- The elementary integrand used in Robbins' lower bound is integrable on `(0,∞)`. -/
-lemma integrable_one_div_twelve_mul_exp_neg_div_mul_exp_neg_mul {x : ℝ} (hx : 0 < x) :
-    IntegrableOn
-      (fun t : ℝ => (1 / 12 : ℝ) * Real.exp (-t / 12) * Real.exp (-t * x))
-      (Ioi (0 : ℝ)) volume := by
-  have hx' : 0 < x + 1 / 12 := by linarith [hx]
-  have hConst := Binet.integrable_const_mul_exp (x := x + 1 / 12) hx'
-  refine hConst.congr_fun ?_ measurableSet_Ioi
-  intro t _ht
-  calc
-    (1 / 12 : ℝ) * Real.exp (-t * (x + 1 / 12))
-    _ = (1 / 12 : ℝ) * (Real.exp (-t / 12) * Real.exp (-t * x)) := by
-        rw [exp_neg_div_twelve_mul_exp_neg_mul]
-    _ = (1 / 12 : ℝ) * Real.exp (-t / 12) * Real.exp (-t * x) := by
-        ring
-
-/-- Integral of the elementary Robbins lower-bound integrand. -/
-lemma integral_one_div_twelve_mul_exp_neg_div_mul_exp_neg_mul {x : ℝ} (hx : 0 < x) :
-    ∫ t in Ioi (0 : ℝ), (1 / 12 : ℝ) * Real.exp (-t / 12) * Real.exp (-t * x) =
-      1 / (12 * x + 1) := by
-  have hx' : 0 < x + 1 / 12 := by linarith [hx]
-  have hbase :
-      ∫ t in Ioi (0 : ℝ), Real.exp (-t * (x + 1 / 12)) = 1 / (x + 1 / 12) := by
-    simpa using (Binet.integral_exp_neg_mul_Ioi (x := x + 1 / 12) hx')
-  calc
-    (∫ t in Ioi (0 : ℝ), (1 / 12 : ℝ) * Real.exp (-t / 12) * Real.exp (-t * x))
-        = ∫ t in Ioi (0 : ℝ), (1 / 12 : ℝ) * Real.exp (-t * (x + 1 / 12)) := by
-            refine MeasureTheory.setIntegral_congr_fun measurableSet_Ioi ?_
-            intro t _ht
-            calc
-              (1 / 12 : ℝ) * Real.exp (-t / 12) * Real.exp (-t * x)
-                  = (1 / 12 : ℝ) * (Real.exp (-t / 12) * Real.exp (-t * x)) := by
-                    ring
-              _ = (1 / 12 : ℝ) * Real.exp (-t * (x + 1 / 12)) := by
-                    rw [exp_neg_div_twelve_mul_exp_neg_mul]
-    _ = (1 / 12 : ℝ) * ∫ t in Ioi (0 : ℝ), Real.exp (-t * (x + 1 / 12)) := by
-        simp [MeasureTheory.integral_const_mul]
-    _ = (1 / 12 : ℝ) * (1 / (x + 1 / 12)) := by rw [hbase]
-    _ = 1 / (12 * x + 1) := by field_simp
-
-/-- For the lower bound, we need J(n+1) ≥ 1/(12(n+1)+1).
-
-This refined lower bound on the Binet integral uses monotonicity of K̃. -/
-lemma J_lower_bound (n : ℕ) :
-    1 / (12 * (n + 1 : ℝ) + 1) ≤ (Binet.J (n + 1 : ℂ)).re := by
-  let x : ℝ := n + 1
-  have hx : 0 < x := by
-    dsimp [x]
-    exact add_pos_of_nonneg_of_pos (Nat.cast_nonneg n) zero_lt_one
-  have hJ : (Binet.J (n + 1 : ℂ)).re =
-      ∫ t in Ioi (0 : ℝ), BinetKernel.Ktilde t * Real.exp (-t * x) := by
-    simpa [x] using (Binet.re_J_eq_integral_Ktilde (x := x) hx)
-  rw [hJ]
-  have h_bound : ∀ t ∈ Ioi 0, (1/12) * Real.exp (-t/12) ≤ BinetKernel.Ktilde t := by
-    intro t ht
-    simpa using
-      (BinetKernel.Ktilde_ge_one_div_twelve_mul_exp_neg_div_twelve (t := t)
-        (by simpa using ht))
-  have h_int_le :
-      ∫ t in Ioi 0, (1/12) * Real.exp (-t/12) * Real.exp (-t * x) ≤
-        ∫ t in Ioi 0, BinetKernel.Ktilde t * Real.exp (-t * x) := by
-    refine MeasureTheory.setIntegral_mono_ae_restrict
-      (integrable_one_div_twelve_mul_exp_neg_div_mul_exp_neg_mul hx)
-      (Binet.integrable_Ktilde_mul_exp_real hx) ?_
-    filter_upwards [self_mem_ae_restrict (measurableSet_Ioi)] with t ht
-    gcongr
-    exact h_bound t ht
-  have h_lhs := integral_one_div_twelve_mul_exp_neg_div_mul_exp_neg_mul hx
-  rw [h_lhs] at h_int_le
-  exact h_int_le
+/-- For `n ≥ 1`, the Binet correction at `n` dominates Robbins' lower tail. -/
+private lemma re_J_ge_robbins_lower (n : ℕ) (hn : 0 < n) :
+    (12 * (n : ℝ) + 1)⁻¹ ≤ (Binet.J n).re := by
+  have hn_pos : (0 : ℝ) < n := Nat.cast_pos.mpr hn
+  simpa using Binet.re_J_ge_one_div_twelve_add_one hn_pos
 
 /-- The Robbins lower bound. -/
 theorem factorial_lower_robbins (n : ℕ) (hn : 0 < n) :
@@ -249,12 +177,8 @@ theorem factorial_lower_robbins (n : ℕ) (hn : 0 < n) :
       n.factorial := by
   have hn_pos : (0 : ℝ) < n := Nat.cast_pos.mpr hn
   have h_J_ge : (1 + (n : ℝ) * 12)⁻¹ ≤ (Binet.J n).re := by
-    have h0 : (1 / (12 * (n : ℝ) + 1) : ℝ) ≤ (Binet.J n).re := by
-      simpa [Nat.add_sub_cancel, Nat.cast_sub (Nat.succ_le_of_lt hn)] using
-        (J_lower_bound (n := n - 1))
-    have h0' : (12 * (n : ℝ) + 1)⁻¹ ≤ (Binet.J n).re := by
-      simpa [one_div] using h0
-    convert h0' using 1; ring_nf
+    have := re_J_ge_robbins_lower n hn
+    convert this using 1 <;> ring
   have h_log_ge :
       n * Real.log n - n + Real.log (2 * Real.pi * n) / 2 + 1 / (12 * n + 1) ≤
         Real.log (n.factorial : ℝ) := by
