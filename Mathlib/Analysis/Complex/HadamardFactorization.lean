@@ -23,7 +23,8 @@ then there is an entire zero-free function `H` with
 The quotient `H` is obtained as the meromorphic normal form of
 `f / (z ^ (ord₀ f) * divisorCanonicalProduct ...)`.
 
-Products and divisor indices are centered at `0`; a general center is not yet API.
+The quotient construction here is centered at `0`.  General-center API is derived downstream by
+translating the function; see `hadamard_factorization_of_order_centered`.
 
 ## Main results
 
@@ -52,6 +53,25 @@ open scoped BigOperators Topology
 /-- The denominator in the Hadamard quotient construction. -/
 noncomputable def hadamardDenom (m : ℕ) (f : ℂ → ℂ) (z : ℂ) : ℂ :=
   z ^ (analyticOrderNatAt f 0) * divisorCanonicalProduct m f (Set.univ : Set ℂ) z
+
+/-- The denominator in the Hadamard quotient construction, centered at `c`. -/
+noncomputable def centeredHadamardDenom (m : ℕ) (c : ℂ) (f : ℂ → ℂ) (z : ℂ) : ℂ :=
+  (z - c) ^ (analyticOrderNatAt f c) *
+    centeredDivisorCanonicalProduct m c f z
+
+/-- The Hadamard quotient construction, centered at `c`. -/
+noncomputable def centeredHadamardQuotient (m : ℕ) (c : ℂ) (f : ℂ → ℂ) (z : ℂ) : ℂ :=
+  f z / centeredHadamardDenom m c f z
+
+@[simp] theorem centeredHadamardDenom_center_eq_one {m : ℕ} {c : ℂ} {f : ℂ → ℂ}
+    (h : analyticOrderNatAt f c = 0) :
+    centeredHadamardDenom m c f c = 1 := by
+  simp [centeredHadamardDenom, h]
+
+@[simp] theorem centeredHadamardDenom_center_eq_zero {m : ℕ} {c : ℂ} {f : ℂ → ℂ}
+    (h : analyticOrderNatAt f c ≠ 0) :
+    centeredHadamardDenom m c f c = 0 := by
+  simp [centeredHadamardDenom, h]
 
 theorem differentiable_divisorCanonicalProduct_univ (m : ℕ) (f : ℂ → ℂ)
     (h_sum : Summable (fun p : divisorZeroIndex₀ f (Set.univ : Set ℂ) =>

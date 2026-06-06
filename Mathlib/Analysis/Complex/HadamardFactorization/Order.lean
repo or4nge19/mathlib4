@@ -16,16 +16,22 @@ Upgrades `hadamard_factorization_of_growth` to the finite-order formulation via
 The growth input is routed through a midpoint exponent `τ` with `⌊τ⌋ = ⌊ρ⌋` so genus
 `⌊ρ⌋` matches Tao's Weierstrass factor degree.
 
+This file proves the finite-order Hadamard factorization theorem, corresponding to
+[tao246bComplexAnalysis], Theorem 22.  The sequence-indexed theorem below reindexes the zero
+divisor of a given finite-order entire function.  It is not Tao's Weierstrass existence theorem
+(Theorem 15), which starts from an arbitrary discrete prescribed zero sequence and constructs an
+entire function with those zeros.
+
 ## Main results
 
 * `hadamard_factorization_of_order` : `f = exp(P) · z^k · ∏' E_m(z/a)`
 * `hadamard_factorization_of_order_sequence` : sequence-indexed Weierstrass product
+* `hadamard_factorization_of_order_centered` : arbitrary-center form, derived by translation
 * `EntireOfOrderAtMost` : order at most `ρ` in the `ε`-family sense
 
 ## References
 
-* [tao246bComplexAnalysis], Theorem 15 (sequence form;
-  see `hadamard_factorization_of_order_sequence`)
+* [tao246bComplexAnalysis], Theorem 22
 * [MR886677] for canonical factors on disks
 -/
 
@@ -37,6 +43,25 @@ open Set Filter Asymptotics
 open scoped Topology BigOperators
 
 namespace Complex.Hadamard
+
+/-- Translating the input moves the origin order to the order at the translation center. -/
+lemma analyticOrderNatAt_comp_add_const (f : ℂ → ℂ) (c : ℂ) :
+    analyticOrderNatAt (fun w : ℂ => f (w + c)) 0 = analyticOrderNatAt f c := by
+  let g : ℂ → ℂ := fun w => w + c
+  have hg : AnalyticAt ℂ g 0 := by fun_prop
+  have hg' : deriv g 0 ≠ 0 := by
+    simp [g]
+  have h :=
+    analyticOrderAt_comp_of_deriv_ne_zero (f := f) (g := g) (z₀ := (0 : ℂ)) hg hg'
+  have h' :
+      analyticOrderAt ((fun x : ℂ => f x) ∘ g) 0 = analyticOrderAt f c := by
+    simpa [g] using h
+  simpa [analyticOrderNatAt, g] using congrArg ENat.toNat h'
+
+/-- Subtracting a constant is the corresponding special case of translation for the origin order. -/
+lemma analyticOrderNatAt_comp_sub_const (f : ℂ → ℂ) (c : ℂ) :
+    analyticOrderNatAt (fun w : ℂ => f (w - c)) 0 = analyticOrderNatAt f (-c) := by
+  simpa [sub_eq_add_neg] using analyticOrderNatAt_comp_add_const f (-c)
 
 /-- An entire function has order at most `ρ` if it satisfies an `ε`-family growth bound. -/
 def EntireOfOrderAtMost (ρ : ℝ) (f : ℂ → ℂ) : Prop :=
@@ -79,6 +104,46 @@ theorem exists_log_growth {ρ τ : ℝ} {f : ℂ → ℂ} (h : EntireOfOrderAtMo
   exact Real.log_growth_of_norm_le_exp_mul_rpow (f := f)
     (r := fun z : ℂ => 1 + ‖z‖) hCpos hτ_nonneg
     (fun z => by linarith [norm_nonneg z]) hnorm
+
+/-- Finite order is invariant under translation of the input. -/
+theorem comp_add_const {ρ : ℝ} {f : ℂ → ℂ} (h : EntireOfOrderAtMost ρ f)
+    (hρ : 0 ≤ ρ) (c : ℂ) :
+    EntireOfOrderAtMost ρ (fun z : ℂ => f (z + c)) := by
+  refine ⟨h.differentiable.comp (differentiable_id.add (differentiable_const c)), ?_⟩
+  intro ε hε
+  rcases h.exists_bound hε with ⟨C, hC, hCbound⟩
+  let A : ℝ := 1 + ‖c‖
+  let C' : ℝ := C * A ^ (ρ + ε)
+  have hApos : 0 < A := by
+    dsimp [A]
+    positivity
+  have hτnonneg : 0 ≤ ρ + ε := by linarith
+  refine ⟨C', mul_pos hC (Real.rpow_pos_of_pos hApos _), ?_⟩
+  intro z
+  have hbase :
+      1 + ‖z + c‖ ≤ A * (1 + ‖z‖) := by
+    dsimp [A]
+    have hnorm : ‖z + c‖ ≤ ‖z‖ + ‖c‖ := norm_add_le z c
+    nlinarith [norm_nonneg z, norm_nonneg c]
+  have hpow :
+      (1 + ‖z + c‖) ^ (ρ + ε) ≤ (A * (1 + ‖z‖)) ^ (ρ + ε) := by
+    exact Real.rpow_le_rpow (by positivity) hbase hτnonneg
+  calc
+    ‖f (z + c)‖ ≤ Real.exp (C * (1 + ‖z + c‖) ^ (ρ + ε)) := hCbound (z + c)
+    _ ≤ Real.exp (C' * (1 + ‖z‖) ^ (ρ + ε)) := by
+      refine Real.exp_le_exp.2 ?_
+      calc
+        C * (1 + ‖z + c‖) ^ (ρ + ε) ≤ C * (A * (1 + ‖z‖)) ^ (ρ + ε) := by
+          exact mul_le_mul_of_nonneg_left hpow hC.le
+        _ = C' * (1 + ‖z‖) ^ (ρ + ε) := by
+          rw [Real.mul_rpow (le_of_lt hApos) (by positivity : 0 ≤ 1 + ‖z‖)]
+          ring
+
+/-- Finite order is invariant under subtracting a constant from the input. -/
+theorem comp_sub_const {ρ : ℝ} {f : ℂ → ℂ} (h : EntireOfOrderAtMost ρ f)
+    (hρ : 0 ≤ ρ) (c : ℂ) :
+    EntireOfOrderAtMost ρ (fun z : ℂ => f (z - c)) := by
+  simpa [sub_eq_add_neg] using h.comp_add_const hρ (-c)
 
 end EntireOfOrderAtMost
 
@@ -148,6 +213,80 @@ theorem hadamard_factorization_of_order_sequence {f : ℂ → ℂ} {ρ : ℝ} (h
               (fun n : ℕ => divisorZeroIndex₀_val (e n)) z := by
   classical
   rcases hadamard_factorization_of_order_reindex (f := f) (ρ := ρ) hρ hnot horder e with
+    ⟨P, hdeg, hfac⟩
+  refine ⟨P, hdeg, ?_⟩
+  intro z
+  simpa [Complex.canonicalProduct_def] using hfac z
+
+/-- Centered finite-order Hadamard factorization.  This is derived from the origin-centered theorem
+by translating `f` by `c`; the product indexes zeros away from the center in centered
+coordinates. -/
+theorem hadamard_factorization_of_order_centered {f : ℂ → ℂ} {ρ : ℝ} (hρ : 0 ≤ ρ)
+    (c : ℂ) (hnot : ∃ z : ℂ, f z ≠ 0)
+    (horder : EntireOfOrderAtMost ρ f) :
+    ∃ (P : Polynomial ℂ),
+      P.degree ≤ Nat.floor ρ ∧
+      ∀ z : ℂ,
+        f z =
+          Complex.exp (Polynomial.eval (z - c) P) *
+            (z - c) ^ (analyticOrderNatAt f c) *
+            centeredDivisorCanonicalProduct (Nat.floor ρ) c f z := by
+  classical
+  let g : ℂ → ℂ := fun w : ℂ => f (w + c)
+  have hnot_g : ∃ w : ℂ, g w ≠ 0 := by
+    rcases hnot with ⟨z, hz⟩
+    refine ⟨z - c, ?_⟩
+    simpa [g] using hz
+  have horder_g : EntireOfOrderAtMost ρ g :=
+    horder.comp_add_const hρ c
+  rcases hadamard_factorization_of_order (f := g) (ρ := ρ) hρ hnot_g horder_g with
+    ⟨P, hdeg, hfac⟩
+  refine ⟨P, hdeg, ?_⟩
+  intro z
+  have h := hfac (z - c)
+  have horder0 : analyticOrderNatAt g 0 = analyticOrderNatAt f c := by
+    simpa [g] using analyticOrderNatAt_comp_add_const f c
+  simpa [g, centeredDivisorCanonicalProduct, horder0] using h
+
+/-- Reindexed centered finite-order Hadamard factorization, for any index type equivalent to the
+centered nonzero divisor indices. -/
+theorem hadamard_factorization_of_order_centered_reindex {ι : Type*} {f : ℂ → ℂ} {ρ : ℝ}
+    (hρ : 0 ≤ ρ) (c : ℂ) (hnot : ∃ z : ℂ, f z ≠ 0)
+    (horder : EntireOfOrderAtMost ρ f)
+    (e : ι ≃ centeredDivisorZeroIndex c f) :
+    ∃ (P : Polynomial ℂ),
+      P.degree ≤ Nat.floor ρ ∧
+      ∀ z : ℂ,
+        f z =
+          Complex.exp (Polynomial.eval (z - c) P) *
+            (z - c) ^ (analyticOrderNatAt f c) *
+            (∏' i : ι, weierstrassFactor (Nat.floor ρ)
+              ((z - c) / centeredDivisorZeroIndex_coord (e i))) := by
+  classical
+  rcases hadamard_factorization_of_order_centered
+      (f := f) (ρ := ρ) hρ c hnot horder with
+    ⟨P, hdeg, hfac⟩
+  refine ⟨P, hdeg, ?_⟩
+  intro z
+  simpa [centeredDivisorCanonicalProduct_eq_tprod_of_equiv (m := Nat.floor ρ)
+      (c := c) (f := f) e z] using hfac z
+
+/-- Sequence-indexed centered finite-order Hadamard factorization. -/
+theorem hadamard_factorization_of_order_centered_sequence {f : ℂ → ℂ} {ρ : ℝ}
+    (hρ : 0 ≤ ρ) (c : ℂ) (hnot : ∃ z : ℂ, f z ≠ 0)
+    (horder : EntireOfOrderAtMost ρ f)
+    (e : ℕ ≃ centeredDivisorZeroIndex c f) :
+    ∃ (P : Polynomial ℂ),
+      P.degree ≤ Nat.floor ρ ∧
+      ∀ z : ℂ,
+        f z =
+          Complex.exp (Polynomial.eval (z - c) P) *
+            (z - c) ^ (analyticOrderNatAt f c) *
+            Complex.canonicalProduct (Nat.floor ρ)
+              (fun n : ℕ => centeredDivisorZeroIndex_coord (e n)) (z - c) := by
+  classical
+  rcases hadamard_factorization_of_order_centered_reindex
+      (f := f) (ρ := ρ) hρ c hnot horder e with
     ⟨P, hdeg, hfac⟩
   refine ⟨P, hdeg, ?_⟩
   intro z

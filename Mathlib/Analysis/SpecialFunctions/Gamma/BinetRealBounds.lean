@@ -286,4 +286,16 @@ theorem re_J_ge_one_div_twelve_add_one {x : ℝ} (hx : 0 < x) :
   rw [h_lhs] at h_int_le
   exact h_int_le
 
+/-- **Robbins two-sided bound for the Binet integral** (real part).
+
+This bundles the kernel estimates used in the derivation of Robbins' factorial bounds. -/
+theorem re_J_robbins_bounds {x : ℝ} (hx : 0 < x) :
+    (12 * x + 1)⁻¹ ≤ (J (x : ℂ)).re ∧ (J (x : ℂ)).re ≤ 1 / (12 * x) :=
+  ⟨re_J_ge_one_div_twelve_add_one hx, re_J_le_one_div_twelve hx⟩
+
+/-- Robbins' two-sided bound for the Binet integral, retaining the strict upper estimate. -/
+theorem re_J_robbins_bounds_strict_upper {x : ℝ} (hx : 0 < x) :
+    (12 * x + 1)⁻¹ ≤ (J (x : ℂ)).re ∧ (J (x : ℂ)).re < 1 / (12 * x) :=
+  ⟨re_J_ge_one_div_twelve_add_one hx, re_J_lt_one_div_twelve hx⟩
+
 end Binet

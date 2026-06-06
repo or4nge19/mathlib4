@@ -10,6 +10,7 @@ public import Mathlib.Analysis.Complex.Norm
 public import Mathlib.Analysis.SpecialFunctions.Gamma.StripBounds
 public import Mathlib.Analysis.SpecialFunctions.Log.PosLog
 public import Mathlib.Analysis.SpecialFunctions.Pow.Real
+public import Mathlib.Analysis.Complex.Divisor
 public import Mathlib.NumberTheory.LSeries.RiemannZeta
 public import Mathlib.NumberTheory.LSeries.HurwitzZetaValues
 public import Mathlib.Analysis.Real.Pi.Bounds
@@ -451,6 +452,98 @@ theorem zetaTimesSMinusOne_entire_eq_mul_riemannZeta {s : ℂ} (hs : s ≠ 1) :
     zetaTimesSMinusOne_entire s = (s - 1) * riemannZeta s := by
   simp [zetaTimesSMinusOne_entire, Function.update, hs]
 
+/-- Away from `1`, zeros of the removable extension are exactly zeros of `ζ`. -/
+theorem zetaTimesSMinusOne_entire_eq_zero_iff {s : ℂ} (hs : s ≠ 1) :
+    zetaTimesSMinusOne_entire s = 0 ↔ riemannZeta s = 0 := by
+  rw [zetaTimesSMinusOne_entire_eq_mul_riemannZeta hs]
+  exact ⟨fun h => (mul_eq_zero.mp h).resolve_left (sub_ne_zero.2 hs), fun h => by simp [h]⟩
+
+/-- Away from `1`, nonvanishing of the removable extension is the same as nonvanishing of `ζ`. -/
+theorem zetaTimesSMinusOne_entire_ne_zero_iff {s : ℂ} (hs : s ≠ 1) :
+    zetaTimesSMinusOne_entire s ≠ 0 ↔ riemannZeta s ≠ 0 := by
+  simpa using (zetaTimesSMinusOne_entire_eq_zero_iff hs).not
+
+/-- In the half-plane of absolute convergence, the completed zeta function does not vanish. -/
+theorem completedRiemannZeta_ne_zero_of_one_lt_re {s : ℂ} (hs : 1 < s.re) :
+    completedRiemannZeta s ≠ 0 := by
+  have hGamma_ne0 : Gammaℝ s ≠ 0 :=
+    Gammaℝ_ne_zero_of_re_pos (zero_lt_one.trans hs)
+  have hzeta_ne0 : riemannZeta s ≠ 0 := riemannZeta_ne_zero_of_one_lt_re hs
+  have hΛ_def : completedRiemannZeta s = riemannZeta s * Gammaℝ s := by
+    have hzeta_def := riemannZeta_def_of_ne_zero (s := s) (ne_zero_of_one_lt_re hs)
+    have hzeta_mul := congrArg (fun x => x * Gammaℝ s) hzeta_def
+    have : riemannZeta s * Gammaℝ s = completedRiemannZeta s := by
+      simpa [div_eq_mul_inv, mul_assoc, hGamma_ne0] using hzeta_mul
+    exact this.symm
+  rw [hΛ_def]
+  exact mul_ne_zero hzeta_ne0 hGamma_ne0
+
+/-- The negative even integers, as the standard trivial-zero sequence for `ζ`. -/
+def riemannZetaTrivialZero (n : ℕ) : ℂ := (-2 : ℂ) * (n + 1)
+
+lemma riemannZetaTrivialZero_ne_zero (n : ℕ) :
+    riemannZetaTrivialZero n ≠ 0 := by
+  exact mul_ne_zero (neg_ne_zero.mpr two_ne_zero) (Nat.cast_add_one_ne_zero n)
+
+lemma riemannZetaTrivialZero_ne_one (n : ℕ) :
+    riemannZetaTrivialZero n ≠ 1 := by
+  intro h
+  have hreal : ((-2 : ℝ) * (n + 1 : ℝ)) = 1 := by
+    simpa [riemannZetaTrivialZero] using congrArg Complex.re h
+  have hnpos : (0 : ℝ) < n + 1 := by positivity
+  nlinarith
+
+/-- The Riemann zeta function vanishes at the standard trivial-zero sequence. -/
+theorem riemannZeta_trivialZero (n : ℕ) :
+    riemannZeta (riemannZetaTrivialZero n) = 0 := by
+  simpa [riemannZetaTrivialZero, neg_mul] using
+    (riemannZeta_neg_two_mul_nat_add_one n)
+
+/-- The removable entire function `(s - 1)ζ(s)` vanishes at the trivial zeros of `ζ`. -/
+theorem zetaTimesSMinusOne_entire_trivial_zero (n : ℕ) :
+    zetaTimesSMinusOne_entire (riemannZetaTrivialZero n) = 0 := by
+  exact (zetaTimesSMinusOne_entire_eq_zero_iff (riemannZetaTrivialZero_ne_one n)).2
+    (riemannZeta_trivialZero n)
+
+/-- The completed zeta factor `Λ` does not vanish at the trivial zeros of `ζ`.
+
+This records the standard distinction: the negative even integers are zeros of `ζ`, while the
+completed factor is nonzero there. -/
+theorem completedRiemannZeta_ne_zero_trivialZero (n : ℕ) :
+    completedRiemannZeta (riemannZetaTrivialZero n) ≠ 0 := by
+  have hs_re : 1 < (1 - riemannZetaTrivialZero n).re := by
+    norm_num [riemannZetaTrivialZero]
+    positivity
+  have hnonzero := completedRiemannZeta_ne_zero_of_one_lt_re (s := 1 - riemannZetaTrivialZero n)
+    hs_re
+  intro hzero
+  exact hnonzero (by simpa [completedRiemannZeta_one_sub] using hzero)
+
+/-- The standard trivial-zero sequence `-2, -4, -6, ...` is injective. -/
+theorem riemannZetaTrivialZero_injective :
+    Function.Injective riemannZetaTrivialZero := by
+  intro m n hmn
+  have hsucc : ((m + 1 : ℕ) : ℂ) = (n + 1 : ℕ) := by
+    exact mul_left_cancel₀ (by norm_num : (-2 : ℂ) ≠ 0) <|
+      by simpa [riemannZetaTrivialZero] using hmn
+  have hsucc_nat : m + 1 = n + 1 := by
+    exact_mod_cast hsucc
+  exact Nat.succ.inj (by simpa [Nat.succ_eq_add_one] using hsucc_nat)
+
+/-- Divisor indices of the removable entire function `(s - 1)ζ(s)` lying over the trivial-zero
+sequence.  This is deliberately a subfamily API: it does not classify all zeros of `ζ`, and it does
+not assert simplicity of the trivial zeros. -/
+def zetaTimesSMinusOneTrivialZeroIndex : Type :=
+  Σ n : ℕ,
+    {p : Hadamard.divisorZeroIndex₀ zetaTimesSMinusOne_entire (Set.univ : Set ℂ) //
+      Hadamard.divisorZeroIndex₀_val p = riemannZetaTrivialZero n}
+
+/-- The divisor value attached to an index in the trivial-zero subfamily. -/
+@[simp] lemma zetaTimesSMinusOneTrivialZeroIndex_val
+    (p : zetaTimesSMinusOneTrivialZeroIndex) :
+    Hadamard.divisorZeroIndex₀_val p.2.1 = riemannZetaTrivialZero p.1 :=
+  p.2.2
+
 /-- The removable extension is uniquely determined by its value at `1` and its values off `1`. -/
 theorem eq_zetaTimesSMinusOne_entire_of_eq_on_compl_singleton {g : ℂ → ℂ}
     (h_one : g (1 : ℂ) = 1)
@@ -505,6 +598,83 @@ theorem zetaTimesSMinusOne_entire_differentiable :
       ⟨zetaTimesSMinusOne_entire_differentiableOn_compl_singleton,
         zetaTimesSMinusOne_entire_continuousAt_one⟩
   simpa [DifferentiableOn, differentiableWithinAt_univ, zetaTimesSMinusOne_entire] using this
+
+/-- Each trivial zero of `ζ` contributes at least one divisor index to `(s - 1)ζ(s)`. -/
+theorem exists_zetaTimesSMinusOne_trivialZeroIndex (n : ℕ) :
+    ∃ p : Hadamard.divisorZeroIndex₀ zetaTimesSMinusOne_entire (Set.univ : Set ℂ),
+      Hadamard.divisorZeroIndex₀_val p = riemannZetaTrivialZero n := by
+  classical
+  have hf : Differentiable ℂ zetaTimesSMinusOne_entire :=
+    zetaTimesSMinusOne_entire_differentiable
+  have hnot : ∃ z : ℂ, zetaTimesSMinusOne_entire z ≠ 0 := by
+    refine ⟨1, ?_⟩
+    simp [zetaTimesSMinusOne_entire_one]
+  have hzero : zetaTimesSMinusOne_entire (riemannZetaTrivialZero n) = 0 :=
+    zetaTimesSMinusOne_entire_trivial_zero n
+  have hnotTop :
+      analyticOrderAt zetaTimesSMinusOne_entire (riemannZetaTrivialZero n) ≠ ⊤ :=
+    Hadamard.analyticOrderAt_ne_top_of_exists_ne_zero hf hnot (riemannZetaTrivialZero n)
+  have hord_ne0 :
+      analyticOrderNatAt zetaTimesSMinusOne_entire (riemannZetaTrivialZero n) ≠ 0 := by
+    intro h0
+    have hEN :
+        (analyticOrderNatAt zetaTimesSMinusOne_entire (riemannZetaTrivialZero n) : ENat) = 0 := by
+      simp [h0]
+    have hAt0 : analyticOrderAt zetaTimesSMinusOne_entire (riemannZetaTrivialZero n) = 0 := by
+      have hcast :
+          (analyticOrderNatAt zetaTimesSMinusOne_entire (riemannZetaTrivialZero n) : ENat) =
+            analyticOrderAt zetaTimesSMinusOne_entire (riemannZetaTrivialZero n) :=
+        Nat.cast_analyticOrderNatAt (f := zetaTimesSMinusOne_entire)
+          (z₀ := riemannZetaTrivialZero n) hnotTop
+      simpa [hcast] using hEN
+    have han : AnalyticAt ℂ zetaTimesSMinusOne_entire (riemannZetaTrivialZero n) :=
+      hf.analyticAt (riemannZetaTrivialZero n)
+    exact ((han.analyticOrderAt_eq_zero).1 hAt0) hzero
+  have hcard :
+      (Hadamard.divisorZeroIndex₀_fiberFinset
+        (f := zetaTimesSMinusOne_entire) (riemannZetaTrivialZero n)).card =
+        analyticOrderNatAt zetaTimesSMinusOne_entire (riemannZetaTrivialZero n) :=
+    Hadamard.divisorZeroIndex₀_fiberFinset_card_eq_analyticOrderNatAt
+      (hf := hf) (z₀ := riemannZetaTrivialZero n) (riemannZetaTrivialZero_ne_zero n)
+  have hcard_pos :
+      0 <
+        (Hadamard.divisorZeroIndex₀_fiberFinset
+          (f := zetaTimesSMinusOne_entire) (riemannZetaTrivialZero n)).card := by
+    simpa [hcard] using Nat.pos_of_ne_zero hord_ne0
+  rcases Finset.card_pos.mp hcard_pos with ⟨p, hp⟩
+  refine ⟨p, ?_⟩
+  exact (Hadamard.mem_divisorZeroIndex₀_fiberFinset
+    (f := zetaTimesSMinusOne_entire) (z₀ := riemannZetaTrivialZero n) p).1 hp
+
+/-- A chosen divisor index of `(s - 1)ζ(s)` above the `n`th trivial zero.  This chooses one
+index in the relevant fiber; it does not assert that the fiber has cardinality one. -/
+noncomputable def zetaTimesSMinusOne_trivialZeroIndexOfNat
+    (n : ℕ) :
+    {p : Hadamard.divisorZeroIndex₀ zetaTimesSMinusOne_entire (Set.univ : Set ℂ) //
+      Hadamard.divisorZeroIndex₀_val p = riemannZetaTrivialZero n} :=
+  ⟨Classical.choose (exists_zetaTimesSMinusOne_trivialZeroIndex n),
+    Classical.choose_spec (exists_zetaTimesSMinusOne_trivialZeroIndex n)⟩
+
+@[simp] lemma zetaTimesSMinusOne_trivialZeroIndexOfNat_val (n : ℕ) :
+    Hadamard.divisorZeroIndex₀_val (zetaTimesSMinusOne_trivialZeroIndexOfNat n).1 =
+      riemannZetaTrivialZero n :=
+  (zetaTimesSMinusOne_trivialZeroIndexOfNat n).2
+
+/-- The chosen divisor indices, packaged as elements of the trivial-zero subfamily. -/
+noncomputable def zetaTimesSMinusOneTrivialZeroIndexOfNat
+    (n : ℕ) : zetaTimesSMinusOneTrivialZeroIndex :=
+  ⟨n, zetaTimesSMinusOne_trivialZeroIndexOfNat n⟩
+
+@[simp] lemma zetaTimesSMinusOneTrivialZeroIndexOfNat_fst (n : ℕ) :
+    (zetaTimesSMinusOneTrivialZeroIndexOfNat n).1 = n :=
+  rfl
+
+/-- The chosen inclusion of `ℕ` into the trivial-zero divisor subfamily is injective.
+This is not a simplicity statement about the fibers over the trivial zeros. -/
+theorem zetaTimesSMinusOneTrivialZeroIndexOfNat_injective :
+    Function.Injective zetaTimesSMinusOneTrivialZeroIndexOfNat := by
+  intro m n hmn
+  exact congrArg Sigma.fst hmn
 
 /-- A coarse global growth bound for the removable extension of `(s - 1)ζ(s)`.
 

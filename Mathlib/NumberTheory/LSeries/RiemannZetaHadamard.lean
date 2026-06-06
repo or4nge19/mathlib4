@@ -13,14 +13,21 @@ public import Mathlib.NumberTheory.LSeries.RiemannZetaValues
 /-!
 # Hadamard factorization for the completed Riemann zeta function
 
-This file specializes Tao's Hadamard factorization theorem ([tao246bComplexAnalysis], Thm. 15)
+This file specializes Tao's finite-order Hadamard factorization theorem
+([tao246bComplexAnalysis], Thm. 22)
 to the entire completed zeta function `completedRiemannZeta₀` (Λ₀). The analytic input is the
 order-one bound `completedRiemannZeta₀_order_one` from `ZetaFiniteOrder`; the product is the
 divisor-indexed canonical Weierstrass product at genus `⌊ρ⌋ = 1`, with multiplicities from
 `MeromorphicOn.divisor`.
 
 Note: `completedRiemannZeta` (Λ with simple poles at `0` and `1`) is a different object; Hadamard
-applies to Λ₀.
+applies to Λ₀.  The negative even integers are the trivial zeros of `riemannZeta`, not zeros of
+Λ₀.  Accordingly, the divisor indices in this file remain generic zeros of Λ₀; trivial-zero divisor
+API belongs with `riemannZeta` or the removable entire function `(s - 1)ζ(s)`.
+
+Although `RiemannZetaValues` records `completedRiemannZeta₀_zero_eq_one`, this file does not
+simplify the monomial exponent `analyticOrderNatAt completedRiemannZeta₀ 0`. Such a simplification
+should be added only after a genuine nonvanishing theorem for Λ₀ at `0` is available.
 
 ## Main results
 

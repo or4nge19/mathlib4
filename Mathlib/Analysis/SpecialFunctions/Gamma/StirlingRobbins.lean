@@ -6,6 +6,7 @@ Authors: Matteo Cipollina
 module
 
 public import Mathlib.Analysis.SpecialFunctions.Gamma.BinetFormula
+public import Mathlib.Analysis.SpecialFunctions.Stirling
 
 
 
@@ -17,6 +18,7 @@ This file proves Robbins' sharp two-sided bounds for the factorial:
   √(2πn) (n/e)^n e^{1/(12n+1)} ≤ n! ≤ √(2πn) (n/e)^n e^{1/(12n)}
 
 These bounds are derived from Binet's formula and the bounds on the Binet integral J(z).
+They are independent of the Weierstrass-product route to `Γ` discussed in Tao 246B Notes 1.
 
 ## Main Results
 
@@ -73,11 +75,9 @@ theorem log_factorial_theta {n : ℕ} (hn : 0 < n) :
       Real.log (Real.Gamma x) =
         (x - 1/2) * Real.log x - x + Real.log (2 * Real.pi) / 2 + (Binet.J x).re := by
     exact Binet.log_Gamma_real_eq hx
-  have h_J_bounds : 0 < (Binet.J x).re ∧ (Binet.J x).re < 1 / (12 * x) := by
-    constructor
-    · exact Binet.re_J_pos hx
-    · exact Binet.re_J_lt_one_div_twelve hx
-  rcases h_J_bounds with ⟨hJ_pos, hJ_ub⟩
+  have hJ_pos : 0 < (Binet.J x).re := Binet.re_J_pos hx
+  have hJ_ub : (Binet.J x).re < 1 / (12 * x) :=
+    (Binet.re_J_robbins_bounds_strict_upper hx).2
   let θ := 12 * x * (Binet.J x).re
   use θ
   constructor
@@ -165,20 +165,15 @@ theorem factorial_upper_robbins (n : ℕ) (hn : 0 < n) :
 
 /-! ## Section 4: Lower bound -/
 
-/-- For `n ≥ 1`, the Binet correction at `n` dominates Robbins' lower tail. -/
-private lemma re_J_ge_robbins_lower (n : ℕ) (hn : 0 < n) :
-    (12 * (n : ℝ) + 1)⁻¹ ≤ (Binet.J n).re := by
-  have hn_pos : (0 : ℝ) < n := Nat.cast_pos.mpr hn
-  simpa using Binet.re_J_ge_one_div_twelve_add_one hn_pos
-
 /-- The Robbins lower bound. -/
 theorem factorial_lower_robbins (n : ℕ) (hn : 0 < n) :
     Real.sqrt (2 * Real.pi * n) * (n / Real.exp 1) ^ n * Real.exp (1 / (12 * n + 1)) ≤
       n.factorial := by
   have hn_pos : (0 : ℝ) < n := Nat.cast_pos.mpr hn
   have h_J_ge : (1 + (n : ℝ) * 12)⁻¹ ≤ (Binet.J n).re := by
-    have := re_J_ge_robbins_lower n hn
-    convert this using 1 <;> ring
+    have := (Binet.re_J_robbins_bounds hn_pos).1
+    convert this using 1
+    ring
   have h_log_ge :
       n * Real.log n - n + Real.log (2 * Real.pi * n) / 2 + 1 / (12 * n + 1) ≤
         Real.log (n.factorial : ℝ) := by
@@ -222,7 +217,83 @@ theorem factorial_robbins (n : ℕ) (hn : 0 < n) :
       Real.sqrt (2 * Real.pi * n) * (n / Real.exp 1) ^ n * Real.exp (1 / (12 * n)) :=
   ⟨factorial_lower_robbins n hn, factorial_upper_robbins n hn⟩
 
-/-! ## Section 6: Asymptotic equivalence -/
+/-! ## Section 6: Robbins bounds for the Stirling sequence -/
+
+private lemma stirlingSeq_den_pos (n : ℕ) (hn : 0 < n) :
+    0 < Real.sqrt (2 * n) * (n / Real.exp 1) ^ n := by
+  have hn_pos : (0 : ℝ) < n := Nat.cast_pos.mpr hn
+  exact mul_pos (Real.sqrt_pos.mpr (by positivity : (0 : ℝ) < 2 * n))
+    (pow_pos (div_pos hn_pos (Real.exp_pos 1)) n)
+
+private lemma sqrt_two_pi_factor_eq_sqrt_pi_mul (n : ℕ) :
+    Real.sqrt (2 * Real.pi * n) * (n / Real.exp 1) ^ n =
+      Real.sqrt Real.pi * (Real.sqrt (2 * n) * (n / Real.exp 1) ^ n) := by
+  simp [Real.sqrt_mul']
+  ring
+
+/-- Robbins' lower bound, normalized as a lower bound for the Stirling sequence. -/
+theorem sqrt_pi_mul_exp_inv_twelve_mul_add_one_le_stirlingSeq
+    (n : ℕ) (hn : 0 < n) :
+    Real.sqrt Real.pi * Real.exp (1 / (12 * n + 1)) ≤ stirlingSeq n := by
+  have h := factorial_lower_robbins n hn
+  have hden_pos := stirlingSeq_den_pos n hn
+  rw [stirlingSeq]
+  refine (le_div_iff₀ hden_pos).2 ?_
+  calc
+    Real.sqrt Real.pi * Real.exp (1 / (12 * n + 1)) *
+        (Real.sqrt (2 * n) * (n / Real.exp 1) ^ n)
+        = Real.sqrt (2 * Real.pi * n) * (n / Real.exp 1) ^ n *
+            Real.exp (1 / (12 * n + 1)) := by
+          rw [sqrt_two_pi_factor_eq_sqrt_pi_mul]
+          ring
+    _ ≤ (n.factorial : ℝ) := h
+
+/-- Robbins' upper bound, normalized as an upper bound for the Stirling sequence. -/
+theorem stirlingSeq_le_sqrt_pi_mul_exp_inv_twelve_mul
+    (n : ℕ) (hn : 0 < n) :
+    stirlingSeq n ≤ Real.sqrt Real.pi * Real.exp (1 / (12 * n)) := by
+  have h := factorial_upper_robbins n hn
+  have hden_pos := stirlingSeq_den_pos n hn
+  rw [stirlingSeq]
+  refine (div_le_iff₀ hden_pos).2 ?_
+  calc
+    (n.factorial : ℝ)
+        ≤ Real.sqrt (2 * Real.pi * n) * (n / Real.exp 1) ^ n *
+            Real.exp (1 / (12 * n)) := h
+    _ = Real.sqrt Real.pi * Real.exp (1 / (12 * n)) *
+        (Real.sqrt (2 * n) * (n / Real.exp 1) ^ n) := by
+          rw [sqrt_two_pi_factor_eq_sqrt_pi_mul]
+          ring
+
+/-- Robbins' lower bound for `stirlingSeq n / √π`. -/
+theorem exp_inv_twelve_mul_add_one_le_stirlingSeq_div_sqrt_pi
+    (n : ℕ) (hn : 0 < n) :
+    Real.exp (1 / (12 * n + 1)) ≤ stirlingSeq n / Real.sqrt Real.pi := by
+  rw [le_div_iff₀ (Real.sqrt_pos.mpr Real.pi_pos)]
+  simpa [mul_comm] using sqrt_pi_mul_exp_inv_twelve_mul_add_one_le_stirlingSeq n hn
+
+/-- Robbins' upper bound for `stirlingSeq n / √π`. -/
+theorem stirlingSeq_div_sqrt_pi_le_exp_inv_twelve_mul
+    (n : ℕ) (hn : 0 < n) :
+    stirlingSeq n / Real.sqrt Real.pi ≤ Real.exp (1 / (12 * n)) := by
+  rw [div_le_iff₀ (Real.sqrt_pos.mpr Real.pi_pos)]
+  simpa [mul_comm] using stirlingSeq_le_sqrt_pi_mul_exp_inv_twelve_mul n hn
+
+/-- The complete Robbins bound for the Stirling sequence. -/
+theorem stirlingSeq_robbins (n : ℕ) (hn : 0 < n) :
+    Real.sqrt Real.pi * Real.exp (1 / (12 * n + 1)) ≤ stirlingSeq n ∧
+      stirlingSeq n ≤ Real.sqrt Real.pi * Real.exp (1 / (12 * n)) :=
+  ⟨sqrt_pi_mul_exp_inv_twelve_mul_add_one_le_stirlingSeq n hn,
+    stirlingSeq_le_sqrt_pi_mul_exp_inv_twelve_mul n hn⟩
+
+/-- The complete Robbins bound for the normalized ratio `stirlingSeq n / √π`. -/
+theorem stirlingSeq_div_sqrt_pi_robbins (n : ℕ) (hn : 0 < n) :
+    Real.exp (1 / (12 * n + 1)) ≤ stirlingSeq n / Real.sqrt Real.pi ∧
+      stirlingSeq n / Real.sqrt Real.pi ≤ Real.exp (1 / (12 * n)) :=
+  ⟨exp_inv_twelve_mul_add_one_le_stirlingSeq_div_sqrt_pi n hn,
+    stirlingSeq_div_sqrt_pi_le_exp_inv_twelve_mul n hn⟩
+
+/-! ## Section 7: Asymptotic equivalence -/
 
 /-- The ratio n! / (√(2πn)(n/e)^n) → 1 as n → ∞. -/
 theorem factorial_asymptotic :
@@ -299,20 +370,16 @@ theorem factorial_asymptotic :
   · filter_upwards [h_squeeze] with n hn
     exact hn.2
 
-/-- Stirling's approximation: n! ~ √(2πn)(n/e)^n. -/
+/-- Stirling's approximation: `n! ~ √(2πn)(n/e)^n`.
+
+This is the same asymptotic equivalence as `factorial_isEquivalent_stirling` from
+`Mathlib.Analysis.SpecialFunctions.Stirling`; the Robbins development above supplies the sharper
+two-sided error bounds. -/
 theorem stirling_asymptotic :
     Asymptotics.IsEquivalent atTop
       (fun n : ℕ => (n.factorial : ℝ))
       (fun n : ℕ => Real.sqrt (2 * Real.pi * n) * (n / Real.exp 1) ^ n) := by
-  rw [Asymptotics.isEquivalent_iff_tendsto_one]
-  · exact factorial_asymptotic
-  · filter_upwards [Filter.eventually_gt_atTop 0] with n hn
-    apply ne_of_gt
-    have hn_pos : (0 : ℝ) < n := Nat.cast_pos.mpr hn
-    apply mul_pos (Real.sqrt_pos.mpr _) (pow_pos _ _)
-    · positivity
-    · have : 0 < n / Real.exp 1 := div_pos hn_pos (Real.exp_pos 1)
-      linarith
+  simpa [mul_assoc, mul_left_comm, mul_comm] using factorial_isEquivalent_stirling
 
 end Stirling
 
@@ -331,6 +398,14 @@ theorem factorial_ge_stirling_lower (n : ℕ) (hn : 0 < n) :
     Real.sqrt (2 * Real.pi * n) * (n / Real.exp 1) ^ n * Real.exp (1 / (12 * n + 1)) ≤
       n.factorial :=
   Stirling.factorial_lower_robbins n hn
+
+/-- Robbins' two-sided factorial estimate, bundled for use outside the `Stirling` namespace. -/
+theorem factorial_robbins (n : ℕ) (hn : 0 < n) :
+    Real.sqrt (2 * Real.pi * n) * (n / Real.exp 1) ^ n * Real.exp (1 / (12 * n + 1)) ≤
+        n.factorial ∧
+      (n.factorial : ℝ) ≤
+        Real.sqrt (2 * Real.pi * n) * (n / Real.exp 1) ^ n * Real.exp (1 / (12 * n)) :=
+  ⟨factorial_ge_stirling_lower n hn, factorial_le_stirling_upper n hn⟩
 
 end Nat
 

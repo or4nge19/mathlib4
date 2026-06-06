@@ -78,4 +78,11 @@ theorem completedRiemannZeta₀_nontrivial : ∃ z : ℂ, completedRiemannZeta�
   have : ((Real.pi : ℂ) - 3) / 6 ≠ 0 := div_ne_zero hnum hden
   simpa [completedRiemannZeta₀_two] using this
 
+/-- The functional equation identifies the values of the entire completed zeta function `Λ₀`
+at `0` and `1`. -/
+theorem completedRiemannZeta₀_zero_eq_one :
+    completedRiemannZeta₀ (0 : ℂ) = completedRiemannZeta₀ (1 : ℂ) := by
+  have h := completedRiemannZeta₀_one_sub (0 : ℂ)
+  simpa using h.symm
+
 end Riemann

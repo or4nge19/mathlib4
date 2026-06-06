@@ -29,6 +29,11 @@ growth into `hadamard_factorization_of_growth`. The pipeline is:
 All products use `divisorCanonicalProduct` centered at `0` with multiplicities from
 `MeromorphicOn.divisor`.
 
+Compared with Tao's proof of the finite-order Hadamard theorem, this file replaces the
+good-circle averaging argument by Cartan radius and product bounds.  The purpose is the same:
+obtain sufficiently many circles on which the canonical product is not too small, so the zero-free
+Hadamard quotient has polynomial exponential growth.
+
 ## Main results
 
 * `hadamard_factorization_of_growth` : entire `f` with log-growth of order `ρ` is a Weierstrass
@@ -38,8 +43,7 @@ All products use `divisorCanonicalProduct` centered at `0` with multiplicities f
 
 ## References
 
-* [tao246bComplexAnalysis] for the disk formulation; this file uses the intrinsic
-  `divisorCanonicalProduct` API
+* [tao246bComplexAnalysis], Theorem 22 for the finite-order Hadamard factorization strategy
 * [MR886677] for canonical factors
 -/
 
