@@ -13,7 +13,7 @@ public import Mathlib.Analysis.SpecialFunctions.Gamma.BinetFormula
 This file records namespace-level consequences of the Gamma bounds proved in
 `Mathlib.Analysis.SpecialFunctions.Gamma.BinetFormula`.
 
-The main estimate is DLMF 5.6.7:
+The main estimate is the Euler-integral bound; compare [DLMF], §5.2.1:
 `‖Γ z‖ ≤ Γ (re z)` for `0 < re z`.  Squared norm variants are kept here for callers
 that need them in finite-order estimates.
 -/
@@ -35,7 +35,8 @@ end Real
 
 namespace Complex
 
-/-- **DLMF 5.6.7**: for `0 < re z`, `‖Γ z‖ ≤ Γ (re z)`. -/
+/-- The Euler-integral representation gives `‖Γ z‖ ≤ Γ (re z)` for `0 < re z`;
+compare [DLMF], §5.2.1. -/
 theorem norm_Gamma_le_Gamma_re {z : ℂ} (hz : 0 < z.re) :
     ‖Gamma z‖ ≤ Real.Gamma z.re :=
   Binet.norm_Gamma_le_Gamma_re hz
@@ -52,8 +53,8 @@ theorem norm_sq_Gamma_le_Gamma_re {z : ℂ} (hz : 0 < z.re) :
   have hΓ : 0 ≤ Real.Gamma z.re := (Real.Gamma_pos_of_pos hz).le
   simpa [pow_two] using mul_le_mul h h (norm_nonneg _) hΓ
 
-/-- For Re(z) ≥ 1 / 2, |Γ(z)|² ≤ |Γ(Re(z))|².
-This is the precise statement of DLMF 5.6.7. -/
+/-- Squared form of the integral-representation bound `|Γ(z)| ≤ Γ(re z)`;
+compare [DLMF], §5.2.1. -/
 theorem norm_sq_Gamma_le_norm_sq_Gamma_re {z : ℂ} (hz : 1 / 2 ≤ z.re) :
     ‖Gamma z‖ ^ 2 ≤ ‖Gamma z.re‖ ^ 2 := by
   have hz_pos : 0 < z.re := by linarith

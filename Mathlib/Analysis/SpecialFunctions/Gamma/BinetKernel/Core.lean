@@ -27,6 +27,11 @@ formula for `log Γ`.
 
 * `BinetKernel.Ktilde_nonneg`, `BinetKernel.Ktilde_le` : `0 ≤ Ktilde t ≤ 1/12` for `t ≥ 0`
 * `BinetKernel.K_eq_alt` : equivalent rational form of `K`
+
+## References
+
+* [DLMF], §5.9.10_2 for Binet's first integral formula and the kernel used here
+* [whittakerWatson1927], Chapter XII for the classical Gamma-function background
 -/
 
 open Real Set Filter MeasureTheory Topology

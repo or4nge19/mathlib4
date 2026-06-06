@@ -45,8 +45,9 @@ theorem Gamma_le_one_of_mem_Icc {x : ℝ} (hlo : 1 ≤ x) (hhi : x ≤ 2) :
     _ = t * 1 + (1 - t) * 1 := by rw [h1, h2]
     _ = 1 := by ring
 
-/-- The integral representation gives |Γ(z)| ≤ Γ(Re(z)) for Re(z) > 0.
-Key: |t^{z-1}| = t^{Re(z)-1} for t > 0. -/
+/-- The Euler-integral representation gives `|Γ(z)| ≤ Γ(Re z)` for `0 < Re z`;
+compare [DLMF], §5.2.1.  The key point is
+`|t^{z-1}| = t^{Re(z)-1}` for `t > 0`. -/
 theorem norm_Gamma_le_Gamma_re {z : ℂ} (hz : 0 < z.re) :
     ‖Complex.Gamma z‖ ≤ Real.Gamma z.re := by
   rw [Complex.Gamma_eq_integral hz, Real.Gamma_eq_integral hz]

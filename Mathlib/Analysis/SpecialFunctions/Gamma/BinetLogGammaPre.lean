@@ -75,6 +75,12 @@ def stirlingMainReal (x : ℝ) : ℝ :=
 def R (x : ℝ) : ℝ :=
   Real.log (Real.Gamma x) - stirlingMainReal x
 
+/-- The real Gamma logarithm is the Stirling main term plus the correction term `R`. -/
+theorem log_Gamma_real_eq_stirlingMainReal_add_R (x : ℝ) :
+    Real.log (Real.Gamma x) = stirlingMainReal x + R x := by
+  rw [R]
+  ring
+
 private lemma stirlingMainReal_add_one_sub {x : ℝ} (hx : 0 < x) :
     stirlingMainReal (x + 1) - stirlingMainReal x =
       Real.log x + (x + 1 / 2) * Real.log (1 + 1 / x) - 1 := by

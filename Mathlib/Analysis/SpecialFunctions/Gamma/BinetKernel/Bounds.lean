@@ -8,9 +8,10 @@ module
 public import Mathlib.Analysis.SpecialFunctions.Gamma.BinetKernel.Core
 
 /-!
-# Taylor and Robbins bounds for the Binet kernel
+# Taylor and Robbins-style bounds for the Binet kernel
 
-Sign analysis, upper bounds, and the Robbins lower bound for `Ktilde`.
+Sign analysis, upper bounds, and a lower bound for `Ktilde` that yields Robbins' lower factorial
+estimate through Binet's formula.
 -/
 
 open Real Set Filter MeasureTheory Topology
@@ -361,8 +362,8 @@ theorem Ktilde_lt {t : ℝ} (ht : 0 < t) : Ktilde t < 1 / 12 := by
 /-! ## Section 4b: Robbins-type lower bound for `Ktilde` -/
 
 /-!
-Robbins' sharpened factorial lower bound is equivalent (via Binet's integral) to a pointwise
-lower bound on the Binet kernel:
+This pointwise lower bound on the Binet kernel is the Binet-route input used below to derive
+Robbins' sharpened factorial lower bound:
 
 `(1/12) * exp(-t/12) ≤ Ktilde t` for all `t > 0`.
 

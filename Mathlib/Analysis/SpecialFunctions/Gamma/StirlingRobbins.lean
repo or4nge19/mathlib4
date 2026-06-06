@@ -17,8 +17,10 @@ This file proves Robbins' sharp two-sided bounds for the factorial:
 
   √(2πn) (n/e)^n e^{1/(12n+1)} ≤ n! ≤ √(2πn) (n/e)^n e^{1/(12n)}
 
-These bounds are derived from Binet's formula and the bounds on the Binet integral J(z).
-They are independent of the Weierstrass-product route to `Γ` discussed in Tao 246B Notes 1.
+These bounds are derived from Binet's formula and the bounds on the Binet integral `J`.  This is
+separate from the Weierstrass-product route to `Γ` discussed in Tao 246B Notes 1; the Binet
+closed-form theorem used here still relies on Mathlib's existing Stirling limit to normalize its
+integration constant.
 
 ## Main Results
 
@@ -28,13 +30,14 @@ They are independent of the Weierstrass-product route to `Γ` discussed in Tao 2
 * `Stirling.factorial_asymptotic`: n! ~ √(2πn)(n/e)^n
 
 The proof applies Binet's formula to `Γ n`, uses `Γ(n + 1) = n * Γ n`, and bounds the Binet
-correction term via `Binet.re_J_lt_one_div_twelve` and `Binet.re_J_ge_one_div_twelve_add_one`.
+correction term via `Binet.re_J_robbins_bounds` and
+`Binet.re_J_robbins_bounds_strict_upper`.
 
 ## References
 
-* Robbins, H. "A Remark on Stirling's Formula." Amer. Math. Monthly 62 (1955): 26-29.
-* Feller, W. "An Introduction to Probability Theory and Its Applications", Vol. 1
-* NIST DLMF 5.11.3
+* [robbins1955] for the sharp factorial bounds
+* [feller1968] for the classical probability-text presentation of Stirling's formula
+* [DLMF], §5.11 for Stirling asymptotic background and explicit error terms
 -/
 
 open Real Set MeasureTheory Filter Topology
@@ -62,7 +65,7 @@ lemma log_factorial_eq_log_nat_add_log_Gamma {n : ℕ} (hn : 0 < n) :
 /-- For n ≥ 1, there exists θ ∈ (0, 1) such that
 log(n!) = n log n - n + log(2πn)/2 + θ/(12n).
 
-This is the precise form of Stirling's approximation with explicit error. -/
+This is the precise form of Stirling's approximation with explicit error, as in [robbins1955]. -/
 theorem log_factorial_theta {n : ℕ} (hn : 0 < n) :
     ∃ θ : ℝ, 0 < θ ∧ θ < 1 ∧
       Real.log (n.factorial : ℝ) =
@@ -209,7 +212,7 @@ theorem factorial_lower_robbins (n : ℕ) (hn : 0 < n) :
 
 /-! ## Section 5: Two-sided bound -/
 
-/-- The complete Robbins bound. -/
+/-- The complete Robbins bound of [robbins1955]. -/
 theorem factorial_robbins (n : ℕ) (hn : 0 < n) :
     Real.sqrt (2 * Real.pi * n) * (n / Real.exp 1) ^ n * Real.exp (1 / (12 * n + 1)) ≤
       n.factorial ∧
@@ -372,18 +375,25 @@ theorem factorial_asymptotic :
 
 /-- Stirling's approximation: `n! ~ √(2πn)(n/e)^n`.
 
-This is the same asymptotic equivalence as `factorial_isEquivalent_stirling` from
-`Mathlib.Analysis.SpecialFunctions.Stirling`; the Robbins development above supplies the sharper
-two-sided error bounds. -/
+This derives the usual asymptotic equivalence from the Robbins squeeze proof above; compare
+`factorial_isEquivalent_stirling` in `Mathlib.Analysis.SpecialFunctions.Stirling`. -/
 theorem stirling_asymptotic :
     Asymptotics.IsEquivalent atTop
       (fun n : ℕ => (n.factorial : ℝ))
       (fun n : ℕ => Real.sqrt (2 * Real.pi * n) * (n / Real.exp 1) ^ n) := by
-  simpa [mul_assoc, mul_left_comm, mul_comm] using factorial_isEquivalent_stirling
+  rw [Asymptotics.isEquivalent_iff_tendsto_one]
+  · exact factorial_asymptotic
+  · filter_upwards [Filter.eventually_gt_atTop 0] with n hn
+    apply ne_of_gt
+    have hn_pos : (0 : ℝ) < n := Nat.cast_pos.mpr hn
+    apply mul_pos (Real.sqrt_pos.mpr _) (pow_pos _ _)
+    · positivity
+    · have : 0 < n / Real.exp 1 := div_pos hn_pos (Real.exp_pos 1)
+      linarith
 
 end Stirling
 
-/-! ## Section 7: Convenient API -/
+/-! ## Section 8: Convenient API -/
 
 namespace Nat
 

@@ -25,14 +25,15 @@ entire function with those zeros.
 ## Main results
 
 * `hadamard_factorization_of_order` : `f = exp(P) · z^k · ∏' E_m(z/a)`
-* `hadamard_factorization_of_order_sequence` : sequence-indexed Weierstrass product
+* `hadamard_factorization_of_order_sequence` : sequence-indexed reindexing of the zero divisor
 * `hadamard_factorization_of_order_centered` : arbitrary-center form, derived by translation
 * `EntireOfOrderAtMost` : order at most `ρ` in the `ε`-family sense
 
 ## References
 
 * [tao246bComplexAnalysis], Theorem 22
-* [MR886677] for canonical factors on disks
+* [boas1954] and [levin1980] for the classical finite-order Hadamard product theorem, including
+  genus `⌊ρ⌋` for functions of order at most `ρ`
 -/
 
 @[expose] public section
@@ -63,7 +64,20 @@ lemma analyticOrderNatAt_comp_sub_const (f : ℂ → ℂ) (c : ℂ) :
     analyticOrderNatAt (fun w : ℂ => f (w - c)) 0 = analyticOrderNatAt f (-c) := by
   simpa [sub_eq_add_neg] using analyticOrderNatAt_comp_add_const f (-c)
 
-/-- An entire function has order at most `ρ` if it satisfies an `ε`-family growth bound. -/
+/-- The centered Hadamard denominator is the ordinary denominator for the translated function. -/
+theorem centeredHadamardDenom_eq_hadamardDenom_translate
+    (m : ℕ) (c : ℂ) (f : ℂ → ℂ) (z : ℂ) :
+    centeredHadamardDenom m c f z =
+      hadamardDenom m (fun w : ℂ => f (w + c)) (z - c) := by
+  simp [centeredHadamardDenom, hadamardDenom,
+    centeredDivisorCanonicalProduct_eq_divisorCanonicalProduct, analyticOrderNatAt_comp_add_const]
+
+/-- An entire function has order at most `ρ` if it satisfies the `ε`-family growth bound used in
+this formalization.
+
+For every `ε > 0`, the norm is bounded by an exponential of order `ρ + ε`. Classical texts often
+package this through an infimum definition of order; this file uses the equivalent `ε`-family side
+directly and does not prove that equivalence as a separate API lemma. -/
 def EntireOfOrderAtMost (ρ : ℝ) (f : ℂ → ℂ) : Prop :=
   Differentiable ℂ f ∧
     ∀ ε : ℝ, 0 < ε →
@@ -145,6 +159,22 @@ theorem comp_sub_const {ρ : ℝ} {f : ℂ → ℂ} (h : EntireOfOrderAtMost ρ 
     EntireOfOrderAtMost ρ (fun z : ℂ => f (z - c)) := by
   simpa [sub_eq_add_neg] using h.comp_add_const hρ (-c)
 
+/-- A nontrivial finite-order entire function has the summability needed for the genus
+`⌊ρ⌋` divisor canonical product. -/
+theorem summable_norm_inv_pow_divisorZeroIndex₀ {ρ : ℝ} {f : ℂ → ℂ}
+    (h : EntireOfOrderAtMost ρ f) (hρ : 0 ≤ ρ) (hnot : ∃ z : ℂ, f z ≠ 0) :
+    Summable (fun p : divisorZeroIndex₀ f (Set.univ : Set ℂ) =>
+      ‖divisorZeroIndex₀_val p‖⁻¹ ^ (Nat.floor ρ + 1)) := by
+  rcases Real.exists_between_self_and_floor_add_one_same_floor hρ with
+    ⟨τ, hτ, _hτ_lt, hτ_nonneg, hfloorτ⟩
+  have hgrowthτ :
+      ∃ C' > 0, ∀ z : ℂ, Real.log (1 + ‖f z‖) ≤ C' * (1 + ‖z‖) ^ τ :=
+    h.exists_log_growth hτ hτ_nonneg
+  have hsummable :=
+    summable_norm_inv_pow_divisorZeroIndex₀_of_growth
+      (f := f) (ρ := τ) hτ_nonneg h.differentiable hnot hgrowthτ
+  simpa [hfloorτ] using hsummable
+
 end EntireOfOrderAtMost
 
 theorem hadamard_factorization_of_order {f : ℂ → ℂ} {ρ : ℝ} (hρ : 0 ≤ ρ)
@@ -198,7 +228,10 @@ theorem hadamard_factorization_of_order_reindex {ι : Type*} {f : ℂ → ℂ} {
       (f := f) (U := Set.univ) e z] using hfac z
 
 /-- Sequence-indexed form of `hadamard_factorization_of_order`, for an enumeration of the nonzero
-divisor indices by `ℕ`. -/
+divisor indices by `ℕ`.
+
+This reindexes `divisorZeroIndex₀ f`; it is not the prescribed-zero existence theorem from
+Tao's Theorem 15. -/
 theorem hadamard_factorization_of_order_sequence {f : ℂ → ℂ} {ρ : ℝ} (hρ : 0 ≤ ρ)
     (hnot : ∃ z : ℂ, f z ≠ 0)
     (horder : EntireOfOrderAtMost ρ f)

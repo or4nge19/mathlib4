@@ -17,6 +17,6 @@ Aggregates `BinetKernel.Core`, `BinetKernel.Bounds`, and `BinetKernel.Limit`.
 ## Main results
 
 * `BinetKernel.tendsto_Ktilde_zero` : `Ktilde t → 1/12` as `t → 0⁺`
-* `BinetKernel.Ktilde_ge_one_div_twelve_mul_exp_neg_div_twelve` : Robbins lower bound
+* `BinetKernel.Ktilde_ge_one_div_twelve_mul_exp_neg_div_twelve` : Robbins-style lower bound
 * `BinetKernel.integrable_Ktilde_exp`, `integrable_Ktilde_exp_complex`
 -/

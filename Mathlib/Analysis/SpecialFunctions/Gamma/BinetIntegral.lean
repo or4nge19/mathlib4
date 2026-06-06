@@ -12,6 +12,12 @@ public import Mathlib.Analysis.SpecialFunctions.Gamma.BinetKernel
 
 This file defines the Binet correction integral
 `J z = ∫₀^∞ K̃(t) exp (-t z) dt` and proves its basic norm estimates.
+
+## References
+
+* [DLMF], §5.9.10_2 for Binet's first integral formula
+* [DLMF], §5.11 for the surrounding Stirling asymptotic estimates
+* [whittakerWatson1927], Chapter XII for the classical Gamma-function background
 -/
 
 open Real Complex Set MeasureTheory Filter Topology BinetKernel
@@ -25,7 +31,8 @@ namespace Binet
 /-- The Binet integral `J(z) = ∫₀^∞ K̃(t) e^{-tz} dt`.
 
 This is the correction term in Binet's formula for `log Γ`. It is defined to be zero off the
-right half-plane. -/
+right half-plane as a Mathlib auxiliary convention; the Binet and Robbins estimates use
+arguments with positive real part. -/
 def J (z : ℂ) : ℂ :=
   if 0 < z.re then
     ∫ t in Set.Ioi (0 : ℝ), (Ktilde t : ℂ) * Complex.exp (-t * z)
@@ -41,6 +48,10 @@ lemma J_well_defined {z : ℂ} (hz : 0 < z.re) :
 lemma J_eq_integral {z : ℂ} (hz : 0 < z.re) :
     J z = ∫ t in Set.Ioi (0 : ℝ), (Ktilde t : ℂ) * Complex.exp (-t * z) := by
   simp only [J, if_pos hz]
+
+/-- Off the right half-plane, the auxiliary Binet integral is defined to be zero. -/
+lemma J_eq_zero_of_re_nonpos {z : ℂ} (hz : z.re ≤ 0) : J z = 0 := by
+  simp [J, not_lt.mpr hz]
 
 /-- Norm of the Binet integrand. -/
 lemma norm_Ktilde_mul_exp {z : ℂ} (t : ℝ) (ht : 0 < t) :

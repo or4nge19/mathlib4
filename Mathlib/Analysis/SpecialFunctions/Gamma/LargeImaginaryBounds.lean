@@ -26,8 +26,8 @@ public import Mathlib.Analysis.SpecialFunctions.Trigonometric.DerivHyp
 
 ## References
 
-* Titchmarsh, "The Theory of Functions", Chapter 4
-* Whittaker & Watson, "Modern Analysis", Chapter XII
+* [titchmarsh1939], Chapter IV
+* [whittakerWatson1927], Chapter XII
 -/
 
 noncomputable section

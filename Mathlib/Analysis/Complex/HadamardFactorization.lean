@@ -36,8 +36,9 @@ assemble the full factorization `hadamard_factorization_of_order`.
 
 ## References
 
-* [tao246bComplexAnalysis] for the disk and Blaschke viewpoint
-* [MR886677] for canonical factors; this file uses `divisorCanonicalProduct`
+* [tao246bComplexAnalysis], Theorem 22 for the finite-order Hadamard factorization strategy
+* [boas1954] and [levin1980] for Weierstrass factors, canonical products, and the classical
+  Hadamard product theorem
 -/
 
 @[expose] public section

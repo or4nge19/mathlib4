@@ -11,7 +11,13 @@ public import Mathlib.Analysis.SpecialFunctions.Gamma.BinetIntegral
 /-!
 # Real bounds for the Binet correction integral
 
-Sharp two-sided estimates on `(J x).re` for `x > 0`, used in Robbins' Stirling bounds.
+Two-sided estimates on `(J x).re` for `x > 0`, used to recover Robbins' sharp Stirling bounds
+for the factorial.
+
+## References
+
+* [robbins1955] for the sharp factorial bounds recovered from these correction-term estimates
+* [DLMF], §5.11 for the surrounding Stirling asymptotic background
 -/
 
 open Real Complex Set MeasureTheory Filter Topology BinetKernel
@@ -257,10 +263,10 @@ private lemma integral_robbins_lower_majorant {x : ℝ} (hx : 0 < x) :
     _ = (1 / 12 : ℝ) * (x + 1 / 12)⁻¹ := by rw [hbase]
     _ = (12 * x + 1)⁻¹ := by field_simp
 
-/-- **Robbins lower bound for the Binet integral** (real part).
+/-- **Binet-route lower bound for the Robbins correction term** (real part).
 
-For `x > 0`, `(12x + 1)⁻¹ ≤ re (J x)`. This is the kernel monotonicity input for Robbins'
-lower Stirling bound; see [robbins1955]. -/
+For `x > 0`, `(12x + 1)⁻¹ ≤ re (J x)`. This is the kernel monotonicity input used here to
+recover Robbins' lower Stirling bound; compare [robbins1955]. -/
 theorem re_J_ge_one_div_twelve_add_one {x : ℝ} (hx : 0 < x) :
     (12 * x + 1)⁻¹ ≤ (J (x : ℂ)).re := by
   have hJ : (J (x : ℂ)).re =
@@ -286,14 +292,15 @@ theorem re_J_ge_one_div_twelve_add_one {x : ℝ} (hx : 0 < x) :
   rw [h_lhs] at h_int_le
   exact h_int_le
 
-/-- **Robbins two-sided bound for the Binet integral** (real part).
+/-- **Binet-route two-sided bound for the Robbins correction term** (real part).
 
 This bundles the kernel estimates used in the derivation of Robbins' factorial bounds. -/
 theorem re_J_robbins_bounds {x : ℝ} (hx : 0 < x) :
     (12 * x + 1)⁻¹ ≤ (J (x : ℂ)).re ∧ (J (x : ℂ)).re ≤ 1 / (12 * x) :=
   ⟨re_J_ge_one_div_twelve_add_one hx, re_J_le_one_div_twelve hx⟩
 
-/-- Robbins' two-sided bound for the Binet integral, retaining the strict upper estimate. -/
+/-- Binet-route two-sided bound for the Robbins correction term, retaining the strict upper
+estimate. -/
 theorem re_J_robbins_bounds_strict_upper {x : ℝ} (hx : 0 < x) :
     (12 * x + 1)⁻¹ ≤ (J (x : ℂ)).re ∧ (J (x : ℂ)).re < 1 / (12 * x) :=
   ⟨re_J_ge_one_div_twelve_add_one hx, re_J_lt_one_div_twelve hx⟩

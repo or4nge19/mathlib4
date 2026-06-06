@@ -23,7 +23,8 @@ which majorizes the logarithmic singularity on dyadic intervals.
 ## References
 
 * [tao246bComplexAnalysis] for the disk and averaging viewpoint
-* [MR886677] for canonical factors on the unit disk
+* [MR886677] for disk automorphisms and canonical factors on the unit disk
+* [boas1954] and [levin1980] for the minimum-modulus estimates used in Hadamard factorization
 -/
 
 @[expose] public section

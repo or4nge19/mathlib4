@@ -6,6 +6,7 @@ Authors: Matteo Cipollina
 module
 
 public import Mathlib.Analysis.Analytic.Order
+public import Mathlib.Analysis.Calculus.LogDerivUniformlyOn
 public import Mathlib.Analysis.Complex.LocallyUniformLimit
 public import Mathlib.Analysis.Complex.WeierstrassFactor
 
@@ -108,6 +109,43 @@ theorem analyticOnNhd_canonicalProduct {m : ℕ} {a : ℕ → ℂ}
   exact DifferentiableOn.analyticOnNhd
     (differentiableOn_univ.mpr (differentiable_canonicalProduct h_sum h_nonzero)) isOpen_univ
 
+/-- Genus-one Weierstrass factors contribute the usual `1 / (z - a) + 1 / a` term to
+the logarithmic derivative. -/
+theorem logDeriv_weierstrassFactor_one_div {a z : ℂ} (ha : a ≠ 0) (hz : z ≠ a) :
+    logDeriv (fun w : ℂ => weierstrassFactor 1 (w / a)) z =
+      1 / (z - a) + 1 / a := by
+  have hE :
+      (fun w : ℂ => weierstrassFactor 1 (w / a)) =
+        fun w : ℂ => (1 - w / a) * exp (w / a) := by
+    ext w
+    simp [weierstrassFactor_def, partialLogSum_eq_sum]
+  have hf : (1 - z / a) ≠ 0 := by
+    intro hzero
+    have hdiv : z / a = 1 := by
+      exact (sub_eq_zero.mp hzero).symm
+    exact hz ((div_eq_one_iff_eq ha).1 hdiv)
+  rw [hE, logDeriv_mul z hf (exp_ne_zero (z / a)) (by fun_prop) (by fun_prop)]
+  have hleft : logDeriv (fun w : ℂ => 1 - w / a) z = 1 / (z - a) := by
+    rw [logDeriv_apply]
+    have hderiv : deriv (fun w : ℂ => 1 - w / a) z = -(1 / a) := by
+      simp [one_div]
+    rw [hderiv]
+    have haz : -z + a ≠ 0 := by
+      simpa [sub_eq_add_neg, add_comm] using sub_ne_zero.mpr (Ne.symm hz)
+    field_simp [ha, sub_ne_zero.mpr hz, haz]
+    have haz' : a - z ≠ 0 := sub_ne_zero.mpr (Ne.symm hz)
+    have hza : z - a = -(a - z) := by ring
+    rw [hza]
+    field_simp [haz']
+  have hright : logDeriv (fun w : ℂ => exp (w / a)) z = 1 / a := by
+    rw [logDeriv_apply]
+    have hderiv : deriv (fun w : ℂ => exp (w / a)) z =
+        exp (z / a) * (1 / a) := by
+      simp [one_div]
+    rw [hderiv]
+    field_simp [exp_ne_zero (z / a)]
+  rw [hleft, hright]
+
 /-- The canonical product vanishes at each prescribed zero `a n`. -/
 @[simp]
 theorem canonicalProduct_apply_eq_zero {m : ℕ} {a : ℕ → ℂ}
@@ -198,5 +236,50 @@ theorem canonicalProduct_ne_zero_iff {m : ℕ} {a : ℕ → ℂ}
     canonicalProduct m a z ≠ 0 ↔ z ∉ Set.range a := by
   rw [not_iff_not]
   exact canonicalProduct_eq_zero_iff h_sum h_nonzero
+
+/-- The logarithmic derivative of a genus-one sequence-indexed canonical product is the expected
+sum of the logarithmic derivatives of the Weierstrass factors, away from the prescribed zero set. -/
+theorem logDeriv_canonicalProduct_one_eq_tsum {a : ℕ → ℂ}
+    (h_sum : Summable (fun n : ℕ => ‖a n‖⁻¹ ^ (2 : ℕ))) (h_nonzero : ∀ n, a n ≠ 0)
+    {z : ℂ} (hz : z ∉ Set.range a)
+    (hm : Summable (fun n : ℕ => 1 / (z - a n) + 1 / a n)) :
+    logDeriv (canonicalProduct 1 a) z =
+      ∑' n : ℕ, (1 / (z - a n) + 1 / a n) := by
+  let Φ : ℕ → ℂ → ℂ := fun n w => weierstrassFactor 1 (w / a n)
+  have hf : ∀ n, Φ n z ≠ 0 := by
+    intro n
+    refine weierstrassFactor_ne_zero_of_ne_one 1 ?_
+    intro h
+    have hza : z = a n := (div_eq_one_iff_eq (h_nonzero n)).1 h
+    exact hz ⟨n, hza.symm⟩
+  have hd : ∀ n, DifferentiableOn ℂ (Φ n) (Set.univ : Set ℂ) := by
+    intro n
+    exact ((differentiable_weierstrassFactor 1).comp
+      (differentiable_id.div_const (a n))).differentiableOn
+  have hm' : Summable fun n => logDeriv (Φ n) z := by
+    refine hm.congr ?_
+    intro n
+    have hza : z ≠ a n := by
+      intro h
+      exact hz ⟨n, h.symm⟩
+    simpa [Φ] using
+      (logDeriv_weierstrassFactor_one_div (a := a n) (z := z) (h_nonzero n) hza).symm
+  have htend : MultipliableLocallyUniformlyOn Φ (Set.univ : Set ℂ) := by
+    simpa [Φ] using multipliableLocallyUniformlyOn_canonicalProduct h_sum h_nonzero
+  have hnez : (∏' n, Φ n z) ≠ 0 := by
+    simpa [Φ, canonicalProduct] using canonicalProduct_ne_zero h_sum h_nonzero hz
+  have hlog :
+      logDeriv (∏' n, Φ n ·) z = ∑' n, logDeriv (Φ n) z :=
+    logDeriv_tprod_eq_tsum (s := (Set.univ : Set ℂ)) isOpen_univ (by simp)
+      hf hd hm' htend hnez
+  calc
+    logDeriv (canonicalProduct 1 a) z = ∑' n, logDeriv (Φ n) z := by
+      simpa [Φ, canonicalProduct] using hlog
+    _ = ∑' n : ℕ, (1 / (z - a n) + 1 / a n) := by
+      refine tsum_congr fun n => ?_
+      have hza : z ≠ a n := by
+        intro h
+        exact hz ⟨n, h.symm⟩
+      simpa [Φ] using logDeriv_weierstrassFactor_one_div (a := a n) (z := z) (h_nonzero n) hza
 
 end Complex

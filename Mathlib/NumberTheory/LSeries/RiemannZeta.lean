@@ -18,11 +18,11 @@ public import Mathlib.Analysis.Complex.CauchyIntegral
 * `completedRiemannZeta`: the completed zeta function `Λ : ℂ → ℂ`, which satisfies
   `Λ(s) = π ^ (-s / 2) Γ(s / 2) ζ(s)` (away from the poles of `Γ(s / 2)`).
 * `completedRiemannZeta₀`: the entire function `Λ₀` satisfying
-  `Λ₀(s) = Λ(s) + 1 / (s - 1) - 1 / s` wherever the RHS is defined.
+  `Λ₀(s) = Λ(s) + 1 / s + 1 / (1 - s)` wherever the RHS is defined.
 
 Note that mathematically `ζ(s)` is undefined at `s = 1`, while `Λ(s)` is undefined at both `s = 0`
 and `s = 1`. Our construction assigns some values at these points; exact formulae involving the
-Euler-Mascheroni constant will follow in a subsequent PR.
+Euler-Mascheroni constant are recorded in `Mathlib/NumberTheory/Harmonic/ZetaAsymp.lean`.
 
 ## Main results:
 
@@ -60,11 +60,13 @@ noncomputable section
 ## Definition of the completed Riemann zeta
 -/
 
-/-- The completed Riemann zeta function with its poles removed, `Λ(s) + 1 / s - 1 / (s - 1)`. -/
+/-- The completed Riemann zeta function with its poles removed, `Λ(s) + 1 / s + 1 / (1 - s)`. -/
 def completedRiemannZeta₀ (s : ℂ) : ℂ := completedHurwitzZetaEven₀ 0 s
 
-/-- The completed Riemann zeta function, `Λ(s)`, which satisfies
-`Λ(s) = π ^ (-s / 2) Γ(s / 2) ζ(s)` (up to a minor correction at `s = 0`). -/
+/-- The completed Riemann zeta function, `Λ(s)`.  Away from the poles and the removable special
+value at `s = 0`, this is the classical expression `π ^ (-s / 2) Γ(s / 2) ζ(s)`;
+the endpoint value comes from the analytic-continuation/Hurwitz-zeta API, not from naively
+substituting into the product formula. -/
 def completedRiemannZeta (s : ℂ) : ℂ := completedHurwitzZetaEven 0 s
 
 lemma HurwitzZeta.completedHurwitzZetaEven_zero (s : ℂ) :
@@ -231,7 +233,7 @@ theorem zeta_eq_tsum_one_div_nat_add_one_cpow {s : ℂ} (hs : 1 < re s) :
 theorem one_div_natCast_cpow_eq_ite_cpow_neg (s : ℂ) (hs : s ≠ 0) (n : ℕ) :
     1 / (n : ℂ) ^ s = if n = 0 then 0 else (n : ℂ) ^ (-s) := by
   by_cases h : n = 0
-  · simp [h, Complex.zero_cpow hs, one_div]
+  · simp [h, Complex.zero_cpow hs]
   · simp [h, one_div, Complex.cpow_neg]
 
 /-- Special case of `zeta_eq_tsum_one_div_nat_cpow` when the argument is in `ℕ`, so the power

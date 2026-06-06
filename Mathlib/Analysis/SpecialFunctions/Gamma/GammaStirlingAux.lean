@@ -15,9 +15,8 @@ vertical strip by the functional equation.
 
 ## References
 
-* NIST DLMF 5.11: Asymptotic Expansions for Γ(z)
-* NIST DLMF 5.6.7: |Γ(x+iy)| ≤ Γ(x) for x ≥ 1/2
-* Whittaker & Watson: A Course of Modern Analysis, Chapter 12
+* [DLMF], §5.11 for Stirling expansions around the Gamma function
+* [whittakerWatson1927], Chapter XII for the classical Gamma-function background
 * The functional equation Γ(z+1) = z·Γ(z) (Mathlib: `Complex.Gamma_add_one`)
 
 ## Main results

@@ -32,7 +32,10 @@ All products use `divisorCanonicalProduct` centered at `0` with multiplicities f
 Compared with Tao's proof of the finite-order Hadamard theorem, this file replaces the
 good-circle averaging argument by Cartan radius and product bounds.  The purpose is the same:
 obtain sufficiently many circles on which the canonical product is not too small, so the zero-free
-Hadamard quotient has polynomial exponential growth.
+Hadamard quotient has polynomial exponential growth.  Thus the route is:
+Jensen/zero counting (Tao Theorem 2 and Proposition 8) → canonical-product convergence (forward
+Exercise 19 input) → Cartan minimum-modulus alternative to the good-circle step → finite-order
+Hadamard (Theorem 22).  The converse direction of Exercise 24 is not part of this theorem.
 
 ## Main results
 
@@ -44,7 +47,8 @@ Hadamard quotient has polynomial exponential growth.
 ## References
 
 * [tao246bComplexAnalysis], Theorem 22 for the finite-order Hadamard factorization strategy
-* [MR886677] for canonical factors
+* [boas1954] and [levin1980] for Weierstrass factors, canonical products, and the classical
+  Hadamard product theorem
 -/
 
 @[expose] public section
@@ -422,6 +426,11 @@ theorem hadamardQuotient_norm_le_exp_rpow_of_growth {f H : ℂ → ℂ} {ρ τ :
       (by linarith [le_of_lt hrpos]) (by positivity) hτ_nonneg hr_le_3
   simpa [mul_assoc] using hball.trans hmain
 
+/-- Hadamard factorization from a global logarithmic growth bound.
+
+The minimum-modulus step in this proof is supplied by the Cartan circle bounds above; this is an
+alternative to Tao's good-circle averaging step, with the same role in bounding the zero-free
+Hadamard quotient. -/
 theorem hadamard_factorization_of_growth {f : ℂ → ℂ} {ρ : ℝ} (hρ : 0 ≤ ρ)
     (hentire : Differentiable ℂ f)
     (hnot : ∃ z : ℂ, f z ≠ 0)

@@ -44,7 +44,10 @@ The key ingredients are:
 
 ## References
 
-* [tao246bComplexAnalysis] for order-one growth of `completedRiemannZeta₀` (Λ₀)
+* [tao246bComplexAnalysis], Theorem 22 and Exercise 23, for the order-one growth input used in
+  the finite-order Hadamard strategy for completed zeta functions
+* [titchmarsh1986] and [edwards1974] for the classical completed-zeta and ξ-function growth
+  background; the formalized object here is the additive pole-removal `Λ₀`, not Riemann's `ξ`
 
 ## Tags
 

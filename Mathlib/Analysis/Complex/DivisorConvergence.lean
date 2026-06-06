@@ -37,7 +37,6 @@ namespace Complex.Hadamard
 lemma finite_divisorZeroIndex₀_subtype_norm_le {f : ℂ → ℂ} {U : Set ℂ} (B : ℝ)
     (hBU : Metric.closedBall (0 : ℂ) B ⊆ U) :
     Finite {p : divisorZeroIndex₀ f U // ‖divisorZeroIndex₀_val p‖ ≤ B} := by
-  classical
   set D : Function.locallyFinsuppWithin U ℤ := MeromorphicOn.divisor f U
   have hK : IsCompact (Metric.closedBall (0 : ℂ) B) := isCompact_closedBall _ _
   have hpts0 : ((Metric.closedBall (0 : ℂ) B) ∩ D.support).Finite :=
@@ -83,7 +82,6 @@ lemma finite_divisorZeroIndex₀_subtype_norm_le {f : ℂ → ℂ} {U : Set ℂ}
 lemma divisorZeroIndex₀_norm_le_finite {f : ℂ → ℂ} {U : Set ℂ} (B : ℝ)
     (hBU : Metric.closedBall (0 : ℂ) B ⊆ U) :
     ({p : divisorZeroIndex₀ f U | ‖divisorZeroIndex₀_val p‖ ≤ B} : Set _).Finite := by
-  classical
   let s : Set (divisorZeroIndex₀ f U) := {p | ‖divisorZeroIndex₀_val p‖ ≤ B}
   haveI : Finite (↥s) := by
     simpa [s] using (finite_divisorZeroIndex₀_subtype_norm_le (f := f) (U := U) B hBU)
@@ -124,7 +122,6 @@ theorem hasProdUniformlyOn_divisorCanonicalProduct_univ
       (fun (p : divisorZeroIndex₀ f (Set.univ : Set ℂ)) (z : ℂ) =>
         weierstrassFactor m (z / divisorZeroIndex₀_val p))
       (divisorCanonicalProduct m f (Set.univ : Set ℂ)) K := by
-  classical
   rcases (isBounded_iff_forall_norm_le.1 hK.isBounded) with ⟨R0, hR0⟩
   set R : ℝ := max R0 1
   have hRpos : 0 < R := lt_of_lt_of_le (by norm_num : (0 : ℝ) < 1) (le_max_right _ _)
@@ -200,7 +197,6 @@ theorem hasProdLocallyUniformlyOn_divisorCanonicalProduct_univ
         weierstrassFactor m (z / divisorZeroIndex₀_val p))
       (divisorCanonicalProduct m f (Set.univ : Set ℂ))
       (Set.univ : Set ℂ) := by
-  classical
   refine hasProdLocallyUniformlyOn_of_forall_compact
       (f := fun p z => weierstrassFactor m (z / divisorZeroIndex₀_val p))
       (g := divisorCanonicalProduct m f (Set.univ : Set ℂ))
@@ -214,7 +210,6 @@ theorem differentiableOn_divisorCanonicalProduct_univ
     (h_sum : Summable (fun p : divisorZeroIndex₀ f (Set.univ : Set ℂ) =>
       ‖divisorZeroIndex₀_val p‖⁻¹ ^ (m + 1))) :
     DifferentiableOn ℂ (divisorCanonicalProduct m f (Set.univ : Set ℂ)) (Set.univ : Set ℂ) := by
-  classical
   have hloc :
       TendstoLocallyUniformlyOn
         (fun (s : Finset (divisorZeroIndex₀ f (Set.univ : Set ℂ))) (z : ℂ) =>
@@ -248,5 +243,15 @@ theorem differentiableOn_divisorCanonicalProduct_univ
   haveI : (Filter.atTop : Filter (Finset (divisorZeroIndex₀ f (Set.univ : Set ℂ)))).NeBot :=
     Filter.atTop_neBot
   exact hloc.differentiableOn hF isOpen_univ
+
+/-- Pointwise differentiability of the divisor-indexed canonical product under the standard
+summability hypothesis. -/
+theorem differentiableAt_divisorCanonicalProduct_univ
+    (m : ℕ) (f : ℂ → ℂ)
+    (h_sum : Summable (fun p : divisorZeroIndex₀ f (Set.univ : Set ℂ) =>
+      ‖divisorZeroIndex₀_val p‖⁻¹ ^ (m + 1))) (z : ℂ) :
+    DifferentiableAt ℂ (divisorCanonicalProduct m f (Set.univ : Set ℂ)) z :=
+  ((differentiableOn_divisorCanonicalProduct_univ m f h_sum) z (by simp)).differentiableAt
+    (by simp)
 
 end Complex.Hadamard

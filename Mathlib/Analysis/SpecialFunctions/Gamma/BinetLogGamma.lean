@@ -247,7 +247,10 @@ private lemma eq_zero_of_tendsto_atTop_periodic_add_one {h : ℝ → ℝ} {x : �
   rw [hconst] at hxseq
   exact tendsto_const_nhds_iff.mp hxseq
 
-/-- Binet's formula for real arguments. -/
+/-- Binet's formula for real arguments.
+
+The recurrence and integral identify the correction term up to a constant; this proof uses the
+existing Stirling limit `Stirling.tendsto_stirlingSeq_sqrt_pi` to normalize that constant. -/
 theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
     Real.log (Real.Gamma x) =
       (x - 1/2) * Real.log x - x + Real.log (2 * Real.pi) / 2 + (J x).re := by
@@ -648,5 +651,12 @@ theorem log_Gamma_real_eq {x : ℝ} (hx : 0 < x) :
   have hmain' := hmain
   dsimp [stirlingMainReal] at hmain'
   exact hmain'
+
+/-- The Binet correction term `R` is the real part of the Binet integral. -/
+theorem R_eq_re_J {x : ℝ} (hx : 0 < x) :
+    R x = (J (x : ℂ)).re := by
+  have h := log_Gamma_real_eq hx
+  unfold R stirlingMainReal
+  linarith
 
 end Binet

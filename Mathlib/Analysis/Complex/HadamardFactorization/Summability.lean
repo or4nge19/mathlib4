@@ -17,7 +17,8 @@ public import Mathlib.Analysis.SpecialFunctions.Log.Summable
 # Divisor summability from logarithmic growth
 
 Dyadic shell summability for the zero divisor of an entire function with a logarithmic growth
-bound. This is step 1 of the intrinsic Hadamard pipeline
+bound. This is the zero-counting input for Tao's finite-order Hadamard theorem, not the
+factorization conclusion itself.  It is step 1 of the intrinsic Hadamard pipeline
 (`divisorCanonicalProduct`, `hadamard_factorization_of_growth`, `hadamard_factorization_of_order`).
 
 ## Main results
@@ -33,11 +34,17 @@ bound. This is step 1 of the intrinsic Hadamard pipeline
 Jensen's formula and log-counting growth bounds live in
 `Analysis.Complex.ValueDistribution.LogCounting`.
 
+Tao Notes 1 enters here through Theorem 2 (Jensen's formula) and Proposition 8 (zero counting from
+growth).  The forward convergence input corresponding to Exercise 19 is used for the genus
+`⌊ρ⌋` canonical product; the converse direction in Exercise 24 is not proved in this branch.
+
 ## References
 
 * [tao246bComplexAnalysis], Theorem 2 and Proposition 8 (disk formulation; compare
   `divisorMassClosedBall₀` and `logCounting`)
-* [MR886677], §1 for disk automorphisms and canonical factors
+* [MR886677], §1 for disk automorphisms and disk canonical factors used in the counting background
+* [boas1954] and [levin1980] for the Jensen/counting estimates feeding the classical Hadamard
+  product theorem
 -/
 
 @[expose] public section
