@@ -114,6 +114,74 @@ lemma norm_div_le_half_of_norm_le_of_two_mul_lt {z a : ℂ} {R : ℝ}
       _ < R * (2 * R)⁻¹ := hmul_lt
       _ = (1 / 2 : ℝ) := hRhalf
 
+/-- The genus-one logarithmic-derivative zero terms are summable away from the zero set whenever
+the genus-one divisor product is summable.
+
+The estimate is the standard far-zero comparison
+`1 / (z - a) + 1 / a = z / (a * (z - a)) = O_z(‖a‖⁻²)`, with the finitely many near zeros removed
+using local finiteness of the divisor support. -/
+theorem summable_logDerivTerms_divisorZeroIndex₀_of_summable_inv_sq
+    {f : ℂ → ℂ} {z : ℂ}
+    (h_sum : Summable (fun p : divisorZeroIndex₀ f (Set.univ : Set ℂ) =>
+      ‖divisorZeroIndex₀_val p‖⁻¹ ^ (2 : ℕ)))
+    (hz : ∀ p : divisorZeroIndex₀ f (Set.univ : Set ℂ), z ≠ divisorZeroIndex₀_val p) :
+    Summable (fun p : divisorZeroIndex₀ f (Set.univ : Set ℂ) =>
+      1 / (z - divisorZeroIndex₀_val p) + 1 / divisorZeroIndex₀_val p) := by
+  let R : ℝ := max ‖z‖ 1
+  have hRpos : 0 < R := lt_of_lt_of_le (by norm_num : (0 : ℝ) < 1) (le_max_right _ _)
+  have hzle : ‖z‖ ≤ R := le_max_left _ _
+  let u : divisorZeroIndex₀ f (Set.univ : Set ℂ) → ℝ :=
+    fun p => (2 * R) * (‖divisorZeroIndex₀_val p‖⁻¹ ^ (2 : ℕ))
+  have hu : Summable u := h_sum.mul_left (2 * R)
+  refine hu.of_norm_bounded_eventually ?_
+  have h_big :
+      ∀ᶠ p : divisorZeroIndex₀ f (Set.univ : Set ℂ) in Filter.cofinite,
+        (2 * R : ℝ) < ‖divisorZeroIndex₀_val p‖ := by
+    have hfin :
+        ({p : divisorZeroIndex₀ f (Set.univ : Set ℂ) | ‖divisorZeroIndex₀_val p‖ ≤
+          2 * R} : Set _).Finite := by
+      have : Metric.closedBall (0 : ℂ) (2 * R) ⊆ (Set.univ : Set ℂ) := by simp
+      exact divisorZeroIndex₀_norm_le_finite
+        (f := f) (U := (Set.univ : Set ℂ)) (B := 2 * R) this
+    have := hfin.eventually_cofinite_notMem
+    filter_upwards [this] with p hp
+    have : ¬ ‖divisorZeroIndex₀_val p‖ ≤ 2 * R := by simpa using hp
+    exact lt_of_not_ge this
+  filter_upwards [h_big] with p hp
+  let a : ℂ := divisorZeroIndex₀_val p
+  have ha0 : a ≠ 0 := divisorZeroIndex₀_val_ne_zero p
+  have hza0 : z - a ≠ 0 := sub_ne_zero.mpr (hz p)
+  have hterm : 1 / (z - a) + 1 / a = z / (a * (z - a)) := by
+    field_simp [ha0, hza0]
+    ring
+  have htri : ‖a‖ ≤ ‖z‖ + ‖z - a‖ := by
+    have hraw : ‖a‖ ≤ ‖z‖ + ‖a - z‖ := by
+      have h := norm_add_le z (a - z)
+      simpa [a, sub_eq_add_neg, add_assoc, add_left_comm, add_comm] using h
+    simpa [norm_sub_rev] using hraw
+  have hza_lower : ‖a‖ / 2 ≤ ‖z - a‖ := by
+    nlinarith [htri, hzle, hp]
+  have hnorm : ‖1 / (z - a) + 1 / a‖ ≤ (2 * R) * (‖a‖⁻¹ ^ (2 : ℕ)) := by
+    rw [hterm, norm_div, norm_mul]
+    have ha_norm_pos : 0 < ‖a‖ := norm_pos_iff.mpr ha0
+    have hza_norm_pos : 0 < ‖z - a‖ := norm_pos_iff.mpr hza0
+    rw [div_eq_mul_inv]
+    calc
+      ‖z‖ * (‖a‖ * ‖z - a‖)⁻¹
+          = ‖z‖ * ‖a‖⁻¹ * ‖z - a‖⁻¹ := by
+              field_simp [ha_norm_pos.ne', hza_norm_pos.ne']
+      _ ≤ R * ‖a‖⁻¹ * ‖z - a‖⁻¹ := by
+              gcongr
+      _ ≤ R * ‖a‖⁻¹ * (2 * ‖a‖⁻¹) := by
+              gcongr
+              have hhalf_pos : 0 < ‖a‖ / 2 := by positivity
+              have hinv : ‖z - a‖⁻¹ ≤ (‖a‖ / 2)⁻¹ := by
+                simpa [one_div] using one_div_le_one_div_of_le hhalf_pos hza_lower
+              have hhalf_inv : (‖a‖ / 2)⁻¹ = 2 * ‖a‖⁻¹ := by field_simp [ha_norm_pos.ne']
+              simpa [hhalf_inv] using hinv
+      _ = (2 * R) * (‖a‖⁻¹ ^ (2 : ℕ)) := by ring
+  simpa [u, a] using hnorm
+
 theorem hasProdUniformlyOn_divisorCanonicalProduct_univ
     (m : ℕ) (f : ℂ → ℂ) {K : Set ℂ} (hK : IsCompact K)
     (h_sum : Summable (fun p : divisorZeroIndex₀ f (Set.univ : Set ℂ) =>
