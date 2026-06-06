@@ -56,8 +56,6 @@ Riemann zeta function, completed zeta function, finite order, Hadamard factoriza
 
 @[expose] public section
 
-noncomputable section
-
 open Complex Set Filter Topology Metric
 open scoped Real
 
@@ -101,7 +99,7 @@ lemma one_sub_re_ge_one_sub_zetaAbelContinuationReLower_of_re_le {z : ℂ}
     (hz : z.re ≤ zetaAbelContinuationReLower) :
     (1 - zetaAbelContinuationReLower) ≤ (1 - z).re := by
   have hz' : z.re ≤ (1 / 10 : ℝ) := by
-    unfold zetaAbelContinuationReLower at hz
+    dsimp [zetaAbelContinuationReLower] at hz
     exact hz
   have h : (9 / 10 : ℝ) ≤ 1 - z.re := by linarith [hz']
   calc (1 - zetaAbelContinuationReLower : ℝ)
@@ -209,11 +207,9 @@ lemma norm_mul_riemannZeta_le_exp_of_reflected {z w : ℂ} {A CΓ C : ℝ}
 /-- `completedRiemannZeta₀` has order at most one: for every `ε > 0` there exists `C > 0` with
 `‖completedRiemannZeta₀ z‖ ≤ exp (C * (1 + ‖z‖) ^ (1 + ε))`. -/
 theorem completedRiemannZeta₀_order_one :
-    ∀ ε : ℝ, 0 < ε →
-      ∃ C > 0, ∀ z : ℂ,
-        ‖completedRiemannZeta₀ z‖ ≤ Real.exp (C * (1 + ‖z‖) ^ (1 + ε)) := by
+    ∀ ε : ℝ, 0 < ε → ∃ C > 0, ∀ z : ℂ,  ‖completedRiemannZeta₀ z‖ ≤
+      Real.exp (C * (1 + ‖z‖) ^ (1 + ε)) := by
   intro ε hε
-  classical
   obtain ⟨M, hM_nonneg, hM⟩ := completedRiemannZeta₀_bounded_on_closedBall 3 (by norm_num)
   obtain ⟨CΓ, hCΓ_pos, hΓ⟩ := Complex.Gammaℝ.Stirling.bound_re_ge_zero
   let C : ℝ :=
@@ -442,7 +438,7 @@ theorem completedRiemannZeta₀_order_one :
 
 The value at `1` is set to the residue of `ζ` at its simple pole; away from `1` this is the
 ordinary product `(s - 1)ζ(s)`. -/
-def zetaTimesSMinusOne_entire (s : ℂ) : ℂ :=
+noncomputable def zetaTimesSMinusOne_entire (s : ℂ) : ℂ :=
   Function.update (fun s : ℂ => (s - 1) * riemannZeta s) 1 1 s
 
 /-- The removable extension of `(s - 1)ζ(s)` has value `1` at the pole. -/
@@ -542,7 +538,8 @@ def zetaTimesSMinusOneTrivialZeroIndex : Type :=
       Hadamard.divisorZeroIndex₀_val p = riemannZetaTrivialZero n}
 
 /-- The divisor value attached to an index in the trivial-zero subfamily. -/
-@[simp] lemma zetaTimesSMinusOneTrivialZeroIndex_val
+@[simp]
+lemma zetaTimesSMinusOneTrivialZeroIndex_val
     (p : zetaTimesSMinusOneTrivialZeroIndex) :
     Hadamard.divisorZeroIndex₀_val p.2.1 = riemannZetaTrivialZero p.1 :=
   p.2.2
@@ -606,7 +603,6 @@ theorem zetaTimesSMinusOne_entire_differentiable :
 theorem exists_zetaTimesSMinusOne_trivialZeroIndex (n : ℕ) :
     ∃ p : Hadamard.divisorZeroIndex₀ zetaTimesSMinusOne_entire (Set.univ : Set ℂ),
       Hadamard.divisorZeroIndex₀_val p = riemannZetaTrivialZero n := by
-  classical
   have hf : Differentiable ℂ zetaTimesSMinusOne_entire :=
     zetaTimesSMinusOne_entire_differentiable
   have hnot : ∃ z : ℂ, zetaTimesSMinusOne_entire z ≠ 0 := by
@@ -658,7 +654,8 @@ noncomputable def zetaTimesSMinusOne_trivialZeroIndexOfNat
   ⟨Classical.choose (exists_zetaTimesSMinusOne_trivialZeroIndex n),
     Classical.choose_spec (exists_zetaTimesSMinusOne_trivialZeroIndex n)⟩
 
-@[simp] lemma zetaTimesSMinusOne_trivialZeroIndexOfNat_val (n : ℕ) :
+@[simp]
+lemma zetaTimesSMinusOne_trivialZeroIndexOfNat_val (n : ℕ) :
     Hadamard.divisorZeroIndex₀_val (zetaTimesSMinusOne_trivialZeroIndexOfNat n).1 =
       riemannZetaTrivialZero n :=
   (zetaTimesSMinusOne_trivialZeroIndexOfNat n).2
@@ -668,7 +665,8 @@ noncomputable def zetaTimesSMinusOneTrivialZeroIndexOfNat
     (n : ℕ) : zetaTimesSMinusOneTrivialZeroIndex :=
   ⟨n, zetaTimesSMinusOne_trivialZeroIndexOfNat n⟩
 
-@[simp] lemma zetaTimesSMinusOneTrivialZeroIndexOfNat_fst (n : ℕ) :
+@[simp]
+lemma zetaTimesSMinusOneTrivialZeroIndexOfNat_fst (n : ℕ) :
     (zetaTimesSMinusOneTrivialZeroIndexOfNat n).1 = n :=
   rfl
 
@@ -685,7 +683,6 @@ The proof combines the half-plane zeta bound, the functional equation, and the G
 theorem zeta_minus_pole_entire_growth :
     ∃ C > 0, ∀ z : ℂ,
       Real.log (1 + ‖zetaTimesSMinusOne_entire z‖) ≤ C * (1 + ‖z‖) ^ (2 : ℝ) := by
-  classical
   have hcont :
       ContinuousOn zetaTimesSMinusOne_entire (Metric.closedBall (0 : ℂ) 3) :=
     zetaTimesSMinusOne_entire_differentiable.continuous.continuousOn

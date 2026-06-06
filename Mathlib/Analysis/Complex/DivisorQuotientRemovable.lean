@@ -18,8 +18,6 @@ singularity results and identifies the exact zero multiplicity of `divisorCanoni
 
 @[expose] public section
 
-noncomputable section
-
 open Filter Function Complex Finset Topology
 open scoped Topology BigOperators
 open Set

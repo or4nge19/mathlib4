@@ -7,15 +7,16 @@ module
 
 public import Mathlib.Analysis.Complex.DivisorIndex
 public import Mathlib.Analysis.Complex.LocallyUniformLimit
+public import Mathlib.Analysis.Calculus.LogDerivUniformlyOn
 public import Mathlib.Analysis.Normed.Module.MultipliableUniformlyOn
 
 
 /-!
 # Convergence and holomorphy of divisor-indexed canonical products
 
-This file proves uniform convergence on compacts, locally uniform convergence, and holomorphy for
-the divisor-indexed canonical product `Complex.Hadamard.divisorCanonicalProduct`, under the
-standard summability hypothesis.
+This file proves uniform convergence on compacts, locally uniform convergence, holomorphy, and the
+genus-one logarithmic-derivative identity for the divisor-indexed canonical product
+`Complex.Hadamard.divisorCanonicalProduct`, under the standard summability hypothesis.
 
 It also provides finiteness lemmas for subsets of the divisor index type cut out by a norm bound.
 -/
@@ -321,5 +322,69 @@ theorem differentiableAt_divisorCanonicalProduct_univ
     DifferentiableAt ℂ (divisorCanonicalProduct m f (Set.univ : Set ℂ)) z :=
   ((differentiableOn_divisorCanonicalProduct_univ m f h_sum) z (by simp)).differentiableAt
     (by simp)
+
+/-!
+## Logarithmic derivative of the genus-one divisor product
+-/
+
+/-- The logarithmic derivative of a genus-one divisor canonical product is the expected sum of
+zero terms.  The logarithmic-derivative term summability is derived from the genus-one divisor
+summability and the assumption that the evaluation point is not one of the indexed zeros. -/
+theorem logDeriv_divisorCanonicalProduct_one_eq_tsum
+    {f : ℂ → ℂ} {z : ℂ}
+    (h_sum : Summable (fun p : divisorZeroIndex₀ f (Set.univ : Set ℂ) =>
+      ‖divisorZeroIndex₀_val p‖⁻¹ ^ (2 : ℕ)))
+    (hz : ∀ p : divisorZeroIndex₀ f (Set.univ : Set ℂ), z ≠ divisorZeroIndex₀_val p)
+    (hprod_ne : divisorCanonicalProduct 1 f (Set.univ : Set ℂ) z ≠ 0) :
+    logDeriv (divisorCanonicalProduct 1 f (Set.univ : Set ℂ)) z =
+      ∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ),
+        (1 / (z - divisorZeroIndex₀_val p) + 1 / divisorZeroIndex₀_val p) := by
+  let Φ : divisorZeroIndex₀ f (Set.univ : Set ℂ) → ℂ → ℂ :=
+    fun p w => weierstrassFactor 1 (w / divisorZeroIndex₀_val p)
+  have hf : ∀ p, Φ p z ≠ 0 := by
+    intro p
+    have hp0 : divisorZeroIndex₀_val p ≠ 0 := divisorZeroIndex₀_val_ne_zero p
+    refine weierstrassFactor_ne_zero_of_ne_one 1 ?_
+    intro h
+    exact hz p ((div_eq_one_iff_eq hp0).1 h)
+  have hd : ∀ p, DifferentiableOn ℂ (Φ p) (Set.univ : Set ℂ) := by
+    intro p
+    have hdiv : Differentiable ℂ (fun w : ℂ => w / divisorZeroIndex₀_val p) := by
+      have : Differentiable ℂ (fun w : ℂ => w * ((divisorZeroIndex₀_val p)⁻¹)) :=
+        (differentiable_id : Differentiable ℂ (fun w : ℂ => w)).mul_const
+          ((divisorZeroIndex₀_val p)⁻¹)
+      simp [div_eq_mul_inv]
+    exact ((differentiable_weierstrassFactor 1).comp hdiv).differentiableOn
+  have hm' : Summable fun p => logDeriv (Φ p) z := by
+    have hm :
+        Summable (fun p : divisorZeroIndex₀ f (Set.univ : Set ℂ) =>
+          1 / (z - divisorZeroIndex₀_val p) + 1 / divisorZeroIndex₀_val p) :=
+      summable_logDerivTerms_divisorZeroIndex₀_of_summable_inv_sq h_sum hz
+    refine hm.congr ?_
+    intro p
+    have hp0 : divisorZeroIndex₀_val p ≠ 0 := divisorZeroIndex₀_val_ne_zero p
+    simpa [Φ] using
+      (Complex.logDeriv_weierstrassFactor_one_div
+        (a := divisorZeroIndex₀_val p) (z := z) hp0 (hz p)).symm
+  have htend : MultipliableLocallyUniformlyOn Φ (Set.univ : Set ℂ) := by
+    have hprod := hasProdLocallyUniformlyOn_divisorCanonicalProduct_univ
+      (m := 1) (f := f) h_sum
+    simpa [Φ, divisorCanonicalProduct] using hprod.multipliableLocallyUniformlyOn
+  have hnez : (∏' p, Φ p z) ≠ 0 := by
+    simpa [Φ, divisorCanonicalProduct] using hprod_ne
+  have hlog : logDeriv (∏' p, Φ p ·) z = ∑' p, logDeriv (Φ p) z :=
+    logDeriv_tprod_eq_tsum (s := (Set.univ : Set ℂ)) isOpen_univ (by simp)
+      hf hd hm' htend hnez
+  calc
+    logDeriv (divisorCanonicalProduct 1 f (Set.univ : Set ℂ)) z
+        = ∑' p, logDeriv (Φ p) z := by
+          simpa [Φ, divisorCanonicalProduct] using hlog
+    _ = ∑' p : divisorZeroIndex₀ f (Set.univ : Set ℂ),
+          (1 / (z - divisorZeroIndex₀_val p) + 1 / divisorZeroIndex₀_val p) := by
+          refine tsum_congr fun p => ?_
+          have hp0 : divisorZeroIndex₀_val p ≠ 0 := divisorZeroIndex₀_val_ne_zero p
+          simpa [Φ] using
+            Complex.logDeriv_weierstrassFactor_one_div
+              (a := divisorZeroIndex₀_val p) (z := z) hp0 (hz p)
 
 end Complex.Hadamard

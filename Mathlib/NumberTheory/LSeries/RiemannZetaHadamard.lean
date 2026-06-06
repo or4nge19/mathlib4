@@ -7,7 +7,9 @@ module
 
 public import Mathlib.Analysis.Complex.HadamardFactorization.Order
 public import Mathlib.Analysis.Complex.DivisorConvergence
-public import Mathlib.Analysis.Calculus.LogDerivUniformlyOn
+public import Mathlib.Analysis.Complex.Divisor
+public import Mathlib.Analysis.Calculus.Deriv.Polynomial
+public import Mathlib.Analysis.SpecialFunctions.Log.ExpGrowth
 public import Mathlib.Analysis.SpecialFunctions.CompletedXi
 public import Mathlib.NumberTheory.LSeries.ZetaFiniteOrder
 public import Mathlib.NumberTheory.LSeries.RiemannZetaValues
@@ -47,11 +49,6 @@ formula for `Λ₀(1)` together with explicit numerical bounds.  Therefore the o
   `_sequence_no_monomial` : xi products with the origin monomial removed
 * `summable_riemannXi_divisorZeroIndex₀_norm_inv_sq` : genus-one summability of xi's nonzero
   zero divisor
-* `logDeriv_exp_polynomial`, `logDeriv_weierstrassFactor_one_div` : local log-derivative
-  identities needed to turn the product into Kadiri's zero-sum formula
-* `logDeriv_divisorCanonicalProduct_one_eq_tsum` : logarithmic derivative of a genus-one
-  divisor canonical product as a zero-indexed sum, with the zero-term summability derived from
-  genus-one divisor summability
 * `logDeriv_riemannXi_divisorCanonicalProduct_one_eq_tsum` and
   `logDeriv_riemannXi_eq_polynomial_derivative_add_tsum` : xi-specialized zero-sum identities
 * `exists_riemannXi_logDeriv_eq_polynomial_derivative_add_tsum` : an API-test style composition of
@@ -91,36 +88,6 @@ theorem completedRiemannZeta₀_entireOfOrderAtMost_one :
   simpa [add_comm, add_left_comm, add_assoc] using
     (Complex.completedRiemannZeta₀_order_one ε hε)
 
-/-- A quadratic polynomial factor is absorbed by any positive exponential margin. -/
-private lemma sq_le_exp_const_mul_rpow {b r : ℝ} (hb : 0 < b) (hr : 1 ≤ r) :
-    r ^ 2 ≤ Real.exp ((4 / b) * r ^ b) := by
-  have hrpos : 0 < r := zero_lt_one.trans_le hr
-  have hcoeff2 : 0 ≤ (2 / b : ℝ) := by positivity
-  have hcoeff4 : 0 ≤ (4 / b : ℝ) := by positivity
-  have hlog_le : Real.log r ≤ (2 / b) * r ^ (b / 2) := by
-    have hle_exp : (b / 2) * Real.log r ≤ Real.exp ((b / 2) * Real.log r) :=
-      Real.le_exp_self _
-    calc
-      Real.log r = (2 / b) * ((b / 2) * Real.log r) := by
-        field_simp [ne_of_gt hb]
-      _ ≤ (2 / b) * Real.exp ((b / 2) * Real.log r) :=
-        mul_le_mul_of_nonneg_left hle_exp hcoeff2
-      _ = (2 / b) * r ^ (b / 2) := by
-        simp [Real.rpow_def_of_pos hrpos, mul_comm]
-  have hpow_le : r ^ (b / 2) ≤ r ^ b :=
-    Real.rpow_le_rpow_of_exponent_le hr (by linarith)
-  have hlog_sq :
-      Real.log (r ^ 2) ≤ (4 / b) * r ^ b := by
-    calc
-      Real.log (r ^ 2) = 2 * Real.log r := by
-        simp [Real.log_pow]
-      _ ≤ 2 * ((2 / b) * r ^ (b / 2)) :=
-        mul_le_mul_of_nonneg_left hlog_le (by norm_num)
-      _ = (4 / b) * r ^ (b / 2) := by ring
-      _ ≤ (4 / b) * r ^ b :=
-        mul_le_mul_of_nonneg_left hpow_le hcoeff4
-  exact (Real.log_le_iff_le_exp (sq_pos_of_pos hrpos)).mp hlog_sq
-
 /-- The Riemann xi function `ξ` has order at most one. -/
 theorem riemannXi_entireOfOrderAtMost_one :
     Complex.Hadamard.EntireOfOrderAtMost (1 : ℝ) riemannXi := by
@@ -148,7 +115,7 @@ theorem riemannXi_entireOfOrderAtMost_one :
       _ ≤ R * R := mul_le_mul hz hz1 (norm_nonneg _) (by positivity)
       _ = R ^ 2 := by ring
   have hquad : R ^ 2 ≤ Real.exp (D * R ^ b) := by
-    simpa [D] using sq_le_exp_const_mul_rpow (b := b) (r := R) hbpos hR1
+    simpa [D] using Real.sq_le_exp_const_mul_rpow (b := b) (r := R) hbpos hR1
   have hΛz : ‖completedRiemannZeta₀ z‖ ≤ Real.exp (C * R ^ b) := by
     simpa [R, b, add_assoc] using hΛ z
   have hterm :
@@ -240,24 +207,6 @@ theorem analyticOrderNatAt_completedRiemannZeta₀_zero :
     apply_eq_zero_of_analyticOrderNatAt_ne_zero (f := completedRiemannZeta₀) (z₀ := 0) h
   exact completedRiemannZeta₀_zero_ne_zero hzero
 
-/-- The logarithmic derivative of the exponential of a polynomial is the polynomial derivative. -/
-theorem logDeriv_exp_polynomial (P : Polynomial ℂ) (z : ℂ) :
-    logDeriv (fun w : ℂ => Complex.exp (Polynomial.eval w P)) z =
-      Polynomial.eval z P.derivative := by
-  have hderiv :
-      deriv (fun w : ℂ => Complex.exp (Polynomial.eval w P)) z =
-        Complex.exp (Polynomial.eval z P) * Polynomial.eval z P.derivative := by
-    simpa [Function.comp_def, mul_comm] using
-      ((Complex.hasDerivAt_exp (Polynomial.eval z P)).comp z (P.hasDerivAt z)).deriv
-  rw [logDeriv_apply, hderiv]
-  field_simp [Complex.exp_ne_zero (Polynomial.eval z P)]
-
-/-- Genus-one Weierstrass factors contribute the usual `1 / (z - a) + 1 / a` term. -/
-theorem logDeriv_weierstrassFactor_one_div {a z : ℂ} (ha : a ≠ 0) (hz : z ≠ a) :
-    logDeriv (fun w : ℂ => Complex.weierstrassFactor 1 (w / a)) z =
-      1 / (z - a) + 1 / a :=
-  Complex.logDeriv_weierstrassFactor_one_div ha hz
-
 /-- The logarithmic-derivative zero terms for Riemann's `ξ` are summable away from the zero set.
 
 This is a Kadiri-facing convenience wrapper around the general far-zero comparison and the
@@ -272,105 +221,33 @@ theorem summable_riemannXi_logDerivTerms_divisorZeroIndex₀
   Complex.Hadamard.summable_logDerivTerms_divisorZeroIndex₀_of_summable_inv_sq
     summable_riemannXi_divisorZeroIndex₀_norm_inv_sq hz
 
-/-- The logarithmic derivative of a genus-one divisor canonical product is the expected sum of
-zero terms.  The logarithmic-derivative term summability is derived from the genus-one divisor
-summability and the assumption that the evaluation point is not one of the indexed zeros.
-
-This is the reusable analytic bridge between the Hadamard product and Kadiri-style zero sums. -/
-theorem logDeriv_divisorCanonicalProduct_one_eq_tsum
-    {f : ℂ → ℂ} {z : ℂ}
-    (h_sum : Summable (fun p : Complex.Hadamard.divisorZeroIndex₀ f (Set.univ : Set ℂ) =>
-      ‖Complex.Hadamard.divisorZeroIndex₀_val p‖⁻¹ ^ (2 : ℕ)))
-    (hz : ∀ p : Complex.Hadamard.divisorZeroIndex₀ f (Set.univ : Set ℂ),
-      z ≠ Complex.Hadamard.divisorZeroIndex₀_val p)
-    (hprod_ne :
-      Complex.Hadamard.divisorCanonicalProduct 1 f (Set.univ : Set ℂ) z ≠ 0) :
-    logDeriv (Complex.Hadamard.divisorCanonicalProduct 1 f (Set.univ : Set ℂ)) z =
-      ∑' p : Complex.Hadamard.divisorZeroIndex₀ f (Set.univ : Set ℂ),
-        (1 / (z - Complex.Hadamard.divisorZeroIndex₀_val p) +
-          1 / Complex.Hadamard.divisorZeroIndex₀_val p) := by
-  let Φ : Complex.Hadamard.divisorZeroIndex₀ f (Set.univ : Set ℂ) → ℂ → ℂ :=
-    fun p w => Complex.weierstrassFactor 1 (w / Complex.Hadamard.divisorZeroIndex₀_val p)
-  have hf : ∀ p, Φ p z ≠ 0 := by
-    intro p
-    have hp0 : Complex.Hadamard.divisorZeroIndex₀_val p ≠ 0 :=
-      Complex.Hadamard.divisorZeroIndex₀_val_ne_zero p
-    refine Complex.weierstrassFactor_ne_zero_of_ne_one 1 ?_
-    intro h
-    exact hz p ((div_eq_one_iff_eq hp0).1 h)
-  have hd : ∀ p, DifferentiableOn ℂ (Φ p) (Set.univ : Set ℂ) := by
-    intro p
-    exact (Complex.Hadamard.differentiable_weierstrassFactor_divisorZeroIndex₀ 1 p).differentiableOn
-  have hm' : Summable fun p => logDeriv (Φ p) z := by
-    have hm :
-        Summable (fun p : Complex.Hadamard.divisorZeroIndex₀ f (Set.univ : Set ℂ) =>
-          1 / (z - Complex.Hadamard.divisorZeroIndex₀_val p) +
-            1 / Complex.Hadamard.divisorZeroIndex₀_val p) :=
-      Complex.Hadamard.summable_logDerivTerms_divisorZeroIndex₀_of_summable_inv_sq h_sum hz
-    refine hm.congr ?_
-    intro p
-    have hp0 : Complex.Hadamard.divisorZeroIndex₀_val p ≠ 0 :=
-      Complex.Hadamard.divisorZeroIndex₀_val_ne_zero p
-    simpa [Φ] using
-      (logDeriv_weierstrassFactor_one_div
-        (a := Complex.Hadamard.divisorZeroIndex₀_val p) (z := z) hp0 (hz p)).symm
-  have htend : MultipliableLocallyUniformlyOn Φ (Set.univ : Set ℂ) := by
-    have hprod :=
-      Complex.Hadamard.hasProdLocallyUniformlyOn_divisorCanonicalProduct_univ
-        (m := 1) (f := f) h_sum
-    simpa [Φ, Complex.Hadamard.divisorCanonicalProduct] using
-      hprod.multipliableLocallyUniformlyOn
-  have hnez : (∏' p, Φ p z) ≠ 0 := by
-    simpa [Φ, Complex.Hadamard.divisorCanonicalProduct] using hprod_ne
-  have hlog :
-      logDeriv (∏' p, Φ p ·) z = ∑' p, logDeriv (Φ p) z :=
-    logDeriv_tprod_eq_tsum (s := (Set.univ : Set ℂ)) isOpen_univ (by simp)
-      hf hd hm' htend hnez
-  calc
-    logDeriv (Complex.Hadamard.divisorCanonicalProduct 1 f (Set.univ : Set ℂ)) z
-        = ∑' p, logDeriv (Φ p) z := by
-          simpa [Φ, Complex.Hadamard.divisorCanonicalProduct] using hlog
-    _ = ∑' p : Complex.Hadamard.divisorZeroIndex₀ f (Set.univ : Set ℂ),
-          (1 / (z - Complex.Hadamard.divisorZeroIndex₀_val p) +
-            1 / Complex.Hadamard.divisorZeroIndex₀_val p) := by
-          refine tsum_congr fun p => ?_
-          have hp0 : Complex.Hadamard.divisorZeroIndex₀_val p ≠ 0 :=
-            Complex.Hadamard.divisorZeroIndex₀_val_ne_zero p
-          simpa [Φ] using
-            logDeriv_weierstrassFactor_one_div
-              (a := Complex.Hadamard.divisorZeroIndex₀_val p) (z := z) hp0 (hz p)
-
 /-- The Kadiri-facing zero-sum formula for the logarithmic derivative of the genus-one divisor
 canonical product attached to Riemann's entire `ξ`. -/
 theorem logDeriv_riemannXi_divisorCanonicalProduct_one_eq_tsum
     {z : ℂ}
     (hz : ∀ p : Complex.Hadamard.divisorZeroIndex₀ riemannXi (Set.univ : Set ℂ),
-      z ≠ Complex.Hadamard.divisorZeroIndex₀_val p)
-    (hprod_ne :
-      Complex.Hadamard.divisorCanonicalProduct 1 riemannXi (Set.univ : Set ℂ) z ≠ 0) :
+      z ≠ Complex.Hadamard.divisorZeroIndex₀_val p) :
     logDeriv (Complex.Hadamard.divisorCanonicalProduct 1 riemannXi (Set.univ : Set ℂ)) z =
       ∑' p : Complex.Hadamard.divisorZeroIndex₀ riemannXi (Set.univ : Set ℂ),
         (1 / (z - Complex.Hadamard.divisorZeroIndex₀_val p) +
           1 / Complex.Hadamard.divisorZeroIndex₀_val p) :=
-  logDeriv_divisorCanonicalProduct_one_eq_tsum
-    summable_riemannXi_divisorZeroIndex₀_norm_inv_sq hz hprod_ne
+  Complex.Hadamard.logDeriv_divisorCanonicalProduct_one_eq_tsum_of_forall_ne
+    summable_riemannXi_divisorZeroIndex₀_norm_inv_sq hz
 
 /-- Kadiri-facing logarithmic derivative identity for a chosen `ξ` Hadamard factorization.
 
 The divisor-product differentiability is supplied by
 `Complex.Hadamard.differentiableAt_divisorCanonicalProduct_univ`, and xi zero summability is
 supplied by `summable_riemannXi_divisorZeroIndex₀_norm_inv_sq`.  The remaining hypotheses are the
-nonzero evaluation and point-not-a-zero assumptions needed for the logarithmic derivative and
-zero-sum terms. -/
+point-not-a-zero assumptions needed for the logarithmic derivative and zero-sum terms; the product
+nonvanishing is derived from the generic divisor-product nonvanishing theorem. -/
 theorem logDeriv_riemannXi_eq_polynomial_derivative_add_tsum
     {P : Polynomial ℂ} {z : ℂ}
     (hfac : ∀ w : ℂ, riemannXi w =
       Complex.exp (Polynomial.eval w P) *
         Complex.Hadamard.divisorCanonicalProduct 1 riemannXi (Set.univ : Set ℂ) w)
     (hz : ∀ p : Complex.Hadamard.divisorZeroIndex₀ riemannXi (Set.univ : Set ℂ),
-      z ≠ Complex.Hadamard.divisorZeroIndex₀_val p)
-    (hprod_ne :
-      Complex.Hadamard.divisorCanonicalProduct 1 riemannXi (Set.univ : Set ℂ) z ≠ 0) :
+      z ≠ Complex.Hadamard.divisorZeroIndex₀_val p) :
     logDeriv riemannXi z =
       Polynomial.eval z P.derivative +
         ∑' p : Complex.Hadamard.divisorZeroIndex₀ riemannXi (Set.univ : Set ℂ),
@@ -383,6 +260,10 @@ theorem logDeriv_riemannXi_eq_polynomial_derivative_add_tsum
     simpa [G] using hfac w
   have hdiff_exp : DifferentiableAt ℂ (fun w : ℂ => Complex.exp (Polynomial.eval w P)) z :=
     ((Complex.hasDerivAt_exp (Polynomial.eval z P)).comp z (P.hasDerivAt z)).differentiableAt
+  have hprod_ne :
+      Complex.Hadamard.divisorCanonicalProduct 1 riemannXi (Set.univ : Set ℂ) z ≠ 0 :=
+    Complex.Hadamard.divisorCanonicalProduct_ne_zero_of_forall_ne
+      1 riemannXi summable_riemannXi_divisorZeroIndex₀_norm_inv_sq hz
   calc
     logDeriv riemannXi z =
         logDeriv (fun w : ℂ => Complex.exp (Polynomial.eval w P) * G w) z := by
@@ -398,7 +279,7 @@ theorem logDeriv_riemannXi_eq_polynomial_derivative_add_tsum
         ∑' p : Complex.Hadamard.divisorZeroIndex₀ riemannXi (Set.univ : Set ℂ),
           (1 / (z - Complex.Hadamard.divisorZeroIndex₀_val p) +
             1 / Complex.Hadamard.divisorZeroIndex₀_val p) := by
-          rw [logDeriv_exp_polynomial]
+          rw [Polynomial.logDeriv_exp_eval]
           rw [show logDeriv G z =
               ∑' p : Complex.Hadamard.divisorZeroIndex₀ riemannXi (Set.univ : Set ℂ),
                 (1 / (z - Complex.Hadamard.divisorZeroIndex₀_val p) +
@@ -406,7 +287,7 @@ theorem logDeriv_riemannXi_eq_polynomial_derivative_add_tsum
             by
               simpa [G] using
                 logDeriv_riemannXi_divisorCanonicalProduct_one_eq_tsum
-                  hz hprod_ne]
+                  hz]
 
 /-- Hadamard factorization for Riemann's entire `ξ` at genus one. -/
 theorem riemannXi_hadamard_factorization :
@@ -434,13 +315,12 @@ factorization with the Kadiri zero-sum bridge.
 
 This theorem is intentionally phrased as an existence statement for the polynomial `P`: it tests
 that the factorization theorem and the logarithmic-derivative bridge compose without exposing the
-origin monomial, product differentiability, or zero-term summability details to callers. -/
+origin monomial, product differentiability, product nonvanishing, or zero-term summability details
+to callers. -/
 theorem exists_riemannXi_logDeriv_eq_polynomial_derivative_add_tsum
     {z : ℂ}
     (hz : ∀ p : Complex.Hadamard.divisorZeroIndex₀ riemannXi (Set.univ : Set ℂ),
-      z ≠ Complex.Hadamard.divisorZeroIndex₀_val p)
-    (hprod_ne :
-      Complex.Hadamard.divisorCanonicalProduct 1 riemannXi (Set.univ : Set ℂ) z ≠ 0) :
+      z ≠ Complex.Hadamard.divisorZeroIndex₀_val p) :
     ∃ (P : Polynomial ℂ), P.degree ≤ 1 ∧
       logDeriv riemannXi z =
         Polynomial.eval z P.derivative +
@@ -448,7 +328,7 @@ theorem exists_riemannXi_logDeriv_eq_polynomial_derivative_add_tsum
             (1 / (z - Complex.Hadamard.divisorZeroIndex₀_val p) +
               1 / Complex.Hadamard.divisorZeroIndex₀_val p) := by
   rcases riemannXi_hadamard_factorization_no_monomial with ⟨P, hdeg, hfac⟩
-  exact ⟨P, hdeg, logDeriv_riemannXi_eq_polynomial_derivative_add_tsum hfac hz hprod_ne⟩
+  exact ⟨P, hdeg, logDeriv_riemannXi_eq_polynomial_derivative_add_tsum hfac hz⟩
 
 /-- Reindexed divisor Hadamard factorization for Riemann's entire `ξ`. -/
 theorem riemannXi_hadamard_factorization_reindex

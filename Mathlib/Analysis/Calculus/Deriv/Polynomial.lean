@@ -7,9 +7,11 @@ module
 
 public import Mathlib.Algebra.Polynomial.AlgebraMap
 public import Mathlib.Algebra.Polynomial.Derivative
+public import Mathlib.Analysis.Calculus.LogDeriv
 public import Mathlib.Analysis.Calculus.Deriv.Mul
 public import Mathlib.Analysis.Calculus.Deriv.Pow
 public import Mathlib.Analysis.Calculus.Deriv.Add
+public import Mathlib.Analysis.SpecialFunctions.ExpDeriv
 
 /-!
 # Derivatives of polynomials
@@ -155,5 +157,18 @@ protected theorem fderivWithin (hxs : UniqueDiffWithinAt 𝕜 s x) :
 protected theorem fderivWithin_aeval (hxs : UniqueDiffWithinAt 𝕜 s x) :
     fderivWithin 𝕜 (fun x => aeval x q) s x = smulRight (1 : 𝕜 →L[𝕜] 𝕜) (aeval x (derivative q)) :=
   (q.hasFDerivWithinAt_aeval x).fderivWithin hxs
+
+/-- The logarithmic derivative of the exponential of a complex polynomial is the polynomial
+derivative. -/
+theorem logDeriv_exp_eval (P : ℂ[X]) (z : ℂ) :
+    logDeriv (fun w : ℂ => Complex.exp (Polynomial.eval w P)) z =
+      Polynomial.eval z P.derivative := by
+  have hderiv :
+      deriv (fun w : ℂ => Complex.exp (Polynomial.eval w P)) z =
+        Complex.exp (Polynomial.eval z P) * Polynomial.eval z P.derivative := by
+    simpa [Function.comp_def, mul_comm] using
+      ((Complex.hasDerivAt_exp (Polynomial.eval z P)).comp z (P.hasDerivAt z)).deriv
+  rw [logDeriv_apply, hderiv]
+  field_simp [Complex.exp_ne_zero (Polynomial.eval z P)]
 
 end Polynomial

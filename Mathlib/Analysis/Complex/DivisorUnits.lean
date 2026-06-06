@@ -23,16 +23,13 @@ single divisor-support point.
 
 @[expose] public section
 
-noncomputable section
-
 open Set
 
 namespace Complex.Hadamard
 
 lemma divisorZeroIndex₀_val_eq_of_mem_ball
     {f : ℂ → ℂ} {z₀ : ℂ} {ε : ℝ}
-    (hball :
-      Metric.ball z₀ ε ∩ (MeromorphicOn.divisor f (Set.univ : Set ℂ)).support = {z₀})
+    (hball : Metric.ball z₀ ε ∩ (MeromorphicOn.divisor f (Set.univ : Set ℂ)).support = {z₀})
     (p : divisorZeroIndex₀ f (Set.univ : Set ℂ))
     (hp : divisorZeroIndex₀_val p ∈ Metric.ball z₀ ε) :
     divisorZeroIndex₀_val p = z₀ := by
@@ -45,8 +42,7 @@ lemma divisorZeroIndex₀_val_eq_of_mem_ball
 
 lemma weierstrassFactor_div_ne_zero_on_ball_of_val_ne
     (m : ℕ) {f : ℂ → ℂ} {z₀ : ℂ} {ε : ℝ}
-    (hball :
-      Metric.ball z₀ ε ∩ (MeromorphicOn.divisor f (Set.univ : Set ℂ)).support = {z₀})
+    (hball : Metric.ball z₀ ε ∩ (MeromorphicOn.divisor f (Set.univ : Set ℂ)).support = {z₀})
     (p : divisorZeroIndex₀ f (Set.univ : Set ℂ)) (hp : divisorZeroIndex₀_val p ≠ z₀) :
     ∀ z ∈ Metric.ball z₀ ε, weierstrassFactor m (z / divisorZeroIndex₀_val p) ≠ 0 := by
   intro z hzball h0
@@ -70,8 +66,7 @@ lemma weierstrassFactor_div_ne_zero_on_ball_of_val_ne
 
 lemma weierstrassFactor_div_ne_zero_on_ball_punctured
     (m : ℕ) {f : ℂ → ℂ} {z₀ : ℂ} {ε : ℝ}
-    (hball :
-      Metric.ball z₀ ε ∩ (MeromorphicOn.divisor f (Set.univ : Set ℂ)).support = {z₀}) :
+    (hball : Metric.ball z₀ ε ∩ (MeromorphicOn.divisor f (Set.univ : Set ℂ)).support = {z₀}) :
     ∀ z ∈ Metric.ball z₀ ε, z ≠ z₀ →
       ∀ p : divisorZeroIndex₀ f (Set.univ : Set ℂ),
         weierstrassFactor m (z / divisorZeroIndex₀_val p) ≠ 0 := by
@@ -88,19 +83,17 @@ lemma weierstrassFactor_div_ne_zero_on_ball_punctured
 ball around `z₀`. -/
 noncomputable def weierstrassFactorUnits
     (m : ℕ) (f : ℂ → ℂ) (z₀ : ℂ) (ε : ℝ)
-    (hball :
-      Metric.ball z₀ ε ∩ (MeromorphicOn.divisor f (Set.univ : Set ℂ)).support = {z₀})
+    (hball : Metric.ball z₀ ε ∩ (MeromorphicOn.divisor f (Set.univ : Set ℂ)).support = {z₀})
     (z : ℂ) (hz : z ∈ Metric.ball z₀ ε) (hz0 : z ≠ z₀) :
     divisorZeroIndex₀ f (Set.univ : Set ℂ) → Units ℂ :=
-  fun p =>
-    Units.mk0 (weierstrassFactor m (z / divisorZeroIndex₀_val p))
-      (weierstrassFactor_div_ne_zero_on_ball_punctured (m := m) (f := f) (z₀ := z₀)
-        (ε := ε) hball z hz hz0 p)
+  fun p => Units.mk0 (weierstrassFactor m (z / divisorZeroIndex₀_val p))
+    (weierstrassFactor_div_ne_zero_on_ball_punctured (m := m) (f := f) (z₀ := z₀)
+      (ε := ε) hball z hz hz0 p)
 
-@[simp] lemma weierstrassFactorUnits_coe
+@[simp]
+lemma weierstrassFactorUnits_coe
     (m : ℕ) (f : ℂ → ℂ) (z₀ : ℂ) (ε : ℝ)
-    (hball :
-      Metric.ball z₀ ε ∩ (MeromorphicOn.divisor f (Set.univ : Set ℂ)).support = {z₀})
+    (hball : Metric.ball z₀ ε ∩ (MeromorphicOn.divisor f (Set.univ : Set ℂ)).support = {z₀})
     (z : ℂ) (hz : z ∈ Metric.ball z₀ ε) (hz0 : z ≠ z₀)
     (p : divisorZeroIndex₀ f (Set.univ : Set ℂ)) :
     ((weierstrassFactorUnits (m := m) (f := f) (z₀ := z₀) (ε := ε)

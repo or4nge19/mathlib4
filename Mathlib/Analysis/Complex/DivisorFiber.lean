@@ -54,7 +54,6 @@ lemma divisor_univ_eq_analyticOrderNatAt_int {f : ℂ → ℂ} (hf : Differentia
 theorem divisorZeroIndex₀_fiber_finite (f : ℂ → ℂ) (z₀ : ℂ) :
     ({p : divisorZeroIndex₀ f (Set.univ : Set ℂ) | divisorZeroIndex₀_val p = z₀} :
       Set _).Finite := by
-  classical
   have hsub :
       ({p : divisorZeroIndex₀ f (Set.univ : Set ℂ) | divisorZeroIndex₀_val p = z₀} : Set _)
         ⊆ ({p : divisorZeroIndex₀ f (Set.univ : Set ℂ) | ‖divisorZeroIndex₀_val p‖ ≤ ‖z₀‖} :
@@ -71,14 +70,14 @@ theorem divisorZeroIndex₀_fiber_finite (f : ℂ → ℂ) (z₀ : ℂ) :
   exact hfin.subset hsub
 
 /-- The finite fiber over `z₀` in the divisor-index type `divisorZeroIndex₀`. -/
-noncomputable def divisorZeroIndex₀_fiberFinset (f : ℂ → ℂ) (z₀ : ℂ) :
+def divisorZeroIndex₀_fiberFinset (f : ℂ → ℂ) (z₀ : ℂ) :
     Finset (divisorZeroIndex₀ f (Set.univ : Set ℂ)) :=
   (divisorZeroIndex₀_fiber_finite (f := f) z₀).toFinset
 
-@[simp] lemma mem_divisorZeroIndex₀_fiberFinset (f : ℂ → ℂ) (z₀ : ℂ)
+@[simp]
+lemma mem_divisorZeroIndex₀_fiberFinset (f : ℂ → ℂ) (z₀ : ℂ)
     (p : divisorZeroIndex₀ f (Set.univ : Set ℂ)) :
     p ∈ divisorZeroIndex₀_fiberFinset (f := f) z₀ ↔ divisorZeroIndex₀_val p = z₀ := by
-  classical
   simp [divisorZeroIndex₀_fiberFinset]
 
 theorem eventually_atTop_subset_fiberFinset
@@ -93,7 +92,6 @@ theorem eventually_atTop_subset_fiberFinset
 lemma divisorZeroIndex₀_fiberFinset_card_eq_toNat_divisor (f : ℂ → ℂ) {z₀ : ℂ} (hz₀ : z₀ ≠ 0) :
     (divisorZeroIndex₀_fiberFinset (f := f) z₀).card =
       Int.toNat (MeromorphicOn.divisor f (Set.univ : Set ℂ) z₀) := by
-  classical
   let S : Set (divisorZeroIndex₀ f (Set.univ : Set ℂ)) := {p | divisorZeroIndex₀_val p = z₀}
   have hS : S.Finite := divisorZeroIndex₀_fiber_finite (f := f) z₀
   set n : ℕ := Int.toNat (MeromorphicOn.divisor f (Set.univ : Set ℂ) z₀)
@@ -137,7 +135,6 @@ lemma divisorZeroIndex₀_fiberFinset_card_eq_toNat_divisor (f : ℂ → ℂ) {z
 lemma divisorZeroIndex₀_fiberFinset_card_eq_analyticOrderNatAt
     {f : ℂ → ℂ} (hf : Differentiable ℂ f) {z₀ : ℂ} (hz₀ : z₀ ≠ 0) :
     (divisorZeroIndex₀_fiberFinset (f := f) z₀).card = analyticOrderNatAt f z₀ := by
-  classical
   have hdiv :
       MeromorphicOn.divisor f (Set.univ : Set ℂ) z₀ = (analyticOrderNatAt f z₀ : ℤ) :=
     divisor_univ_eq_analyticOrderNatAt_int (f := f) hf z₀
@@ -152,7 +149,6 @@ lemma mem_divisorZeroIndex₀_fiberFinset_of_val_mem_ball
     (p : divisorZeroIndex₀ f (Set.univ : Set ℂ))
     (hp : divisorZeroIndex₀_val p ∈ Metric.ball z₀ ε) :
     p ∈ divisorZeroIndex₀_fiberFinset (f := f) z₀ := by
-  classical
   have : divisorZeroIndex₀_val p = z₀ :=
     divisorZeroIndex₀_val_eq_of_mem_ball (f := f) (z₀ := z₀) (ε := ε) hball p hp
   exact (mem_divisorZeroIndex₀_fiberFinset (f := f) (z₀ := z₀) p).2 this
@@ -164,7 +160,6 @@ lemma mem_divisorZeroIndex₀_fiberFinset_iff_val_mem_ball
       Metric.ball z₀ ε ∩ (MeromorphicOn.divisor f (Set.univ : Set ℂ)).support = {z₀})
     (p : divisorZeroIndex₀ f (Set.univ : Set ℂ)) :
     p ∈ divisorZeroIndex₀_fiberFinset (f := f) z₀ ↔ divisorZeroIndex₀_val p ∈ Metric.ball z₀ ε := by
-  classical
   constructor
   · intro hp
     have : divisorZeroIndex₀_val p = z₀ :=
@@ -176,7 +171,6 @@ lemma mem_divisorZeroIndex₀_fiberFinset_iff_val_mem_ball
 lemma not_mem_divisorZeroIndex₀_fiberFinset_iff_val_ne
     {f : ℂ → ℂ} (z₀ : ℂ) (p : divisorZeroIndex₀ f (Set.univ : Set ℂ)) :
     p ∉ divisorZeroIndex₀_fiberFinset (f := f) z₀ ↔ divisorZeroIndex₀_val p ≠ z₀ := by
-  classical
   simp [mem_divisorZeroIndex₀_fiberFinset]
 
 lemma val_not_mem_ball_of_not_mem_fiberFinset

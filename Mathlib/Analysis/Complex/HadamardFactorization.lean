@@ -43,8 +43,6 @@ assemble the full factorization `hadamard_factorization_of_order`.
 
 @[expose] public section
 
-noncomputable section
-
 namespace Complex.Hadamard
 
 open Filter Topology Set Complex
@@ -64,12 +62,14 @@ noncomputable def centeredHadamardDenom (m : ℕ) (c : ℂ) (f : ℂ → ℂ) (z
 noncomputable def centeredHadamardQuotient (m : ℕ) (c : ℂ) (f : ℂ → ℂ) (z : ℂ) : ℂ :=
   f z / centeredHadamardDenom m c f z
 
-@[simp] theorem centeredHadamardDenom_center_eq_one {m : ℕ} {c : ℂ} {f : ℂ → ℂ}
+@[simp]
+theorem centeredHadamardDenom_center_eq_one {m : ℕ} {c : ℂ} {f : ℂ → ℂ}
     (h : analyticOrderNatAt f c = 0) :
     centeredHadamardDenom m c f c = 1 := by
   simp [centeredHadamardDenom, h]
 
-@[simp] theorem centeredHadamardDenom_center_eq_zero {m : ℕ} {c : ℂ} {f : ℂ → ℂ}
+@[simp]
+theorem centeredHadamardDenom_center_eq_zero {m : ℕ} {c : ℂ} {f : ℂ → ℂ}
     (h : analyticOrderNatAt f c ≠ 0) :
     centeredHadamardDenom m c f c = 0 := by
   simp [centeredHadamardDenom, h]
@@ -378,12 +378,14 @@ theorem divisor_hadamardQuotient_eq_zero
     _ = 0 := by
           simp [hdiv_denom]
 
+/-- The Hadamard quotient is an entire zero-free function when the canonical product has the
+required convergence.  The hypothesis `hnot` excludes the identically zero function, for which the
+discrete divisor/order bookkeeping used by Hadamard factorization is not the intended API. -/
 theorem exists_entire_nonzero_hadamardQuotient
     (m : ℕ) {f : ℂ → ℂ} (hf : Differentiable ℂ f) (hnot : ∃ z : ℂ, f z ≠ 0)
     (h_sum : Summable (fun p : divisorZeroIndex₀ f (Set.univ : Set ℂ) =>
       ‖divisorZeroIndex₀_val p‖⁻¹ ^ (m + 1))) :
-    ∃ H : ℂ → ℂ,
-      Differentiable ℂ H ∧
+    ∃ H : ℂ → ℂ, Differentiable ℂ H ∧
       (∀ z, H z ≠ 0) ∧
       ∀ z : ℂ,
         f z =

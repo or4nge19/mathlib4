@@ -29,7 +29,6 @@ canonical products.
 
 @[expose] public section
 
-noncomputable section
 
 open Set
 
@@ -51,11 +50,13 @@ abbrev divisorZeroIndex₀ (f : ℂ → ℂ) (U : Set ℂ) : Type :=
 abbrev divisorZeroIndex₀_val {f : ℂ → ℂ} {U : Set ℂ} (p : divisorZeroIndex₀ f U) : ℂ :=
   p.1.1
 
-@[simp] lemma divisorZeroIndex₀_val_ne_zero {f : ℂ → ℂ} {U : Set ℂ} (p : divisorZeroIndex₀ f U) :
+@[simp]
+lemma divisorZeroIndex₀_val_ne_zero {f : ℂ → ℂ} {U : Set ℂ} (p : divisorZeroIndex₀ f U) :
     divisorZeroIndex₀_val p ≠ 0 := p.2
 
 /-- A (nonzero) divisor index has nonzero multiplicity at its underlying point. -/
-@[simp] lemma divisorZeroIndex₀_val_mem_divisor_support {f : ℂ → ℂ} {U : Set ℂ}
+@[simp]
+lemma divisorZeroIndex₀_val_mem_divisor_support {f : ℂ → ℂ} {U : Set ℂ}
     (p : divisorZeroIndex₀ f U) :
     MeromorphicOn.divisor f U (divisorZeroIndex₀_val p) ≠ 0 := by
   have hn :
@@ -86,7 +87,7 @@ lemma exists_ball_inter_divisor_support_eq_singleton_of_index
       (divisorZeroIndex₀_val_mem_divisor_support' (p := p))
 
 /-- The canonical product attached to the (nonzero) divisor of `f` on `U`. -/
-def divisorCanonicalProduct (m : ℕ) (f : ℂ → ℂ) (U : Set ℂ) (z : ℂ) : ℂ :=
+noncomputable def divisorCanonicalProduct (m : ℕ) (f : ℂ → ℂ) (U : Set ℂ) (z : ℂ) : ℂ :=
   ∏' p : divisorZeroIndex₀ f U, weierstrassFactor m (z / divisorZeroIndex₀_val p)
 
 /-! ## Centered products -/
@@ -109,22 +110,26 @@ abbrev centeredDivisorZeroIndex_val {c : ℂ} {f : ℂ → ℂ}
     (p : centeredDivisorZeroIndex c f) : ℂ :=
   c + centeredDivisorZeroIndex_coord p
 
-@[simp] lemma centeredDivisorZeroIndex_val_sub_center {c : ℂ} {f : ℂ → ℂ}
+@[simp]
+lemma centeredDivisorZeroIndex_val_sub_center {c : ℂ} {f : ℂ → ℂ}
     (p : centeredDivisorZeroIndex c f) :
     centeredDivisorZeroIndex_val p - c = centeredDivisorZeroIndex_coord p := by
   simp [centeredDivisorZeroIndex_val, centeredDivisorZeroIndex_coord]
 
-@[simp] lemma centeredDivisorZeroIndex_coord_ne_zero {c : ℂ} {f : ℂ → ℂ}
+@[simp]
+lemma centeredDivisorZeroIndex_coord_ne_zero {c : ℂ} {f : ℂ → ℂ}
     (p : centeredDivisorZeroIndex c f) :
     centeredDivisorZeroIndex_coord p ≠ 0 :=
   divisorZeroIndex₀_val_ne_zero p
 
-@[simp] lemma centeredDivisorZeroIndex_val_sub_center_ne_zero {c : ℂ} {f : ℂ → ℂ}
+@[simp]
+lemma centeredDivisorZeroIndex_val_sub_center_ne_zero {c : ℂ} {f : ℂ → ℂ}
     (p : centeredDivisorZeroIndex c f) :
     centeredDivisorZeroIndex_val p - c ≠ 0 := by
   simp
 
-@[simp] lemma centeredDivisorZeroIndex_val_ne_center {c : ℂ} {f : ℂ → ℂ}
+@[simp]
+lemma centeredDivisorZeroIndex_val_ne_center {c : ℂ} {f : ℂ → ℂ}
     (p : centeredDivisorZeroIndex c f) :
     centeredDivisorZeroIndex_val p ≠ c := by
   intro h
@@ -132,7 +137,7 @@ abbrev centeredDivisorZeroIndex_val {c : ℂ} {f : ℂ → ℂ}
 
 /-- Canonical product centered at `c`: the zero at `c` is omitted from the product and is handled
 by the monomial `(z - c) ^ analyticOrderNatAt f c` in centered Hadamard factorization. -/
-def centeredDivisorCanonicalProduct (m : ℕ) (c : ℂ) (f : ℂ → ℂ) (z : ℂ) : ℂ :=
+noncomputable def centeredDivisorCanonicalProduct (m : ℕ) (c : ℂ) (f : ℂ → ℂ) (z : ℂ) : ℂ :=
   ∏' p : centeredDivisorZeroIndex c f,
     weierstrassFactor m ((z - c) / centeredDivisorZeroIndex_coord p)
 
@@ -163,7 +168,8 @@ theorem centeredDivisorCanonicalProduct_eq_canonicalProduct_of_equiv
   simpa [Complex.canonicalProduct_def] using
     centeredDivisorCanonicalProduct_eq_tprod_of_equiv (m := m) (c := c) (f := f) e z
 
-@[simp] lemma centeredDivisorCanonicalProduct_center (m : ℕ) (c : ℂ) (f : ℂ → ℂ) :
+@[simp]
+lemma centeredDivisorCanonicalProduct_center (m : ℕ) (c : ℂ) (f : ℂ → ℂ) :
     centeredDivisorCanonicalProduct m c f c = 1 := by
   classical
   simp [centeredDivisorCanonicalProduct]
@@ -187,7 +193,8 @@ theorem divisorCanonicalProduct_eq_canonicalProduct_of_equiv
   simpa [Complex.canonicalProduct_def] using
     divisorCanonicalProduct_eq_tprod_of_equiv (m := m) (f := f) (U := U) e z
 
-@[simp] lemma divisorCanonicalProduct_zero (m : ℕ) (f : ℂ → ℂ) (U : Set ℂ) :
+@[simp]
+lemma divisorCanonicalProduct_zero (m : ℕ) (f : ℂ → ℂ) (U : Set ℂ) :
     divisorCanonicalProduct m f U 0 = 1 := by
   classical
   simp [divisorCanonicalProduct]

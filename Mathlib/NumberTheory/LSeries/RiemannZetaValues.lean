@@ -25,8 +25,6 @@ Euler-Mascheroni formula for `Λ₀(1)` is in `Mathlib/NumberTheory/Harmonic/Zet
 
 @[expose] public section
 
-noncomputable section
-
 open Complex Set
 
 namespace Riemann
