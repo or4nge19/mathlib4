@@ -1,7 +1,7 @@
 /-
 Copyright (c) 2022 Anatole Dedecker. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Anatole Dedecker
+Authors: Anatole Dedecker, Matteo Cipollina
 -/
 module
 
@@ -32,10 +32,15 @@ of requiring self adjointness in the definition.
 * `ContinuousLinearMap.isPositive_iff_complex` : in a ***complex*** Hilbert space,
   checking that `⟪T x, x⟫` is a nonnegative real number for all `x` suffices to prove that
   `T` is positive.
+* `ContinuousLinearMap.IsPositive.norm_apply_sq_le` : Cauchy–Schwarz for a positive operator,
+  `‖T x‖² ≤ ‖T‖ re ⟪T x, x⟫`.
+* `ContinuousLinearMap.IsPositive.norm_le_norm_of_le` : the operator norm is monotone on
+  positive operators.
 
 ## References
 
 * [Bourbaki, *Topological Vector Spaces*][bourbaki1987]
+* [Blackadar, *Operator Algebras*, I.3.2.5][blackadar2006operator]
 
 ## Tags
 
@@ -491,6 +496,98 @@ instance instIsOrderedModule : IsOrderedModule 𝕜 (E →L[𝕜] E) where
     rw [← coe_le_coe_iff]; exact smul_le_smul_of_nonneg_right hb (by simpa)
 
 end Order
+
+/-! ### Cauchy–Schwarz and norm monotonicity -/
+
+/-- **Cauchy–Schwarz for a positive operator**: `‖T x‖² ≤ ‖T‖ re ⟪T x, x⟫`.
+
+Positivity applied to `x - t T x` gives `0 ≤ ⟪T x, x⟫ - 2t‖T x‖² + t² ⟪T² x, T x⟫` for every real
+`t`, and `⟪T² x, T x⟫ ≤ ‖T‖ ‖T x‖²`; take `t = ‖T‖⁻¹`. This is the inequality behind the strong
+convergence of bounded monotone nets of operators
+([Blackadar, I.3.2.5][blackadar2006operator]). -/
+theorem IsPositive.norm_apply_sq_le {T : E →L[𝕜] E} (hT : T.IsPositive) (x : E) :
+    ‖T x‖ ^ 2 ≤ ‖T‖ * re ⟪T x, x⟫ := by
+  rcases eq_or_lt_of_le (norm_nonneg T) with hT0 | hT0
+  · have hz : T = 0 := norm_eq_zero.1 hT0.symm
+    simp [hz]
+  set A : ℝ := re ⟪T x, x⟫ with hA
+  set t : ℝ := ‖T‖⁻¹ with ht
+  have hkey := hT.2 (x - (t : 𝕜) • T x)
+  rw [reApplyInnerSelf_apply] at hkey
+  have hsymm : ⟪T (T x), x⟫ = ⟪T x, T x⟫ := (hT.isSymmetric (T x) x).symm ▸ rfl
+  have hexp : re ⟪T (x - (t : 𝕜) • T x), x - (t : 𝕜) • T x⟫ =
+      A - 2 * t * ‖T x‖ ^ 2 + t ^ 2 * re ⟪T (T x), T x⟫ := by
+    have hTx : ⟪T x, T x⟫ = ((‖T x‖ ^ 2 : ℝ) : 𝕜) := by
+      rw [inner_self_eq_norm_sq_to_K]
+      norm_cast
+    rw [map_sub, _root_.map_smul, inner_sub_left, inner_sub_right, inner_sub_right]
+    simp only [inner_smul_left, inner_smul_right, RCLike.conj_ofReal, hsymm, hTx]
+    rw [map_sub, map_sub, map_sub]
+    simp only [RCLike.mul_re, RCLike.ofReal_re, RCLike.ofReal_im, RCLike.mul_im, zero_mul,
+      sub_zero, mul_zero]
+    rw [hA]
+    ring
+  rw [hexp] at hkey
+  have hB : re ⟪T (T x), T x⟫ ≤ ‖T‖ * ‖T x‖ ^ 2 := by
+    calc re ⟪T (T x), T x⟫ ≤ ‖(⟪T (T x), T x⟫)‖ := re_le_norm _
+      _ ≤ ‖T (T x)‖ * ‖T x‖ := norm_inner_le_norm _ _
+      _ ≤ (‖T‖ * ‖T x‖) * ‖T x‖ := by gcongr; exact T.le_opNorm (T x)
+      _ = ‖T‖ * ‖T x‖ ^ 2 := by ring
+  have ht2 : t ^ 2 * (‖T‖ * ‖T x‖ ^ 2) = t * ‖T x‖ ^ 2 := by
+    rw [ht]
+    field_simp
+  have hstep : t ^ 2 * re ⟪T (T x), T x⟫ ≤ t * ‖T x‖ ^ 2 := by
+    rw [← ht2]
+    exact mul_le_mul_of_nonneg_left hB (by positivity)
+  have hfinal : t * ‖T x‖ ^ 2 ≤ A := by linarith
+  rw [hA]
+  calc ‖T x‖ ^ 2 = ‖T‖ * (‖T‖⁻¹ * ‖T x‖ ^ 2) := by field_simp
+    _ ≤ ‖T‖ * A := mul_le_mul_of_nonneg_left hfinal hT0.le
+
+/-- `A.reApplyInnerSelf x ≤ ‖A‖ ‖x‖²` for any operator: Cauchy–Schwarz for the ambient inner
+product. -/
+theorem reApplyInnerSelf_le_norm_mul_norm_sq {A : E →L[𝕜] E} (x : E) :
+    A.reApplyInnerSelf x ≤ ‖A‖ * ‖x‖ ^ 2 := by
+  rw [reApplyInnerSelf_apply]
+  calc re ⟪A x, x⟫ ≤ ‖(⟪A x, x⟫)‖ := re_le_norm _
+    _ ≤ ‖A x‖ * ‖x‖ := norm_inner_le_norm _ _
+    _ ≤ (‖A‖ * ‖x‖) * ‖x‖ := by gcongr; exact A.le_opNorm x
+    _ = ‖A‖ * ‖x‖ ^ 2 := by ring
+
+/-- **The operator norm is monotone on positive operators**: `0 ≤ A ≤ B` implies `‖A‖ ≤ ‖B‖`.
+
+Over `ℂ` this also follows from `CStarAlgebra.norm_le_norm_of_le_of_nonneg`, but that argument
+uses the continuous functional calculus. The proof here is elementary, covers `RCLike`, and does
+not require completeness of the space. -/
+theorem IsPositive.norm_le_norm_of_le {A B : E →L[𝕜] E} (hA : A.IsPositive) (hAB : A ≤ B) :
+    ‖A‖ ≤ ‖B‖ := by
+  rcases eq_or_lt_of_le (norm_nonneg A) with hA0 | hA0
+  · rw [← hA0]; exact norm_nonneg B
+  have hmono : ∀ x, re ⟪A x, x⟫ ≤ re ⟪B x, x⟫ := by
+    intro x
+    have hd := hAB
+    rw [le_def] at hd
+    have := hd.2 x
+    rw [reApplyInnerSelf_apply] at this
+    simp only [_root_.sub_apply, inner_sub_left, map_sub] at this
+    linarith
+  have hbound : ∀ x, ‖A x‖ ≤ Real.sqrt (‖A‖ * ‖B‖) * ‖x‖ := by
+    intro x
+    have h1 : ‖A x‖ ^ 2 ≤ ‖A‖ * ‖B‖ * ‖x‖ ^ 2 := by
+      calc ‖A x‖ ^ 2 ≤ ‖A‖ * re ⟪A x, x⟫ := hA.norm_apply_sq_le x
+        _ ≤ ‖A‖ * (‖B‖ * ‖x‖ ^ 2) := by
+            refine mul_le_mul_of_nonneg_left ?_ (norm_nonneg A)
+            exact le_trans (hmono x) (reApplyInnerSelf_le_norm_mul_norm_sq x)
+        _ = ‖A‖ * ‖B‖ * ‖x‖ ^ 2 := by ring
+    have h2 : Real.sqrt (‖A x‖ ^ 2) ≤ Real.sqrt (‖A‖ * ‖B‖ * ‖x‖ ^ 2) := Real.sqrt_le_sqrt h1
+    rwa [Real.sqrt_sq (norm_nonneg _), Real.sqrt_mul (by positivity),
+      Real.sqrt_sq (norm_nonneg x)] at h2
+  have hle : ‖A‖ ≤ Real.sqrt (‖A‖ * ‖B‖) :=
+    A.opNorm_le_bound (Real.sqrt_nonneg _) hbound
+  have hsq : ‖A‖ ^ 2 ≤ ‖A‖ * ‖B‖ := by
+    calc ‖A‖ ^ 2 ≤ (Real.sqrt (‖A‖ * ‖B‖)) ^ 2 := pow_le_pow_left₀ (norm_nonneg A) hle 2
+      _ = ‖A‖ * ‖B‖ := Real.sq_sqrt (by positivity)
+  nlinarith [hsq, hA0]
 
 /-- An idempotent operator is positive if and only if it is self-adjoint. -/
 @[grind →]
