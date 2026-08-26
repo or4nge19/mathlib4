@@ -1,13 +1,14 @@
 /-
 Copyright (c) 2024 Frédéric Dupuis. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Frédéric Dupuis
+Authors: Frédéric Dupuis, Matteo Cipollina
 -/
 module
 
 public import Mathlib.Algebra.Star.TransferInstance
 public import Mathlib.Analysis.InnerProductSpace.Adjoint
 public import Mathlib.Analysis.InnerProductSpace.Dual
+public import Mathlib.Analysis.InnerProductSpace.Positive
 public import Mathlib.Analysis.LocallyConvex.WeakOperatorTopology
 
 /-!
@@ -24,6 +25,7 @@ applications of elements of the dual and inner products with vectors in the spac
   `x : E`, `y : F`. Also included are the corresponding characterizations of continuity.
 + The adjoint operation is continuous in the weak operator topology, declared as an instance of
   `ContinuousStar (F →WOT[𝕜] F)`.
++ `ContinuousLinearMapWOT.isClosed_setOf_isPositive`: the positive operators are WOT-closed.
 -/
 
 public section
@@ -92,5 +94,27 @@ instance : ContinuousStar (F →WOT[𝕜] F) where
     rw [forall_comm]
     conv in ⟪_, _⟫_𝕜 => rw [← inner_conj_symm, ← RCLike.star_def]
     fun_prop
+
+/-- The positive operators are a closed subset of the weak operator topology. Equivalently, the
+positive cone of the Loewner order is WOT-closed. -/
+theorem isClosed_setOf_isPositive :
+    IsClosed {A : F →WOT[𝕜] F | (toCLM A).IsPositive} := by
+  have hinner (x y : F) : Continuous fun A : F →WOT[𝕜] F ↦ ⟪y, A x⟫_𝕜 :=
+    continuous_inner_apply (f := id) continuous_id x y
+  simp_rw [ContinuousLinearMap.isPositive_def, Set.ofPred_and]
+  refine .inter ?_ ?_
+  · simp_rw [LinearMap.IsSymmetric, Set.ofPred_forall]
+    exact isClosed_iInter fun x ↦ isClosed_iInter fun y ↦ isClosed_eq
+      ((RCLike.continuous_conj.comp (hinner x y)).congr fun A ↦ inner_conj_symm (A x) y)
+      (hinner y x)
+  · simp_rw [ContinuousLinearMap.reApplyInnerSelf_apply, Set.ofPred_forall]
+    exact isClosed_iInter fun x ↦ isClosed_le continuous_const
+      ((RCLike.continuous_re.comp (hinner x x)).congr fun A ↦ (inner_re_symm (A x) x).symm)
+
+/-- The positive cone of the Loewner order is closed in the weak operator topology. -/
+theorem isClosed_setOf_nonneg :
+    IsClosed {A : F →WOT[𝕜] F | 0 ≤ toCLM A} := by
+  convert isClosed_setOf_isPositive (𝕜 := 𝕜) (F := F) using 1
+  exact Set.ext fun A ↦ (toCLM A).nonneg_iff_isPositive
 
 end ContinuousLinearMapWOT
