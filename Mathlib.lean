@@ -2073,6 +2073,7 @@ public import Mathlib.Analysis.InnerProductSpace.LaxMilgram
 public import Mathlib.Analysis.InnerProductSpace.LinearMap
 public import Mathlib.Analysis.InnerProductSpace.LinearPMap
 public import Mathlib.Analysis.InnerProductSpace.MeanErgodic
+public import Mathlib.Analysis.InnerProductSpace.MonotoneConvergence
 public import Mathlib.Analysis.InnerProductSpace.MulOpposite
 public import Mathlib.Analysis.InnerProductSpace.NormDet
 public import Mathlib.Analysis.InnerProductSpace.NormPow
