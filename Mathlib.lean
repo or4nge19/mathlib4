@@ -4757,6 +4757,9 @@ public import Mathlib.Geometry.Manifold.Metrizable
 public import Mathlib.Geometry.Manifold.Notation
 public import Mathlib.Geometry.Manifold.PartitionOfUnity
 public import Mathlib.Geometry.Manifold.PoincareConjecture
+public import Mathlib.Geometry.Manifold.PseudoRiemannian.Basic
+public import Mathlib.Geometry.Manifold.PseudoRiemannian.Lorentzian
+public import Mathlib.Geometry.Manifold.PseudoRiemannian.Riemannian
 public import Mathlib.Geometry.Manifold.Riemannian.Basic
 public import Mathlib.Geometry.Manifold.Riemannian.PathELength
 public import Mathlib.Geometry.Manifold.Sheaf.Basic
@@ -4778,6 +4781,7 @@ public import Mathlib.Geometry.Manifold.VectorBundle.HomInverse
 public import Mathlib.Geometry.Manifold.VectorBundle.LocalFrame
 public import Mathlib.Geometry.Manifold.VectorBundle.MDifferentiable
 public import Mathlib.Geometry.Manifold.VectorBundle.Pullback
+public import Mathlib.Geometry.Manifold.VectorBundle.PseudoRiemannian
 public import Mathlib.Geometry.Manifold.VectorBundle.Riemannian
 public import Mathlib.Geometry.Manifold.VectorBundle.SmoothSection
 public import Mathlib.Geometry.Manifold.VectorBundle.Tangent
