@@ -34,6 +34,8 @@ would defeat the subsumption.
 * `PseudoInnerProductSpace.flatEquiv`, `sharpEquiv`, `sharpL`: `♭ : E ≃L[ℝ] E⋆` and its inverse
 * `PseudoInnerProductSpace.dualPseudoInnerSL`: the induced form on `E⋆`, i.e. the inverse metric
 * `PseudoInnerProductSpace.index`: negative inertia `sigNeg` of the associated quadratic form
+* `PseudoInnerProductSpace.eq_zero_of_symm_of_antisymm`: the algebraic identity behind
+  uniqueness of the Levi-Civita connection, independent of signature
 
 ## Acknowledgements
 
@@ -102,6 +104,14 @@ lemma pseudoInner_add_right (u v w : E) :
     pseudoInner u (v + w) = pseudoInner u v + pseudoInner u w := by
   simp [pseudoInner]
 
+lemma pseudoInner_sub_left (u v w : E) :
+    pseudoInner (u - v) w = pseudoInner u w - pseudoInner v w := by
+  simp [pseudoInner]
+
+lemma pseudoInner_sub_right (u v w : E) :
+    pseudoInner u (v - w) = pseudoInner u v - pseudoInner u w := by
+  simp [pseudoInner]
+
 lemma pseudoInner_smul_left (c : ℝ) (v w : E) :
     pseudoInner (c • v) w = c * pseudoInner v w := by
   simp [pseudoInner]
@@ -109,6 +119,27 @@ lemma pseudoInner_smul_left (c : ℝ) (v w : E) :
 lemma pseudoInner_smul_right (c : ℝ) (v w : E) :
     pseudoInner v (c • w) = c * pseudoInner v w := by
   simp [pseudoInner]
+
+/-! ### The Levi-Civita rigidity identity -/
+
+/-- A map that is symmetric in its two arguments and antisymmetric against the form in its
+outer arguments vanishes.
+
+This is the algebraic content of the uniqueness of the Levi-Civita connection: the difference
+tensor `S` of two connections is symmetric when both are torsion-free, and satisfies
+`⟪S u v, w⟫ = -⟪S w v, u⟫` when both are metric, and these two together force `S = 0`. Only
+symmetry and nondegeneracy of the form are used, so the statement is insensitive to signature. -/
+lemma eq_zero_of_symm_of_antisymm {S : E → E → E} (hsymm : ∀ u v, S u v = S v u)
+    (hanti : ∀ u v w, pseudoInner (S u v) w = -pseudoInner (S w v) u) (u v : E) :
+    S u v = 0 := by
+  refine eq_zero_of_pseudoInner_eq_zero fun w ↦ ?_
+  have h1 := hanti u v w
+  have h2 : pseudoInner (S w v) u = pseudoInner (S v w) u := by rw [hsymm w v]
+  have h3 := hanti v w u
+  have h4 : pseudoInner (S u w) v = pseudoInner (S w u) v := by rw [hsymm u w]
+  have h5 := hanti w u v
+  have h6 : pseudoInner (S v u) w = pseudoInner (S u v) w := by rw [hsymm v u]
+  linarith
 
 end Basic
 
