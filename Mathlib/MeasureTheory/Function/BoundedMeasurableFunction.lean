@@ -5,15 +5,18 @@ Authors: Matteo Cipollina, Krystian Nowakowski
 -/
 module
 
+public import Mathlib.Algebra.Module.MinimalAxioms
 public import Mathlib.Analysis.CStarAlgebra.Basic
 public import Mathlib.Analysis.CStarAlgebra.Classes
 public import Mathlib.Analysis.Normed.Group.Bounded
+public import Mathlib.Analysis.Normed.Order.Lattice
 public import Mathlib.MeasureTheory.Constructions.BorelSpace.Basic
 public import Mathlib.MeasureTheory.Constructions.BorelSpace.Metrizable
 public import Mathlib.MeasureTheory.Constructions.BorelSpace.Complex
 public import Mathlib.MeasureTheory.Function.SimpleFunc
 public import Mathlib.Analysis.SpecialFunctions.Sqrt
 public import Mathlib.MeasureTheory.Group.Arithmetic
+public import Mathlib.MeasureTheory.Order.Lattice
 public import Mathlib.Topology.Bornology.BoundedOperation
 public import Mathlib.Topology.ContinuousMap.Basic
 public import Mathlib.Topology.ContinuousMap.Algebra
@@ -43,6 +46,12 @@ Blackadar's *Operator Algebras*, III.5.2.13, calls this algebra `B(X)`.
 
 * `MeasureTheory.BoundedMeasurableFunction.instNormedAddCommGroup`, `instNormedRing`,
   `instStarRing`, `instCStarRing`: the C⋆-identity
+* `MeasureTheory.BoundedMeasurableFunction.instNormOneClass`: `‖(1 : α →ᵇᵐ E)‖ = 1` when `α` is
+  nonempty
+* `MeasureTheory.BoundedMeasurableFunction.instLattice`: pointwise lattice operations when `E` is
+  a normed lattice ordered group
+* `MeasureTheory.BoundedMeasurableFunction.instModule'`: `α →ᵇᵐ E` is a module over the bounded
+  measurable functions `α →ᵇᵐ 𝕜`
 * `MeasureTheory.BoundedMeasurableFunction.instCompleteSpace`: completeness in the supremum norm
 * `MeasureTheory.BoundedMeasurableFunction.instCStarAlgebra`: `α →ᵇᵐ A` is a C⋆-algebra when `A`
   is one
@@ -170,20 +179,11 @@ instance instSub [MeasurableSub₂ E] : Sub (BoundedMeasurableFunction α E) whe
 
 instance instSMulNat [MeasurableAdd₂ E] : SMul ℕ (BoundedMeasurableFunction α E) where
   smul n f :=
-    { toFun := fun x ↦ n • f x
-      measurable' := by
-        induction n with
-        | zero =>
-            simp
-        | succ n ihn =>
-            have : (fun x ↦ (n + 1) • f x) = (fun x ↦ n • f x) + (f : α → E) := by
-              ext x; exact succ_nsmul (f x) n
-            rw [this]
-            exact ihn.add f.measurable
+    { toFun := n • (f : α → E)
+      measurable' := f.measurable.const_smul n
       bounded' := by
         rcases f.isBounded_range.exists_norm_le with ⟨Cf, hCf⟩
-        refine (isBounded_iff_forall_norm_le).2 ?_
-        refine ⟨n * Cf, ?_⟩
+        refine (isBounded_iff_forall_norm_le).2 ⟨n * Cf, ?_⟩
         rintro _ ⟨x, rfl⟩
         exact (norm_nsmul_le (a := f x) (n := n)).trans <| by
           gcongr
@@ -192,9 +192,17 @@ instance instSMulNat [MeasurableAdd₂ E] : SMul ℕ (BoundedMeasurableFunction 
 instance instSMulInt [MeasurableAdd₂ E] [MeasurableNeg E] :
     SMul ℤ (BoundedMeasurableFunction α E) where
   smul n f :=
-    match n with
-    | .ofNat m => m • f
-    | .negSucc m => -((m.succ : ℕ) • f)
+    { toFun := n • (f : α → E)
+      measurable' := f.measurable.const_smul n
+      bounded' := by
+        rcases f.isBounded_range.exists_norm_le with ⟨Cf, hCf⟩
+        refine (isBounded_iff_forall_norm_le).2 ⟨n.natAbs * Cf, ?_⟩
+        rintro _ ⟨x, rfl⟩
+        change ‖n • f x‖ ≤ _
+        rw [← norm_natAbs_smul]
+        exact (norm_nsmul_le (a := f x) (n := n.natAbs)).trans <| by
+          gcongr
+          exact hCf _ (mem_range_self x) }
 
 @[simp]
 lemma zero_apply (x : α) : (0 : BoundedMeasurableFunction α E) x = 0 :=
@@ -225,18 +233,10 @@ lemma nsmul_apply [MeasurableAdd₂ E] (n : ℕ) (f : BoundedMeasurableFunction 
   rfl
 
 @[simp]
-theorem zsmul_apply [MeasurableAdd₂ E] [MeasurableNeg E]
+lemma zsmul_apply [MeasurableAdd₂ E] [MeasurableNeg E]
     (n : ℤ) (f : BoundedMeasurableFunction α E) (x : α) :
-    (n • f) x = n • f x := by
-  cases n with
-  | ofNat m =>
-      change ((m : ℕ) • f) x = (m : ℤ) • f x
-      rw [nsmul_apply]
-      simp
-  | negSucc m =>
-      change (-((m.succ : ℕ) • f)) x = (Int.negSucc m) • f x
-      rw [neg_apply, nsmul_apply]
-      simp
+    (n • f) x = n • f x :=
+  rfl
 
 @[simp]
 lemma coe_zero : ((0 : BoundedMeasurableFunction α E) : α → E) = 0 :=
@@ -267,11 +267,10 @@ lemma coe_nsmul [MeasurableAdd₂ E] (f : BoundedMeasurableFunction α E) (n : �
   rfl
 
 @[simp]
-theorem coe_zsmul [MeasurableAdd₂ E] [MeasurableNeg E]
+lemma coe_zsmul [MeasurableAdd₂ E] [MeasurableNeg E]
     (f : BoundedMeasurableFunction α E) (n : ℤ) :
-    ((n • f : BoundedMeasurableFunction α E) : α → E) = n • f := by
-  ext x
-  exact zsmul_apply n f x
+    ((n • f : BoundedMeasurableFunction α E) : α → E) = n • f :=
+  rfl
 
 instance instAddCommGroup [MeasurableAdd₂ E] [MeasurableNeg E] [MeasurableSub₂ E] :
     AddCommGroup (BoundedMeasurableFunction α E) :=
@@ -466,6 +465,33 @@ noncomputable def const (α : Type*) [MeasurableSpace α] (c : E) :
 lemma const_apply (c : E) (x : α) : const α c x = c :=
   rfl
 
+instance instNatCast [NatCast E] : NatCast (BoundedMeasurableFunction α E) :=
+  ⟨fun n => const α n⟩
+
+instance instIntCast [IntCast E] : IntCast (BoundedMeasurableFunction α E) :=
+  ⟨fun n => const α n⟩
+
+@[simp, norm_cast]
+lemma coe_natCast [NatCast E] (n : ℕ) : ⇑(n : BoundedMeasurableFunction α E) = n :=
+  rfl
+
+@[simp, norm_cast]
+lemma coe_intCast [IntCast E] (n : ℤ) : ⇑(n : BoundedMeasurableFunction α E) = n :=
+  rfl
+
+@[simp, norm_cast]
+lemma coe_ofNat [NatCast E] (n : ℕ) [n.AtLeastTwo] :
+    ⇑(ofNat(n) : BoundedMeasurableFunction α E) = ofNat(n) :=
+  rfl
+
+@[simp]
+lemma natCast_apply [NatCast E] (n : ℕ) (x : α) : (n : BoundedMeasurableFunction α E) x = n :=
+  rfl
+
+@[simp]
+lemma intCast_apply [IntCast E] (n : ℤ) (x : α) : (n : BoundedMeasurableFunction α E) x = n :=
+  rfl
+
 /-- Indicator functions of measurable sets, viewed as bounded measurable functions. -/
 noncomputable def indicator (α : Type*) [MeasurableSpace α] (u : Set α) (hu : MeasurableSet u)
     [One E] : BoundedMeasurableFunction α E :=
@@ -493,7 +519,11 @@ theorem exists_norm_le (f : α →ᵇᵐ E) : ∃ C : ℝ, 0 ≤ C ∧ ∀ x, �
   obtain ⟨C, hC⟩ := (isBounded_iff_forall_norm_le.1 f.isBounded_range)
   exact ⟨max C 0, le_max_right _ _, fun x => (hC _ ⟨x, rfl⟩).trans (le_max_left _ _)⟩
 
-/-- The supremum norm of a bounded measurable function, as the least bound. -/
+/-- The supremum norm of a bounded measurable function, as the least bound of `‖f x‖`.
+
+This is the same formula as `BoundedContinuousFunction.norm_eq`. There `‖f‖ = dist f 0` is
+primitive; here the structure hypothesis is bornological boundedness of the range, so we take
+the least bound as the definition. -/
 noncomputable instance instNorm : Norm (α →ᵇᵐ E) where
   norm f := sInf {C | 0 ≤ C ∧ ∀ x, ‖f x‖ ≤ C}
 
@@ -516,6 +546,17 @@ theorem norm_le_of_forall {f : α →ᵇᵐ E} {C : ℝ} (hC : 0 ≤ C) (h : ∀
 
 theorem norm_le {f : α →ᵇᵐ E} {C : ℝ} (hC : 0 ≤ C) : ‖f‖ ≤ C ↔ ∀ x, ‖f x‖ ≤ C :=
   ⟨fun h x => (norm_coe_le_norm f x).trans h, norm_le_of_forall hC⟩
+
+theorem norm_eq_iSup_norm [Nonempty α] (f : α →ᵇᵐ E) : ‖f‖ = ⨆ x, ‖f x‖ := by
+  obtain ⟨C, -, hC⟩ := exists_norm_le f
+  have hbdd : BddAbove (range fun x ↦ ‖f x‖) := ⟨C, by rintro _ ⟨x, rfl⟩; exact hC x⟩
+  refine le_antisymm ?_ (ciSup_le fun x ↦ norm_coe_le_norm f x)
+  exact (norm_le ((norm_nonneg _).trans (le_ciSup hbdd (Classical.arbitrary α)))).2
+    fun x ↦ le_ciSup hbdd x
+
+/-- If `‖(1 : E)‖ = 1`, then `‖(1 : α →ᵇᵐ E)‖ = 1` if `α` is nonempty. -/
+instance instNormOneClass [Nonempty α] [One E] [NormOneClass E] : NormOneClass (α →ᵇᵐ E) where
+  norm_one := by simp only [norm_eq_iSup_norm, coe_one, Pi.one_apply, norm_one, ciSup_const]
 
 theorem norm_eq_zero_iff [MeasurableAdd₂ E] [MeasurableNeg E] [MeasurableSub₂ E]
     {f : α →ᵇᵐ E} : ‖f‖ = 0 ↔ f = 0 := by
@@ -545,19 +586,81 @@ noncomputable instance instNormedAddCommGroup [MeasurableAdd₂ E] [MeasurableNe
           exact norm_coe_le_norm (-f) x)
       eq_zero_of_map_eq_zero' := fun f h => norm_eq_zero_iff.1 h }
 
+section NormedLatticeOrderedGroup
+
+variable [Lattice E] [HasSolidNorm E] [IsOrderedAddMonoid E]
+
+instance instPartialOrder : PartialOrder (α →ᵇᵐ E) :=
+  PartialOrder.lift (fun f => (f : α → E)) coe_injective
+
+instance instSup [MeasurableSup₂ E] : Max (α →ᵇᵐ E) where
+  max f g :=
+    { toFun := f ⊔ g
+      measurable' := f.measurable.sup g.measurable
+      bounded' := by
+        rcases f.isBounded_range.exists_norm_le with ⟨Cf, hCf⟩
+        rcases g.isBounded_range.exists_norm_le with ⟨Cg, hCg⟩
+        refine (isBounded_iff_forall_norm_le).2 ⟨Cf + Cg, ?_⟩
+        rintro _ ⟨x, rfl⟩
+        exact (norm_sup_le_add (f x) (g x)).trans
+          (add_le_add (hCf _ (mem_range_self x)) (hCg _ (mem_range_self x))) }
+
+instance instInf [MeasurableInf₂ E] : Min (α →ᵇᵐ E) where
+  min f g :=
+    { toFun := f ⊓ g
+      measurable' := f.measurable.inf g.measurable
+      bounded' := by
+        rcases f.isBounded_range.exists_norm_le with ⟨Cf, hCf⟩
+        rcases g.isBounded_range.exists_norm_le with ⟨Cg, hCg⟩
+        refine (isBounded_iff_forall_norm_le).2 ⟨Cf + Cg, ?_⟩
+        rintro _ ⟨x, rfl⟩
+        exact (norm_inf_le_add (f x) (g x)).trans
+          (add_le_add (hCf _ (mem_range_self x)) (hCg _ (mem_range_self x))) }
+
+@[simp, norm_cast]
+lemma coe_sup [MeasurableSup₂ E] (f g : α →ᵇᵐ E) : ⇑(f ⊔ g) = ⇑f ⊔ ⇑g := rfl
+
+@[simp, norm_cast]
+lemma coe_inf [MeasurableInf₂ E] (f g : α →ᵇᵐ E) : ⇑(f ⊓ g) = ⇑f ⊓ ⇑g := rfl
+
+variable [MeasurableSup₂ E] [MeasurableInf₂ E]
+
+instance instSemilatticeSup : SemilatticeSup (α →ᵇᵐ E) := fast_instance%
+  DFunLike.coe_injective.semilatticeSup _ .rfl .rfl coe_sup
+
+instance instSemilatticeInf : SemilatticeInf (α →ᵇᵐ E) := fast_instance%
+  DFunLike.coe_injective.semilatticeInf _ .rfl .rfl coe_inf
+
+instance instLattice : Lattice (α →ᵇᵐ E) := fast_instance%
+  DFunLike.coe_injective.lattice _ .rfl .rfl coe_sup coe_inf
+
+variable [MeasurableAdd₂ E] [MeasurableNeg E] [MeasurableSub₂ E]
+
+@[simp, norm_cast] lemma coe_abs (f : α →ᵇᵐ E) : ⇑|f| = |⇑f| := rfl
+@[simp, norm_cast] lemma coe_posPart (f : α →ᵇᵐ E) : ⇑f⁺ = (⇑f)⁺ := rfl
+@[simp, norm_cast] lemma coe_negPart (f : α →ᵇᵐ E) : ⇑f⁻ = (⇑f)⁻ := rfl
+
+instance instHasSolidNorm : HasSolidNorm (α →ᵇᵐ E) where
+  solid := by
+    intro f g h
+    have i1 : ∀ t, ‖f t‖ ≤ ‖g t‖ := fun t => HasSolidNorm.solid (h t)
+    rw [norm_le (norm_nonneg _)]
+    exact fun t => (i1 t).trans (norm_coe_le_norm g t)
+
+instance instIsOrderedAddMonoid : IsOrderedAddMonoid (α →ᵇᵐ E) where
+  add_le_add_left f g h₁ h t := by simpa using h₁ _
+
+end NormedLatticeOrderedGroup
+
 section CStar
 
 variable {A : Type*} [NormedRing A] [MeasurableSpace A] [BorelSpace A] [MeasurableAdd₂ A]
   [MeasurableNeg A] [MeasurableSub₂ A] [MeasurableMul₂ A] [BoundedMul A]
 
 /-- **Bounded measurable functions into a ring form a ring**, pointwise. -/
-instance instRing : Ring (α →ᵇᵐ A) where
-  __ := instAddCommGroup
-  __ := instMonoid
-  left_distrib _ _ _ := ext fun _ => mul_add _ _ _
-  right_distrib _ _ _ := ext fun _ => add_mul _ _ _
-  zero_mul _ := ext fun _ => zero_mul _
-  mul_zero _ := ext fun _ => mul_zero _
+instance instRing : Ring (α →ᵇᵐ A) :=
+  DFunLike.coe_injective.ring _ coe_zero coe_one coe_add coe_mul coe_neg coe_sub
+    (fun n f => coe_nsmul f n) (fun n f => coe_zsmul f n) coe_pow coe_natCast coe_intCast
 
 omit [BorelSpace A] [MeasurableAdd₂ A] [MeasurableNeg A] [MeasurableSub₂ A] in
 theorem norm_mul_le' (f g : α →ᵇᵐ A) : ‖f * g‖ ≤ ‖f‖ * ‖g‖ :=
@@ -573,6 +676,46 @@ noncomputable instance instNormedRing : NormedRing (α →ᵇᵐ A) where
   __ := instNormedAddCommGroup
   __ := instRing
   norm_mul_le := norm_mul_le'
+
+omit [BorelSpace A] in
+/-- If the product of bounded measurable functions is zero, then the norm of their sum is the
+maximum of their norms. -/
+lemma norm_add_eq_max [IsCancelMulZero A] {f g : α →ᵇᵐ A} (h : f * g = 0) :
+    ‖f + g‖ = max ‖f‖ ‖g‖ := by
+  have hfg : ∀ x, f x = 0 ∨ g x = 0 := by simpa [DFunLike.ext_iff, mul_eq_zero] using h
+  have hfg' x : ‖(f + g) x‖ = max ‖f x‖ ‖g x‖ := by obtain (h | h) := hfg x <;> simp [h]
+  have key (c : ℝ) (hc : 0 ≤ c) : ‖f + g‖ ≤ c ↔ max ‖f‖ ‖g‖ ≤ c := by
+    simp_rw [norm_le hc, hfg', max_le_iff, norm_le hc, forall_and]
+  exact le_antisymm (by rw [key]; positivity) (by rw [← key]; positivity)
+
+omit [BorelSpace A] in
+lemma nnnorm_add_eq_max [IsCancelMulZero A] {f g : α →ᵇᵐ A} (h : f * g = 0) :
+    ‖f + g‖₊ = max ‖f‖₊ ‖g‖₊ :=
+  NNReal.eq <| norm_add_eq_max h
+
+omit [BorelSpace A] in
+lemma norm_sub_eq_max [IsCancelMulZero A] {f g : α →ᵇᵐ A} (h : f * g = 0) :
+    ‖f - g‖ = max ‖f‖ ‖g‖ := by
+  simpa [sub_eq_add_neg] using norm_add_eq_max (f := f) (g := -g) (by simpa)
+
+omit [BorelSpace A] in
+lemma nnnorm_sub_eq_max [IsCancelMulZero A] {f g : α →ᵇᵐ A} (h : f * g = 0) :
+    ‖f - g‖₊ = max ‖f‖₊ ‖g‖₊ :=
+  NNReal.eq <| norm_sub_eq_max h
+
+open scoped Function in
+omit [BorelSpace A] in
+/-- If the pairwise products of bounded measurable functions are all zero, then the norm of their
+sum is the maximum of their norms. -/
+lemma nnnorm_sum_eq_sup [IsCancelMulZero A] {ι : Type*} {f : ι → (α →ᵇᵐ A)} (s : Finset ι)
+    (h : Pairwise ((· * · = 0) on f)) :
+    ‖∑ i ∈ s, f i‖₊ = s.sup (‖f ·‖₊) := by
+  classical
+  induction s using Finset.induction_on with
+  | empty => simp
+  | insert j s hj ih =>
+    suffices f j * ∑ i ∈ s, f i = 0 by simpa [hj, ← ih] using nnnorm_add_eq_max this
+    simpa [Finset.mul_sum] using Finset.sum_eq_zero fun i hi ↦ h (by grind)
 
 variable {B : Type*} [NormedAddCommGroup B] [MeasurableSpace B] [BorelSpace B]
   [StarAddMonoid B] [NormedStarGroup B] [MeasurableAdd₂ B] [MeasurableNeg B] [MeasurableSub₂ B]
@@ -700,6 +843,56 @@ noncomputable instance instNormedAlgebra : NormedAlgebra 𝕜 (α →ᵇᵐ A) w
     exact (norm_smul_le r (f x)).trans (by gcongr; exact norm_coe_le_norm f x)
 
 end AlgebraStructure
+
+section ModuleOverBoundedFunctions
+
+variable {α : Type*} [MeasurableSpace α] {𝕜 E : Type*}
+  [NormedField 𝕜] [MeasurableSpace 𝕜]
+  [NormedAddCommGroup E] [MeasurableSpace E] [NormedSpace 𝕜 E] [MeasurableSMul₂ 𝕜 E]
+
+/-! ### Structure as a module over scalar functions
+
+If `E` is a normed `𝕜`-space, then `α →ᵇᵐ E` is naturally a module over the algebra of bounded
+measurable functions `α →ᵇᵐ 𝕜`. -/
+
+instance instSMul' : SMul (α →ᵇᵐ 𝕜) (α →ᵇᵐ E) where
+  smul f g :=
+    { toFun := fun x => f x • g x
+      measurable' := f.measurable.smul g.measurable
+      bounded' := by
+        refine (isBounded_iff_forall_norm_le).2 ⟨‖f‖ * ‖g‖, ?_⟩
+        rintro _ ⟨x, rfl⟩
+        exact (norm_smul_le (f x) (g x)).trans <|
+          mul_le_mul (norm_coe_le_norm f x) (norm_coe_le_norm g x) (norm_nonneg _)
+            (norm_nonneg' f) }
+
+@[simp]
+lemma smul_apply' (f : α →ᵇᵐ 𝕜) (g : α →ᵇᵐ E) (x : α) : (f • g) x = f x • g x :=
+  rfl
+
+@[simp]
+lemma coe_smul' (f : α →ᵇᵐ 𝕜) (g : α →ᵇᵐ E) : ⇑(f • g) = ⇑f • ⇑g :=
+  rfl
+
+variable [BorelSpace 𝕜]
+  [MeasurableAdd₂ 𝕜] [MeasurableNeg 𝕜] [MeasurableSub₂ 𝕜] [MeasurableMul₂ 𝕜] [BoundedMul 𝕜]
+  [MeasurableAdd₂ E] [MeasurableNeg E] [MeasurableSub₂ E]
+
+instance instModule' : Module (α →ᵇᵐ 𝕜) (α →ᵇᵐ E) :=
+  Module.ofMinimalAxioms
+    (fun c _ _ => ext fun a => smul_add (c a) _ _)
+    (fun _ _ _ => ext fun _ => add_smul _ _ _)
+    (fun _ _ _ => ext fun _ => mul_smul _ _ _)
+    (fun f => ext fun x => one_smul 𝕜 (f x))
+
+instance instIsBoundedSMul' : IsBoundedSMul (α →ᵇᵐ 𝕜) (α →ᵇᵐ E) :=
+  IsBoundedSMul.of_norm_smul_le fun f g =>
+    norm_le_of_forall (mul_nonneg (norm_nonneg' f) (norm_nonneg' g)) fun x =>
+      (norm_smul_le (f x) (g x)).trans <|
+        mul_le_mul (norm_coe_le_norm f x) (norm_coe_le_norm g x) (norm_nonneg _)
+          (norm_nonneg' f)
+
+end ModuleOverBoundedFunctions
 
 section StarAlgebraStructure
 
