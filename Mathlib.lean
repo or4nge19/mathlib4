@@ -4758,6 +4758,7 @@ public import Mathlib.Geometry.Manifold.Notation
 public import Mathlib.Geometry.Manifold.PartitionOfUnity
 public import Mathlib.Geometry.Manifold.PoincareConjecture
 public import Mathlib.Geometry.Manifold.PseudoRiemannian.Basic
+public import Mathlib.Geometry.Manifold.PseudoRiemannian.LeviCivita
 public import Mathlib.Geometry.Manifold.PseudoRiemannian.Lorentzian
 public import Mathlib.Geometry.Manifold.PseudoRiemannian.Riemannian
 public import Mathlib.Geometry.Manifold.Riemannian.Basic
