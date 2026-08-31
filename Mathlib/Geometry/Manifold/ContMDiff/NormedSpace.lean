@@ -1,11 +1,12 @@
 /-
 Copyright (c) 2020 Sébastien Gouëzel. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Sébastien Gouëzel, Floris van Doorn
+Authors: Sébastien Gouëzel, Floris van Doorn, Matteo Cipollina
 -/
 module
 
 public import Mathlib.Geometry.Manifold.ContMDiff.Constructions
+public import Mathlib.Analysis.Calculus.ContDiff.Operations
 public import Mathlib.Analysis.Normed.Operator.Prod
 
 /-! ## Equivalence of smoothness with the basic definition for functions between vector spaces
@@ -13,6 +14,8 @@ public import Mathlib.Analysis.Normed.Operator.Prod
 * `contMDiff_iff_contDiff`: for functions between vector spaces,
   manifold-smoothness is equivalent to usual smoothness.
 * `ContinuousLinearMap.contMDiff`: continuous linear maps between normed spaces are smooth
+* `ContMDiffAt.clm_inverse`: pointwise inversion of a `C^n` family of invertible continuous
+  linear maps is `C^n`
 
 Smoothness of addition and scalar multiplication in normed spaces is proven not here but in
 `Mathlib/Geometry/Manifold/Algebra/LieGroup.lean` and `Mathlib/Geometry/Manifold/Algebra/SMul.lean`
@@ -263,3 +266,31 @@ theorem ContMDiff.clm_prodMap {g : M → F₁ →L[𝕜] F₃} {f : M → F₂ �
     (hg : ContMDiff I 𝓘(𝕜, F₁ →L[𝕜] F₃) n g) (hf : ContMDiff I 𝓘(𝕜, F₂ →L[𝕜] F₄) n f) :
     ContMDiff I 𝓘(𝕜, F₁ × F₂ →L[𝕜] F₃ × F₄) n fun x => (g x).prodMap (f x) := fun x =>
   (hg x).clm_prodMap (hf x)
+
+/-! ### Inversion of a family of continuous linear maps -/
+
+/-- Pointwise inversion of a `C^n` family of continuous linear maps, invertible at the base point,
+is `C^n` at that point. This is the manifold-parameter form of
+`ContinuousLinearMap.IsInvertible.contDiffAt_map_inverse`. -/
+theorem ContMDiffAt.clm_inverse [CompleteSpace F] {A : M → F →L[𝕜] F'} {x : M}
+    (hA : ContMDiffAt I 𝓘(𝕜, F →L[𝕜] F') n A x) (hinv : (A x).IsInvertible) :
+    ContMDiffAt I 𝓘(𝕜, F' →L[𝕜] F) n (fun x ↦ ContinuousLinearMap.inverse (A x)) x :=
+  hinv.contDiffAt_map_inverse.comp_contMDiffAt hA
+
+/-- Within-set version of `ContMDiffAt.clm_inverse`. -/
+theorem ContMDiffWithinAt.clm_inverse [CompleteSpace F] {A : M → F →L[𝕜] F'} {x : M}
+    (hA : ContMDiffWithinAt I 𝓘(𝕜, F →L[𝕜] F') n A s x) (hinv : (A x).IsInvertible) :
+    ContMDiffWithinAt I 𝓘(𝕜, F' →L[𝕜] F) n (fun x ↦ ContinuousLinearMap.inverse (A x)) s x :=
+  hinv.contDiffAt_map_inverse.comp_contMDiffWithinAt hA
+
+/-- On-set version of `ContMDiffAt.clm_inverse`. -/
+theorem ContMDiffOn.clm_inverse [CompleteSpace F] {A : M → F →L[𝕜] F'}
+    (hA : ContMDiffOn I 𝓘(𝕜, F →L[𝕜] F') n A s) (hinv : ∀ x ∈ s, (A x).IsInvertible) :
+    ContMDiffOn I 𝓘(𝕜, F' →L[𝕜] F) n (fun x ↦ ContinuousLinearMap.inverse (A x)) s :=
+  fun x hx ↦ (hA x hx).clm_inverse (hinv x hx)
+
+/-- Global version of `ContMDiffAt.clm_inverse`. -/
+theorem ContMDiff.clm_inverse [CompleteSpace F] {A : M → F →L[𝕜] F'}
+    (hA : ContMDiff I 𝓘(𝕜, F →L[𝕜] F') n A) (hinv : ∀ x, (A x).IsInvertible) :
+    ContMDiff I 𝓘(𝕜, F' →L[𝕜] F) n (fun x ↦ ContinuousLinearMap.inverse (A x)) :=
+  fun x ↦ (hA x).clm_inverse (hinv x)
