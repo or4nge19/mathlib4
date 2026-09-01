@@ -7,14 +7,29 @@ module
 
 public import Mathlib.Analysis.InnerProductSpace.Dual
 public import Mathlib.Geometry.Manifold.VectorBundle.CovariantDerivative.Metric
+public import Mathlib.Geometry.Manifold.VectorBundle.CovariantDerivative.MetricUniqueness
+public import Mathlib.Geometry.Manifold.VectorBundle.Riemannian
 public import Mathlib.Geometry.Manifold.VectorBundle.CovariantDerivative.Torsion
 
 /-!
-# The Levi-Civita connection on a Riemannian manifold
+# The Levi-Civita connection
 
-This file defines the Levi-Civita connection on a (finite-dimensional) Riemannian manifold `(M, g)`.
-A connection `∇` on the tangent bundle of a Riemannian manifold `(M, g)` is called a
-*Levi-Civita connection* if it is both compatible with the metric `g` and torsion-free.
+This file defines the Levi-Civita connection on a finite-dimensional pseudo-Riemannian manifold
+`(M, g)`: the tangent spaces carry a continuous symmetric **nondegenerate** bilinear form, with no
+positivity assumed. A connection `∇` on the tangent bundle is called a *Levi-Civita connection* if
+it is both compatible with the metric `g` and torsion-free.
+
+Positivity is used nowhere. The two places one might expect it are
+
+* recovering a vector from its pairings, which is
+  `injective_inner_mdifferentiableAt_section` — pure nondegeneracy, and
+* the duality step in the construction, which uses the musical isomorphism
+  `PseudoInnerProductSpace.sharpL` rather than the Riesz representation.
+
+Riemannian geometry is therefore the special case: `RiemannianBundle` supplies
+`PseudoInnerProductSpace` through `InnerProductSpace.toPseudoInnerProductSpace`, so every statement
+below applies to a Riemannian manifold with no adapter, and Lorentzian and general
+pseudo-Riemannian signatures are covered at the same time.
 Any two such connections are equal (on differentiable vector fields), which is why one speaks of
 *the* Levi-Civita connection on `TM`. We prove this uniqueness, construct a Levi-Civita connection
 and prove that is defines a compatible torsion-free connection.
@@ -34,8 +49,9 @@ connection is a `C^n` connection.
   uniquely determined on differentiable vector fields
 
 * `CovariantDerivative.leviCivitaConnection`: a choice of Levi-Civita connection on the tangent
-  bundle `TM` of a Riemannian manifold `(M, g)`: this is unique up to the value on
-  non-differentiable vector fields.
+  bundle `TM` of a pseudo-Riemannian manifold `(M, g)`: this is unique up to the value on
+  non-differentiable vector fields. Together with `IsLeviCivitaConnection.uniqueness` this is the
+  **fundamental theorem of pseudo-Riemannian geometry**.
   If you know the Levi-Civita connection already, you can use `IsLeviCivitaConnection` instead.
 
 * `CovariantDerivative.isLeviCivitaConnection_leviCivitaConnection`:
@@ -47,7 +63,8 @@ connection is a `C^n` connection.
   a term `⟪∇ X Y, Z⟫` (for differentiable vector fields `X`, `Y` and `Z`) without reference to the
   Levi-Civita connection.
   Our construction recovers `∇ X Y` from expressions `⟪∇ X Y, Z⟫` by duality. We use a tensoriality
-  argument and the musical isomorphism: the metric `g` induces a map from `(2,0)`-tensors
+  argument and the musical isomorphism `♯` (`PseudoInnerProductSpace.sharpL`, an isomorphism by
+  nondegeneracy alone): the metric `g` induces a map from `(2,0)`-tensors
   (i.e., a map `T_pM × T_pM → ℝ` at each point) to `(1,1)`-tensors (i.e., a map `T_pM → (T_pM)*`
   at each point); we apply this to the `(2,0)`-tensor `(X, Z) ↦ ⟪∇ X Y, Z⟫`, to obtain a
   `(1,1)`-tensor denoted `∇ Y`. This avoids the use of local frames and trivializations
@@ -59,7 +76,7 @@ Levi-Civita connection, metric, torsion-free, Koszul formula, musical isomorphis
 
 -/
 
-open Bundle FiberBundle Function NormedSpace VectorField
+open Bundle FiberBundle Function NormedSpace PseudoInnerProductSpace VectorField
 
 open scoped Manifold ContDiff
 
@@ -89,32 +106,6 @@ variable
   {E : B → Type*} [TopologicalSpace (TotalSpace F E)] [∀ x, NormedAddCommGroup (E x)]
   [∀ x, InnerProductSpace ℝ (E x)] [FiberBundle F E]
 
-variable (IB F E) in
-/-- A vector in `E x` is uniquely determined by its scalar product with sections that
-are differentiable at `x` -/
-public lemma injective_inner_mdifferentiableAt_section  (x : B) :
-    Function.Injective
-      (fun X₀ : E x ↦
-        fun (Z : Π x, E x) (_ : MDiffAt (T% Z) x) ↦ (⟪X₀, Z x⟫)) := by
-  intro X₀ Y₀ h
-  suffices ⟪X₀, X₀ - Y₀⟫ = ⟪Y₀, X₀ - Y₀⟫ by
-    rw [← sub_eq_zero, ← inner_self_eq_zero (𝕜 := ℝ), inner_sub_left, sub_eq_zero]
-    exact this
-  simpa using congr($h _ (mdifferentiableAt_extend _ _ (X₀ - Y₀)))
-
-variable (IB F E) in
-/-- A vector in `E x` is uniquely determined by its scalar product with sections that
-are `C^n` at `x` -/
-public lemma injective_inner_contMDiffAt_section (n : ℕ∞ω) (x : B) :
-    Function.Injective
-      (fun X₀ : E x ↦
-        fun (Z : Π x, E x) (_ : CMDiffAt n (T% Z) x) ↦ (⟪X₀, Z x⟫)) := by
-  intro X₀ Y₀ h
-  suffices ⟪X₀, X₀ - Y₀⟫ = ⟪Y₀, X₀ - Y₀⟫ by
-    rw [← sub_eq_zero, ← inner_self_eq_zero (𝕜 := ℝ), inner_sub_left, sub_eq_zero]
-    exact this
-  simpa using congr($h _ (contMDiffAt_extend _ _ (X₀ - Y₀)))
-
 end
 
 section -- and a specialisation to manifolds
@@ -123,21 +114,21 @@ section -- and a specialisation to manifolds
 variable {E : Type*} [NormedAddCommGroup E] [NormedSpace ℝ E]
   {H : Type*} [TopologicalSpace H] (I : ModelWithCorners ℝ E H)
   {M : Type*} [TopologicalSpace M] [ChartedSpace H M] [IsManifold I 1 M]
-  [RiemannianBundle (fun (x : M) ↦ TangentSpace I x)]
+  [∀ x : M, PseudoInnerProductSpace ℝ (TangentSpace I x)]
 
-/-- A tangent vector at `x` is uniquely determined by its scalar product with differentiable
+/-- A tangent vector at `x` is uniquely determined by its pairing with differentiable
 vector fields -/
 lemma injective_inner_mdifferentiableAt_vectorField (x : M) :
     Function.Injective
       (fun X₀ : TangentSpace I x ↦
-        fun (Z : Π x, TangentSpace I x) (_ : MDiffAt (T% Z) x) ↦ (⟪X₀, Z x⟫)) :=
+        fun (Z : Π x, TangentSpace I x) (_ : MDiffAt (T% Z) x) ↦ inner ℝ X₀ (Z x)) :=
   injective_inner_mdifferentiableAt_section (E := TangentSpace I) I E x
 
-/-- A tangent vector at `x` is uniquely determined by its scalar product with `C^n` vector fields -/
+/-- A tangent vector at `x` is uniquely determined by its pairing with `C^n` vector fields -/
 lemma injective_inner_contMDiffAt_vectorField {n : ℕ∞ω} (x : M) :
     Function.Injective
       (fun X₀ : TangentSpace I x ↦
-        fun (Z : Π x, TangentSpace I x) (_ : CMDiffAt n (T% Z) x) ↦ (⟪X₀, Z x⟫)) :=
+        fun (Z : Π x, TangentSpace I x) (_ : CMDiffAt n (T% Z) x) ↦ inner ℝ X₀ (Z x)) :=
   injective_inner_contMDiffAt_section (E := TangentSpace I) I E n x
 
 end
@@ -151,12 +142,12 @@ variable
 
 variable {M : Type*} [TopologicalSpace M] [ChartedSpace H M] [IsManifold I 2 M]
 
--- From now on, `M` is endowed with a Riemannian metric.
+-- From now on, `M` is endowed with a pseudo-Riemannian metric: a fibrewise continuous symmetric
+-- nondegenerate form. Positivity is nowhere used, and a Riemannian metric supplies this through
+-- `InnerProductSpace.toPseudoInnerProductSpace`.
 variable
-  [RiemannianBundle (fun (x : M) ↦ TangentSpace I x)]
+  [∀ x : M, PseudoInnerProductSpace ℝ (TangentSpace I x)]
   {X X' X'' Y Y' Y'' Z Z' : Π x : M, TangentSpace I x}
-
-open scoped RealInnerProductSpace
 
 -- Let `cov` and `cov'` be covariant derivatives on `TM`.
 variable (cov cov' : CovariantDerivative I E (TangentSpace I : M → Type _))
@@ -168,8 +159,8 @@ local macro_rules | `(∇ $X $σ) => `(fun (x : M) ↦ cov $σ x ($X x))
 local syntax:max "∇'" term:arg term:arg : term
 local macro_rules | `(∇' $X $σ) => `(fun (x : M) ↦ cov' $σ x ($X x))
 
--- From now on, we assume the Riemannian metric on `M` is `C¹`.
-variable [IsContMDiffRiemannianBundle I 1 E (fun (x : M) ↦ TangentSpace I x)]
+-- From now on, we assume the metric on `M` is `C¹`.
+variable [IsContMDiffPseudoRiemannianBundle I 1 E (fun (x : M) ↦ TangentSpace I x)]
 
 -- Local notation for pointwise inner products of vector fields.
 -- Note this does not cause ambiguity with the notation obtained
@@ -194,7 +185,7 @@ variable {I} in
 namespace CovariantDerivative
 variable {x : M}
 
-/-- A covariant derivative on the tangent bundle `TM` to a Riemannian manifold is called a
+/-- A covariant derivative on the tangent bundle `TM` of a pseudo-Riemannian manifold is called a
 **Levi-Civita connection** if it is torsion-free and compatible with `g`.
 Note that the bundle metric on `TM` is implicitly hidden in this definition.
 -/
@@ -224,11 +215,11 @@ public lemma IsLeviCivitaConnection.apply_eq
   have eq2a := h.isMetricCompatible.mvfderiv_inner_eq Y hZ hX
   have eq3a := h.isMetricCompatible.mvfderiv_inner_eq Z hX hY
   -- use the torsion-freeness in three ways
-  have eq1b := congr(inner ℝ (Y x) ($(h.2) x (X x) (Z x)))
-  have eq2b := congr(inner ℝ (Z x) ($(h.2) x (Y x) (X x)))
-  have eq3b := congr(inner ℝ (X x) ($(h.2) x (Z x) (Y x)))
+  have eq1b := congr(inner ℝ  (Y x) ($(h.2) x (X x) (Z x)))
+  have eq2b := congr(inner ℝ  (Z x) ($(h.2) x (Y x) (X x)))
+  have eq3b := congr(inner ℝ  (X x) ($(h.2) x (Z x) (Y x)))
   -- combine
-  simp (disch := fun_prop) [real_inner_comm, inner_sub_right, torsion_apply] at *
+  simp (disch := fun_prop) [PseudoInnerProductSpace.inner_comm, torsion_apply] at *
   linear_combination - (eq1a + eq1b + eq2a + eq2b - eq3a - eq3b) / 2
 
 /-- The **Koszul formula**, expressing the term `⟨∇ X Y, Z⟩` for all differentiable vector fields
@@ -251,13 +242,17 @@ public lemma IsLeviCivitaConnection.apply_eq_extend
 /-- The Levi-Civita connection on `(M, g)` is uniquely determined on differentiable vector fields.
 
 Note that the differentiability hypothesis on `Y` is required, since `CovariantDerivative` objects
-are unconstrained in their behaviour on non-differentiable vector fields. -/
+are unconstrained in their behaviour on non-differentiable vector fields.
+
+This is the positive-definite case of
+`CovariantDerivative.eq_of_isMetricCompatible_of_torsion_eq_zero`, which holds for any
+nondegenerate fibrewise form. -/
 public theorem IsLeviCivitaConnection.uniqueness
     (hcov : cov.IsLeviCivitaConnection) (hcov' : cov'.IsLeviCivitaConnection)
     (hY : MDiffAt (T% Y) x) (X₀ : TangentSpace% x) :
-    cov Y x X₀ = cov' Y x X₀ := by
-  apply injective_inner_mdifferentiableAt_vectorField; ext Z hZ
-  exact (hcov.apply_eq_extend I X₀ hY hZ).trans (hcov'.apply_eq_extend I X₀ hY hZ).symm
+    cov Y x X₀ = cov' Y x X₀ :=
+  DFunLike.congr_fun (eq_of_isMetricCompatible_of_torsion_eq_zero
+    hcov.isMetricCompatible hcov'.isMetricCompatible hcov.torsion hcov'.torsion hY) X₀
 
 end uniqueness
 
@@ -279,11 +274,11 @@ theorem tensorialAt_leviCivitaAuxInner₁
   smul hf hX := by
     simp (disch := fun_prop) [leviCivitaAuxInner, mvfderiv_fun_mul,
       mlieBracket_smul_left, mlieBracket_smul_right,
-      inner_add_right, inner_smul_left, inner_smul_right, real_inner_comm]
+      PseudoInnerProductSpace.inner_comm]
     ring
   add hX₁ hX₂ := by
     simp (disch := fun_prop) [leviCivitaAuxInner, mlieBracket_add_right, mlieBracket_add_left,
-      mvfderiv_fun_add, inner_add_left, inner_add_right]
+      mvfderiv_fun_add]
     ring
 
 /-- `leviCivitaAuxInner` is tensorial with respect to its third argument. -/
@@ -294,13 +289,12 @@ theorem tensorialAt_leviCivitaAuxInner₃
     simp (disch := fun_prop) [leviCivitaAuxInner,
       mlieBracket_smul_right, mlieBracket_smul_left,
       mvfderiv_fun_mul,
-      inner_smul_left, inner_smul_right, inner_add_right, real_inner_comm]
+      PseudoInnerProductSpace.inner_comm]
     ring
   add hZ₁ hZ₂ := by
     simp (disch := fun_prop) [leviCivitaAuxInner,
       mlieBracket_add_right, mlieBracket_add_left,
-      mvfderiv_fun_add,
-      inner_add_left, inner_add_right]
+      mvfderiv_fun_add]
     ring
 
 /-- Almost the function underlying our construction of the Levi-Civita connection:
@@ -308,16 +302,17 @@ this is the desired `(1,1)`-tensor, but without considerations to the junk value
 applied to non-differentiable vector fields. -/
 noncomputable def leviCivitaAuxOfMDiffAt (hY : MDiffAt (T% Y) x) :
     TangentSpace I x →L[ℝ] TangentSpace I x :=
-  -- Use the musical isomorphism to produce a candidate `∇ Y` as a `(1,1)`-tensor
-  -- (rather than a `2`-tensor).
-  (InnerProductSpace.toDual ℝ _).symm.toContinuousLinearEquiv.toContinuousLinearMap ∘L
+  -- Use the musical isomorphism `♯` to produce a candidate `∇ Y` as a `(1,1)`-tensor
+  -- (rather than a `2`-tensor). Only nondegeneracy of the form is used, through
+  -- `sharpL`.
+  sharpL (TangentSpace I x) ∘L
     (TensorialAt.mkHom₂ _ (x := x)
       (fun _Z hZ ↦ tensorialAt_leviCivitaAuxInner₁ _ _ hY hZ)
       (fun _X hX ↦ tensorialAt_leviCivitaAuxInner₃ _ _ hY hX))
 
 theorem leviCivitaAuxOfMDiffAt_apply_inner
     (hX : MDiffAt (T% X) x) (hY : MDiffAt (T% Y) x) (hZ : MDiffAt (T% Z) x) :
-    ⟪leviCivitaAuxOfMDiffAt I hY (X x), Z x⟫ = leviCivitaAuxInner I X Y Z x := by
+    inner ℝ (leviCivitaAuxOfMDiffAt I hY (X x)) (Z x) = leviCivitaAuxInner I X Y Z x := by
   unfold leviCivitaAuxOfMDiffAt
   simp [TensorialAt.mkHom₂_apply _ _ hX hZ]
 
@@ -330,7 +325,7 @@ noncomputable def leviCivitaAux
 
 theorem leviCivitaAux_apply_inner
     (hX : MDiffAt (T% X) x) (hY : MDiffAt (T% Y) x) (hZ : MDiffAt (T% Z) x) :
-    ⟪leviCivitaAux I Y x (X x), Z x⟫ = leviCivitaAuxInner I X Y Z x := by
+    inner ℝ (leviCivitaAux I Y x (X x)) (Z x) = leviCivitaAuxInner I X Y Z x := by
   simpa [leviCivitaAux, dite_eq_left hY] using leviCivitaAuxOfMDiffAt_apply_inner I hX hY hZ
 
 lemma isCovariantDerivativeOn_leviCivitaAux :
@@ -340,8 +335,7 @@ lemma isCovariantDerivativeOn_leviCivitaAux :
     apply injective_inner_mdifferentiableAt_vectorField; ext Z hZ
     simp (disch := fun_prop) [leviCivitaAux, dite_eq_left, TensorialAt.mkHom₂_apply,
       leviCivitaAuxOfMDiffAt, leviCivitaAuxInner, mvfderiv_fun_add,
-      mlieBracket_add_left, mlieBracket_add_right,
-      inner_add_left, inner_add_right]
+      mlieBracket_add_left, mlieBracket_add_right]
     ring
   leibniz {Y f x} hY hf _ := by
     apply injective_eval_mdifferentiableAt_vectorField; ext X hX
@@ -349,12 +343,12 @@ lemma isCovariantDerivativeOn_leviCivitaAux :
     simp (disch := fun_prop) [leviCivitaAux, dite_eq_left, leviCivitaAuxOfMDiffAt,
       TensorialAt.mkHom₂_apply, leviCivitaAuxInner, mvfderiv_fun_mul,
       mlieBracket_smul_left, mlieBracket_smul_right,
-      inner_add_left, inner_add_right, inner_smul_left, inner_smul_right, real_inner_comm]
+      PseudoInnerProductSpace.inner_comm]
     ring
 
 variable (M) in
-/-- A choice of Levi-Civita connection on the tangent bundle `TM` of a Riemannian manifold `(M, g)`:
-this is unique up to the value on non-differentiable vector fields.
+/-- A choice of Levi-Civita connection on the tangent bundle `TM` of a pseudo-Riemannian manifold
+`(M, g)`: this is unique up to the value on non-differentiable vector fields.
 If you know the Levi-Civita connection already, you can use `IsLeviCivitaConnection` instead. -/
 public noncomputable def leviCivitaConnection :
     CovariantDerivative I E (TangentSpace I : M → Type _) where
@@ -363,7 +357,7 @@ public noncomputable def leviCivitaConnection :
 
 public theorem leviCivitaConnection_apply_inner
     (hX : MDiffAt (T% X) x) (hY : MDiffAt (T% Y) x) (hZ : MDiffAt (T% Z) x) :
-    ⟪leviCivitaConnection I M Y x (X x), Z x⟫ =
+    inner ℝ (leviCivitaConnection I M Y x (X x)) (Z x) =
       (d% ⟪Y, Z⟫ x (X x) + d% ⟪Z, X⟫ x (Y x) - d% ⟪X, Y⟫ x (Z x)
       - ⟪Y, VectorField.mlieBracket I X Z⟫ x
       - ⟪Z, VectorField.mlieBracket I Y X⟫ x
@@ -372,12 +366,12 @@ public theorem leviCivitaConnection_apply_inner
 
 public theorem leviCivitaConnection_apply_inner_right
     (hX : MDiffAt (T% X) x) (hY : MDiffAt (T% Y) x) (hZ : MDiffAt (T% Z) x) :
-    ⟪X x, leviCivitaConnection I M Y x (Z x)⟫ =
+    inner ℝ (X x) (leviCivitaConnection I M Y x (Z x)) =
       (d% ⟪Y, X⟫ x (Z x) + d% ⟪X, Z⟫ x (Y x) - d% ⟪Z, Y⟫ x (X x)
       - ⟪Y ,VectorField.mlieBracket I Z X⟫ x
       - ⟪X, VectorField.mlieBracket I Y Z⟫ x
       + ⟪Z, VectorField.mlieBracket I X Y⟫ x) / 2 := by
-  rw [real_inner_comm]
+  rw [PseudoInnerProductSpace.inner_comm]
   exact leviCivitaAux_apply_inner _ hZ hY hX
 
 public lemma isMetricCompatible_leviCivitaConnection :
@@ -386,9 +380,10 @@ public lemma isMetricCompatible_leviCivitaConnection :
   intro x X Y Z hX hY hZ
   -- Normalise the expressions by swapping arguments for inner product and mlieBracket,
   -- until the swappable arguments are in order X < Y < Z.
-  simp (disch := fun_prop) [leviCivitaConnection_apply_inner_right,
-    fun x ↦ real_inner_comm (Z x),
-    fun x ↦ real_inner_comm (Y x) (X x),
+  simp (disch := fun_prop) [leviCivitaConnection_apply_inner,
+    leviCivitaConnection_apply_inner_right,
+    fun x ↦ PseudoInnerProductSpace.inner_comm (Z x),
+    fun x ↦ PseudoInnerProductSpace.inner_comm (Y x) (X x),
     mlieBracket_swap (V := Z),
     mlieBracket_swap (V := Y) (W := X)]
   ring
@@ -398,10 +393,10 @@ public lemma torsion_leviCivitaConnection_eq_zero :
   rw [CovariantDerivative.torsion_eq_zero_iff]
   intro X Y x hX hY
   apply injective_inner_mdifferentiableAt_vectorField; ext Z hZ
-  simp (disch := fun_prop) [leviCivitaConnection_apply_inner I,
+  -- The pairing may end up with the connection on either side, so supply both rewrites.
+  simp (disch := fun_prop) [leviCivitaConnection_apply_inner_right I,
     mlieBracket_swap (V := Y) (W := X), mlieBracket_swap (V := Z) (W := X),
-    mlieBracket_swap (V := Z) (W := Y),
-    real_inner_comm, inner_sub_left]
+    mlieBracket_swap (V := Z) (W := Y), PseudoInnerProductSpace.inner_comm]
   ring
 
 /-- `leviCivitaConnection` is a Levi-Civita connection (i.e., compatible and torsion-free) -/

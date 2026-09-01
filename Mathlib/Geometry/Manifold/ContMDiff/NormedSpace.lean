@@ -6,7 +6,6 @@ Authors: Sébastien Gouëzel, Floris van Doorn, Matteo Cipollina
 module
 
 public import Mathlib.Geometry.Manifold.ContMDiff.Constructions
-public import Mathlib.Analysis.Calculus.ContDiff.Operations
 public import Mathlib.Analysis.Normed.Operator.Prod
 
 /-! ## Equivalence of smoothness with the basic definition for functions between vector spaces
@@ -14,8 +13,8 @@ public import Mathlib.Analysis.Normed.Operator.Prod
 * `contMDiff_iff_contDiff`: for functions between vector spaces,
   manifold-smoothness is equivalent to usual smoothness.
 * `ContinuousLinearMap.contMDiff`: continuous linear maps between normed spaces are smooth
-* `ContMDiffAt.clm_inverse`: pointwise inversion of a `C^n` family of invertible continuous
-  linear maps is `C^n`
+* `ContMDiffWithinAt.clm_inverse`: pointwise inversion of a `C^n` family of continuous linear
+  maps, invertible at the base point, is `C^n` there
 
 Smoothness of addition and scalar multiplication in normed spaces is proven not here but in
 `Mathlib/Geometry/Manifold/Algebra/LieGroup.lean` and `Mathlib/Geometry/Manifold/Algebra/SMul.lean`
@@ -269,28 +268,31 @@ theorem ContMDiff.clm_prodMap {g : M → F₁ →L[𝕜] F₃} {f : M → F₂ �
 
 /-! ### Inversion of a family of continuous linear maps -/
 
-/-- Pointwise inversion of a `C^n` family of continuous linear maps, invertible at the base point,
-is `C^n` at that point. This is the manifold-parameter form of
-`ContinuousLinearMap.IsInvertible.contDiffAt_map_inverse`. -/
-theorem ContMDiffAt.clm_inverse [CompleteSpace F] {A : M → F →L[𝕜] F'} {x : M}
-    (hA : ContMDiffAt I 𝓘(𝕜, F →L[𝕜] F') n A x) (hinv : (A x).IsInvertible) :
-    ContMDiffAt I 𝓘(𝕜, F' →L[𝕜] F) n (fun x ↦ ContinuousLinearMap.inverse (A x)) x :=
-  hinv.contDiffAt_map_inverse.comp_contMDiffAt hA
-
-/-- Within-set version of `ContMDiffAt.clm_inverse`. -/
-theorem ContMDiffWithinAt.clm_inverse [CompleteSpace F] {A : M → F →L[𝕜] F'} {x : M}
+/-- Pointwise inversion of a `C^n` family of continuous linear maps is `C^n` within a set, at a
+point where the family is invertible. Only invertibility at the base point is assumed. This is the
+manifold-parameter form of `ContDiffWithinAt.clm_inverse`. -/
+theorem ContMDiffWithinAt.clm_inverse [CompleteSpace F] {A : M → F →L[𝕜] F'}
     (hA : ContMDiffWithinAt I 𝓘(𝕜, F →L[𝕜] F') n A s x) (hinv : (A x).IsInvertible) :
-    ContMDiffWithinAt I 𝓘(𝕜, F' →L[𝕜] F) n (fun x ↦ ContinuousLinearMap.inverse (A x)) s x :=
+    ContMDiffWithinAt I 𝓘(𝕜, F' →L[𝕜] F) n (fun y ↦ ContinuousLinearMap.inverse (A y)) s x :=
   hinv.contDiffAt_map_inverse.comp_contMDiffWithinAt hA
 
-/-- On-set version of `ContMDiffAt.clm_inverse`. -/
+/-- Pointwise inversion of a `C^n` family of continuous linear maps, invertible at the base point,
+is `C^n` at that point. -/
+theorem ContMDiffAt.clm_inverse [CompleteSpace F] {A : M → F →L[𝕜] F'}
+    (hA : ContMDiffAt I 𝓘(𝕜, F →L[𝕜] F') n A x) (hinv : (A x).IsInvertible) :
+    ContMDiffAt I 𝓘(𝕜, F' →L[𝕜] F) n (fun y ↦ ContinuousLinearMap.inverse (A y)) x :=
+  hinv.contDiffAt_map_inverse.comp_contMDiffAt hA
+
+/-- Pointwise inversion of a `C^n` family of continuous linear maps, invertible on a set, is `C^n`
+on that set. -/
 theorem ContMDiffOn.clm_inverse [CompleteSpace F] {A : M → F →L[𝕜] F'}
     (hA : ContMDiffOn I 𝓘(𝕜, F →L[𝕜] F') n A s) (hinv : ∀ x ∈ s, (A x).IsInvertible) :
-    ContMDiffOn I 𝓘(𝕜, F' →L[𝕜] F) n (fun x ↦ ContinuousLinearMap.inverse (A x)) s :=
+    ContMDiffOn I 𝓘(𝕜, F' →L[𝕜] F) n (fun y ↦ ContinuousLinearMap.inverse (A y)) s :=
   fun x hx ↦ (hA x hx).clm_inverse (hinv x hx)
 
-/-- Global version of `ContMDiffAt.clm_inverse`. -/
+/-- Pointwise inversion of a `C^n` family of everywhere-invertible continuous linear maps
+is `C^n`. -/
 theorem ContMDiff.clm_inverse [CompleteSpace F] {A : M → F →L[𝕜] F'}
     (hA : ContMDiff I 𝓘(𝕜, F →L[𝕜] F') n A) (hinv : ∀ x, (A x).IsInvertible) :
-    ContMDiff I 𝓘(𝕜, F' →L[𝕜] F) n (fun x ↦ ContinuousLinearMap.inverse (A x)) :=
+    ContMDiff I 𝓘(𝕜, F' →L[𝕜] F) n fun y ↦ ContinuousLinearMap.inverse (A y) :=
   fun x ↦ (hA x).clm_inverse (hinv x)

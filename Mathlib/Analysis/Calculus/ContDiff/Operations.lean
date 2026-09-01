@@ -871,6 +871,35 @@ theorem ContinuousLinearMap.IsInvertible.contDiffAt_map_inverse [CompleteSpace E
   rcases he with ⟨M, rfl⟩
   exact _root_.contDiffAt_map_inverse M
 
+/-- Pointwise inversion of a `C^n` family of continuous linear maps is `C^n` within a set, at a
+point where the family is invertible. Only invertibility at that point is assumed: the family is
+then invertible nearby, and `ContinuousLinearMap.inverse` is `C^n` there. -/
+theorem ContDiffWithinAt.clm_inverse [CompleteSpace F] {A : E → F →L[𝕜] G}
+    (hA : ContDiffWithinAt 𝕜 n A s x) (hA' : (A x).IsInvertible) :
+    ContDiffWithinAt 𝕜 n (fun y ↦ ContinuousLinearMap.inverse (A y)) s x :=
+  hA'.contDiffAt_map_inverse.comp_contDiffWithinAt x hA
+
+/-- Pointwise inversion of a `C^n` family of continuous linear maps, invertible at the base point,
+is `C^n` at that point. -/
+theorem ContDiffAt.clm_inverse [CompleteSpace F] {A : E → F →L[𝕜] G}
+    (hA : ContDiffAt 𝕜 n A x) (hA' : (A x).IsInvertible) :
+    ContDiffAt 𝕜 n (fun y ↦ ContinuousLinearMap.inverse (A y)) x :=
+  hA'.contDiffAt_map_inverse.comp x hA
+
+/-- Pointwise inversion of a `C^n` family of continuous linear maps, invertible on a set, is `C^n`
+on that set. -/
+theorem ContDiffOn.clm_inverse [CompleteSpace F] {A : E → F →L[𝕜] G}
+    (hA : ContDiffOn 𝕜 n A s) (hA' : ∀ x ∈ s, (A x).IsInvertible) :
+    ContDiffOn 𝕜 n (fun y ↦ ContinuousLinearMap.inverse (A y)) s :=
+  fun x hx ↦ (hA x hx).clm_inverse (hA' x hx)
+
+/-- Pointwise inversion of a `C^n` family of everywhere-invertible continuous linear maps
+is `C^n`. -/
+theorem ContDiff.clm_inverse [CompleteSpace F] {A : E → F →L[𝕜] G}
+    (hA : ContDiff 𝕜 n A) (hA' : ∀ x, (A x).IsInvertible) :
+    ContDiff 𝕜 n fun y ↦ ContinuousLinearMap.inverse (A y) :=
+  contDiff_iff_contDiffAt.2 fun x ↦ hA.contDiffAt.clm_inverse (hA' x)
+
 end MapInverse
 
 section FunctionInverse

@@ -26,10 +26,10 @@ This is the analytic input to local constancy of the index of a pseudo-Riemannia
 
 ## Main results
 
-* `ContinuousLinearMap.eventually_forall_pos`, `eventually_forall_neg`: definiteness on a fixed
-  subspace is an open condition on the form
-* `ContinuousLinearMap.eventually_sigNeg_eq`: `sigPos`, `sigNeg` and triviality of the radical are
-  locally constant
+* `ContinuousLinearMap.eventually_restrict_posDef`, `eventually_restrict_negDef`: definiteness on a
+  fixed subspace is an open condition on the form
+* `ContinuousLinearMap.eventually_radical_eq_bot`, `eventually_sigPos_eq`, `eventually_sigNeg_eq`:
+  nondegeneracy and both inertia indices are locally constant
 * `ContinuousLinearMap.sigNeg_toQuadraticForm_of_congr`: transport along a linear equivalence
 
 ## Tags
@@ -66,8 +66,9 @@ variable {F : Type*} [NormedAddCommGroup F] [NormedSpace ℝ F] [FiniteDimension
 /-- Positive definiteness on a subspace is quantitative: `ε ‖v‖ ^ 2 ≤ b v v` for some `ε > 0`,
 by compactness of the unit sphere and homogeneity. -/
 lemma exists_pos_forall_le_of_posDef (b : F →L[ℝ] F →L[ℝ] ℝ) {V : Submodule ℝ F}
-    (hV : ∀ v : V, v ≠ 0 → 0 < b v v) :
+    (hV₀ : (b.toQuadraticForm.restrict V).PosDef) :
     ∃ ε > 0, ∀ v : V, ε * ‖(v : F)‖ ^ 2 ≤ b v v := by
+  have hV : ∀ v : V, v ≠ 0 → 0 < b (v : F) (v : F) := fun v hv ↦ by simpa using hV₀ v hv
   have hcont : Continuous fun v : V ↦ b (v : F) (v : F) :=
     (b.continuous.comp continuous_subtype_val).clm_apply continuous_subtype_val
   rcases subsingleton_or_nontrivial V with _ | _
@@ -119,30 +120,25 @@ private lemma pos_of_norm_sub_lt {b c : F →L[ℝ] F →L[ℝ] ℝ} {V : Submod
   nlinarith [hle v, (abs_le.mp hbound).1, (abs_le.mp hbound).2]
 
 /-- Positive definiteness on a fixed subspace is an open condition on the bilinear form. -/
-lemma eventually_forall_pos {b : F →L[ℝ] F →L[ℝ] ℝ} {V : Submodule ℝ F}
-    (hV : ∀ v : V, v ≠ 0 → 0 < b v v) :
-    ∀ᶠ c in 𝓝 b, ∀ v : V, v ≠ 0 → 0 < c (v : F) (v : F) := by
+lemma eventually_restrict_posDef {b : F →L[ℝ] F →L[ℝ] ℝ} {V : Submodule ℝ F}
+    (hV : (b.toQuadraticForm.restrict V).PosDef) :
+    ∀ᶠ c in 𝓝 b, (c.toQuadraticForm.restrict V).PosDef := by
   obtain ⟨ε, hε, hle⟩ := exists_pos_forall_le_of_posDef b hV
-  filter_upwards [ball_mem_nhds b hε] with c hc
+  filter_upwards [ball_mem_nhds b hε] with c hc v hv
   have h1 : dist c b < ε := Metric.mem_ball.mp hc
   rw [dist_eq_norm c b] at h1
-  exact pos_of_norm_sub_lt hle h1
+  simpa using pos_of_norm_sub_lt hle h1 v hv
 
-/-- Negative definiteness on a fixed subspace is an open condition on the bilinear form. -/
-lemma eventually_forall_neg {b : F →L[ℝ] F →L[ℝ] ℝ} {V : Submodule ℝ F}
-    (hV : ∀ v : V, v ≠ 0 → b v v < 0) :
-    ∀ᶠ c in 𝓝 b, ∀ v : V, v ≠ 0 → c (v : F) (v : F) < 0 := by
-  have hneg : ∀ v : V, v ≠ 0 → 0 < (-b) (v : F) (v : F) := fun v hv ↦ by simpa using hV v hv
-  obtain ⟨ε, hε, hle⟩ := exists_pos_forall_le_of_posDef (-b) hneg
-  filter_upwards [ball_mem_nhds b hε] with c hc v hv
-  have hcb : dist c b < ε := Metric.mem_ball.mp hc
-  rw [dist_eq_norm c b] at hcb
-  have heq : (-c) - (-b) = -(c - b) := by abel
-  have hnorm : ‖(-c) - (-b)‖ < ε := by
-    have h2 : ‖(-c) - (-b)‖ = ‖c - b‖ := by rw [heq]; exact norm_neg (c - b)
-    rw [h2]; exact hcb
-  have := pos_of_norm_sub_lt hle hnorm v hv
-  simpa using this
+/-- Negative definiteness on a fixed subspace is an open condition on the bilinear form. As in
+`QuadraticForm.le_sigNeg_of_negDef`, negative definiteness is spelled as positive definiteness
+of `-Q`. -/
+lemma eventually_restrict_negDef {b : F →L[ℝ] F →L[ℝ] ℝ} {V : Submodule ℝ F}
+    (hV : ((-b.toQuadraticForm).restrict V).PosDef) :
+    ∀ᶠ c in 𝓝 b, ((-c.toQuadraticForm).restrict V).PosDef := by
+  -- Negation is a homeomorphism, so this is the positive case at `-b`.
+  have h := eventually_restrict_posDef (b := -b) (V := V) (by simpa using hV)
+  filter_upwards [(continuous_neg.tendsto b).eventually h] with c hc
+  simpa using hc
 
 /-! ### Local constancy of the signature -/
 
@@ -153,39 +149,45 @@ private lemma sigPos_add_sigNeg_of_radical_eq_bot (hb : b.toQuadraticForm.radica
   have h := QuadraticForm.sigPos_add_sigNeg_add_radical (Q := b.toQuadraticForm)
   rwa [hb, finrank_bot, Nat.add_zero] at h
 
-/-- **The signature is locally constant.** If `b.toQuadraticForm` has trivial radical, so does
-every nearby form, with the same `sigPos` and `sigNeg`.
-
-No symmetry is assumed: `sigPos`, `sigNeg` and `radical` see only `v ↦ b v v`, which is unchanged
-by symmetrising `b`. -/
-theorem eventually_sigNeg_eq (hb : b.toQuadraticForm.radical = ⊥) :
+/-- Near a nondegenerate form the radical stays trivial and neither inertia index moves. The three
+consequences are exposed separately below. -/
+private lemma eventually_radical_and_sig_eq (hb : b.toQuadraticForm.radical = ⊥) :
     ∀ᶠ c in 𝓝 b, c.toQuadraticForm.radical = ⊥ ∧
       sigPos c.toQuadraticForm = sigPos b.toQuadraticForm ∧
       sigNeg c.toQuadraticForm = sigNeg b.toQuadraticForm := by
   classical
-  obtain ⟨Vp, hVpdim, hVppos⟩ :=
-    exists_finrank_eq_sigPos_and_posDef b.toQuadraticForm
-  obtain ⟨Vn, hVndim, hVnneg⟩ :=
-    exists_finrank_eq_sigNeg_and_negDef b.toQuadraticForm
+  obtain ⟨Vp, hVpdim, hVppos⟩ := exists_finrank_eq_sigPos_and_posDef b.toQuadraticForm
+  obtain ⟨Vn, hVndim, hVnneg⟩ := exists_finrank_eq_sigNeg_and_negDef b.toQuadraticForm
   have hsum := sigPos_add_sigNeg_of_radical_eq_bot hb
-  have hpos : ∀ v : Vp, v ≠ 0 → 0 < b (v : F) (v : F) := fun v hv ↦ hVppos v hv
-  have hneg : ∀ v : Vn, v ≠ 0 → b (v : F) (v : F) < 0 := fun v hv ↦ by
-    have h : (0 : ℝ) < -(b (v : F) (v : F)) := hVnneg v hv
-    linarith
-  filter_upwards [eventually_forall_pos hpos, eventually_forall_neg hneg] with c hcp hcn
-  -- Both maximal subspaces stay definite, so the two parts of the signature can only grow.
+  filter_upwards [eventually_restrict_posDef hVppos, eventually_restrict_negDef hVnneg]
+    with c hcp hcn
+  -- Both maximal definite subspaces stay definite, so the two parts of the signature can only grow.
   have hle_pos : sigPos b.toQuadraticForm ≤ sigPos c.toQuadraticForm := by
-    rw [← hVpdim]
-    exact le_sigPos_of_posDef _ fun v hv ↦ hcp v hv
+    rw [← hVpdim]; exact le_sigPos_of_posDef _ hcp
   have hle_neg : sigNeg b.toQuadraticForm ≤ sigNeg c.toQuadraticForm := by
-    rw [← hVndim]
-    refine le_sigNeg_of_negDef _ fun v hv ↦ ?_
-    change (0 : ℝ) < -(c (v : F) (v : F))
-    linarith [hcn v hv]
+    rw [← hVndim]; exact le_sigNeg_of_negDef _ hcn
   -- Sylvester's law caps the total, so both inequalities are equalities.
   have hc := QuadraticForm.sigPos_add_sigNeg_add_radical (Q := c.toQuadraticForm)
   have hrad : finrank ℝ c.toQuadraticForm.radical = 0 := by lia
-  refine ⟨Submodule.finrank_eq_zero.mp hrad, by lia, by lia⟩
+  exact ⟨Submodule.finrank_eq_zero.mp hrad, by lia, by lia⟩
+
+/-- **Nondegeneracy is an open condition** on a continuous bilinear form. -/
+theorem eventually_radical_eq_bot (hb : b.toQuadraticForm.radical = ⊥) :
+    ∀ᶠ c in 𝓝 b, c.toQuadraticForm.radical = ⊥ :=
+  (eventually_radical_and_sig_eq hb).mono fun _ h ↦ h.1
+
+/-- **The positive inertia index is locally constant** at a nondegenerate form.
+
+No symmetry is assumed: `sigPos`, `sigNeg` and `radical` see only `v ↦ b v v`, which is unchanged
+by symmetrising `b`. -/
+theorem eventually_sigPos_eq (hb : b.toQuadraticForm.radical = ⊥) :
+    ∀ᶠ c in 𝓝 b, sigPos c.toQuadraticForm = sigPos b.toQuadraticForm :=
+  (eventually_radical_and_sig_eq hb).mono fun _ h ↦ h.2.1
+
+/-- **The negative inertia index is locally constant** at a nondegenerate form. -/
+theorem eventually_sigNeg_eq (hb : b.toQuadraticForm.radical = ⊥) :
+    ∀ᶠ c in 𝓝 b, sigNeg c.toQuadraticForm = sigNeg b.toQuadraticForm :=
+  (eventually_radical_and_sig_eq hb).mono fun _ h ↦ h.2.2
 
 /-! ### Transport along a linear equivalence -/
 

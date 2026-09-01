@@ -992,6 +992,32 @@ theorem inCoordinates_eq {x₀ x : B} {y₀ y : B'} {ϕ : E x →SL[σ] E' y}
   simp_rw [inCoordinates, ContinuousLinearMap.coe_comp, ContinuousLinearEquiv.coe_coe,
     Trivialization.coe_continuousLinearEquivAt_eq, Trivialization.symm_continuousLinearEquivAt_eq]
 
+section Inverse
+
+variable {𝕜 : Type*} [NontriviallyNormedField 𝕜]
+  {F₁ : Type*} [NormedAddCommGroup F₁] [NormedSpace 𝕜 F₁]
+  {E₁ : B → Type*} [∀ x, AddCommMonoid (E₁ x)] [∀ x, Module 𝕜 (E₁ x)]
+  [TopologicalSpace (TotalSpace F₁ E₁)] [∀ x, TopologicalSpace (E₁ x)]
+  [FiberBundle F₁ E₁] [VectorBundle 𝕜 F₁ E₁]
+  {F₂ : Type*} [NormedAddCommGroup F₂] [NormedSpace 𝕜 F₂]
+  {E₂ : B' → Type*} [∀ x, AddCommMonoid (E₂ x)] [∀ x, Module 𝕜 (E₂ x)]
+  [TopologicalSpace (TotalSpace F₂ E₂)] [∀ x, TopologicalSpace (E₂ x)]
+  [FiberBundle F₂ E₂] [VectorBundle 𝕜 F₂ E₂]
+
+/-- `ContinuousLinearMap.inverse` intertwines `ContinuousLinearMap.inCoordinates` in the two
+directions. Invertibility of `ϕ` is not needed: on the base sets of the reference trivializations
+the coordinate legs are invertible, and `inverse` reverses composition with an invertible map
+whether or not the middle map is invertible. -/
+theorem inCoordinates_inverse {x₀ x : B} {y₀ y : B'} (ϕ : E₁ x →L[𝕜] E₂ y)
+    (hx : x ∈ (trivializationAt F₁ E₁ x₀).baseSet)
+    (hy : y ∈ (trivializationAt F₂ E₂ y₀).baseSet) :
+    inCoordinates F₂ E₂ F₁ E₁ y₀ y x₀ x (inverse ϕ) =
+      inverse (inCoordinates F₁ E₁ F₂ E₂ x₀ x y₀ y ϕ) := by
+  rw [inCoordinates_eq hy hx, inCoordinates_eq hx hy, inverse_equiv_comp, inverse_comp_equiv,
+    ContinuousLinearEquiv.symm_symm, ContinuousLinearMap.comp_assoc]
+
+end Inverse
+
 set_option backward.isDefEq.respectTransparency false in
 /-- Rewrite `ContinuousLinearMap.inCoordinates` in a `VectorBundleCore`. -/
 protected theorem _root_.VectorBundleCore.inCoordinates_eq {ι ι'} (Z : VectorBundleCore 𝕜₁ B F ι)

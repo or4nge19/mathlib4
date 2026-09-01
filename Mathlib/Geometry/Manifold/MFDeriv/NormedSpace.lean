@@ -267,6 +267,39 @@ theorem MDifferentiable.clm_prodMap {g : M → F₁ →L[𝕜] F₃} {f : M → 
     (hg : MDiff g) (hf : MDiff f) : MDiff fun x ↦ (g x).prodMap (f x) :=
   fun x ↦ (hg x).clm_prodMap (hf x)
 
+/-! ### Inversion of a family of continuous linear maps -/
+
+/-- Pointwise inversion of a differentiable family of continuous linear maps is differentiable
+within a set, at a point where the family is invertible. Only invertibility at the base point is
+assumed. This is the differentiability analogue of `ContMDiffWithinAt.clm_inverse`. -/
+theorem MDifferentiableWithinAt.clm_inverse [CompleteSpace F₁] {A : M → F₁ →L[𝕜] F₂} {s : Set M}
+    {x : M} (hA : MDiffAt[s] A x) (hinv : (A x).IsInvertible) :
+    MDiffAt[s] (fun y ↦ ContinuousLinearMap.inverse (A y) : M → F₂ →L[𝕜] F₁) x :=
+  DifferentiableAt.comp_mdifferentiableWithinAt
+    ((hinv.contDiffAt_map_inverse (n := 1)).differentiableAt one_ne_zero) hA
+
+/-- Pointwise inversion of a differentiable family of continuous linear maps, invertible at the
+base point, is differentiable at that point. -/
+theorem MDifferentiableAt.clm_inverse [CompleteSpace F₁] {A : M → F₁ →L[𝕜] F₂} {x : M}
+    (hA : MDiffAt A x) (hinv : (A x).IsInvertible) :
+    MDiffAt (fun y ↦ ContinuousLinearMap.inverse (A y) : M → F₂ →L[𝕜] F₁) x :=
+  DifferentiableAt.comp_mdifferentiableWithinAt
+    ((hinv.contDiffAt_map_inverse (n := 1)).differentiableAt one_ne_zero) hA
+
+/-- Pointwise inversion of a differentiable family of continuous linear maps, invertible on a set,
+is differentiable on that set. -/
+theorem MDifferentiableOn.clm_inverse [CompleteSpace F₁] {A : M → F₁ →L[𝕜] F₂} {s : Set M}
+    (hA : MDiff[s] A) (hinv : ∀ x ∈ s, (A x).IsInvertible) :
+    MDiff[s] (fun y ↦ ContinuousLinearMap.inverse (A y) : M → F₂ →L[𝕜] F₁) :=
+  fun x hx ↦ (hA x hx).clm_inverse (hinv x hx)
+
+/-- Pointwise inversion of a differentiable family of everywhere-invertible continuous linear maps
+is differentiable. -/
+theorem MDifferentiable.clm_inverse [CompleteSpace F₁] {A : M → F₁ →L[𝕜] F₂}
+    (hA : MDiff A) (hinv : ∀ x, (A x).IsInvertible) :
+    MDiff (fun y ↦ ContinuousLinearMap.inverse (A y) : M → F₂ →L[𝕜] F₁) :=
+  fun x ↦ (hA x).clm_inverse (hinv x)
+
 /-! ### Differentiability of scalar multiplication -/
 
 section smul

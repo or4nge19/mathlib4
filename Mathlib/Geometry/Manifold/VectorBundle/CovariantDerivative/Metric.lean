@@ -14,20 +14,19 @@ public import Mathlib.Geometry.Manifold.MFDeriv.NormedSpace
 This file defines connections on a pseudo-Riemannian vector bundle which are compatible with the
 ambient metric. A bundled connection `∇` on a pseudo-Riemannian vector bundle `(V, g)` is
 compatible with the metric `g` if and only if the differentiated metric tensor `∇ g` (defined by
-`(X, σ, τ) ↦ 𝓛_X g(σ, τ) - g(∇_X σ, τ) - g(σ, ∇_X τ)`) vanishes on all differentiable vector
-fields `X` and differentiable sections `σ`, `τ`.
+`(X, σ, τ) ↦ 𝓛_X g(σ, τ) - g(∇_X σ, τ) - g(σ, ∇_X τ)`) vanishes on all differentiable vector fields
+`X` and differentiable sections `σ`, `τ`.
 
 Positivity of `g` is used nowhere: the compatibility tensor needs only bilinearity, symmetry and
 smoothness of the pairing. The statements therefore take `PseudoInnerProductSpace` fibres, which
-is the generality they actually have. Riemannian bundles are included via
-`InnerProductSpace.toPseudoInnerProductSpace` and
-`Bundle.IsContMDiffRiemannianBundle.toIsContMDiffPseudoRiemannianBundle`.
+is the generality they actually have. Riemannian bundles are included with no adapter, via
+`InnerProductSpace.toPseudoInnerProductSpace`.
 
 ## Main definitions and results
 
 * `CovariantDerivative.derivMetricTensor`: the tensor
-  `(X, σ, τ) ↦ 𝓛_X g(σ, τ) - g(∇_X σ, τ) - g(σ, ∇_X τ)` defining when a connection `∇`
-  on a pseudo-Riemannian vector bundle `(V, g)` is compatible with the metric `g`.
+  `(X, σ, τ) ↦ 𝓛_X g(σ, τ) - g(∇_X σ, τ) - g(σ, ∇_X τ)` defining when a connection `∇` on a
+  pseudo-Riemannian vector bundle `(V, g)` is compatible with the metric `g`.
 * `CovariantDerivative.derivMetricTensor_apply` and
   `CovariantDerivative.derivMetricTensor_apply_eq_extend` give formulas for applying
   the compatibility tensor at `x` to vector fields and sections which are differentiable at `x`,
@@ -43,12 +42,11 @@ is the generality they actually have. Riemannian bundles are included via
   isometry.
 
 * Given connections on bundles `V` and `W`, there is an induced connection on the bundle
-  `Hom(V, W)`. When this induced connection has been defined in Mathlib, rephrase the definition
-  of `CovariantDerivative.derivMetricTensor`, to be simply the covariant derivative of the
+  `Hom(V, W)`. When this induced connection has been defined in Mathlib, rephrase the definition of
+  `CovariantDerivative.derivMetricTensor`, to be simply the covariant derivative of the
   metric tensor (considered as a section of `Hom(V, Hom(V, ℝ))`).
 
 -/
-
 open Bundle NormedSpace PseudoInnerProductSpace
 open scoped Manifold ContDiff
 
@@ -62,23 +60,22 @@ variable
   {V : M → Type*} [TopologicalSpace (TotalSpace F V)]
   [∀ x, AddCommGroup (V x)] [∀ x, Module ℝ (V x)] [∀ x, TopologicalSpace (V x)]
   [∀ x, IsTopologicalAddGroup (V x)] [∀ x, ContinuousSMul ℝ (V x)]
-  [∀ x, PseudoInnerProductSpace (V x)] [FiberBundle F V]
+  [∀ x, PseudoInnerProductSpace ℝ (V x)] [FiberBundle F V]
 
 /-! # Compatible connections
 
-A connection on `V` is compatible with the metric on `V` iff
-`𝓛_X ⟨σ, τ⟩ = ⟨∇_X σ, τ⟩ + ⟨σ, ∇_X τ⟩` holds for all sufficiently nice vector fields `X` on `M`
-and sections `σ`, `τ` of `V`.
+A connection on `V` is compatible with the metric on `V` iff `𝓛_X ⟨σ, τ⟩ = ⟨∇_X σ, τ⟩ + ⟨σ, ∇_X τ⟩`
+holds for all sufficiently nice vector fields `X` on `M` and sections `σ`, `τ` of `V`.
 The left hand side is the Lie derivative of the function `⟨σ, τ⟩` w.r.t. the vector field `X`:
-its value at `x` is `df(X x)`, where `f := ⟨σ, τ⟩` (ie. `X` is seen a derivation on the
-algebra of functions on the base manifold acting on the function `⟨σ, τ⟩`).
+its value at `x` is `df(X x)`, where `f := ⟨σ, τ⟩` (ie. `X` is seen a derivation on the algebra
+of functions on the base manifold acting on the function `⟨σ, τ⟩`).
 In our definition, we ask for this identity to hold at each `x : M`, whenever `X`, `σ` and `τ` are
 differentiable at `x`.
 -/
 
 variable {σ σ' τ : Π x : M, V x}
 
-local notation "⟪" σ ", " τ "⟫" => fun x ↦ pseudoInner (σ x) (τ x)
+local notation "⟪" σ ", " τ "⟫" => fun x ↦ inner ℝ (σ x) (τ x)
 
 namespace CovariantDerivative
 
@@ -90,61 +87,51 @@ section. -/
 local syntax "∇" term:arg term : term
 local macro_rules | `(∇ $X $σ) => `(fun (x : M) ↦ cov $σ x ($X x))
 
-set_option synthInstance.maxHeartbeats 100000 in
--- TVS fibres: iterated hom-bundle topology.
 /-- The function defining the compatibility tensor for `∇` w.r.t. `g`:
 prefer using `derivMetricTensor` instead -/
-noncomputable def derivMetricTensorAux (σ τ : Π x : M, V x) (x : M) :
-    TangentSpace I x →L[ℝ] ℝ :=
-  d% ⟪σ, τ⟫ x - flatL (V x) (τ x) ∘L cov σ x - flatL (V x) (σ x) ∘L cov τ x
+noncomputable def derivMetricTensorAux (σ τ : Π x : M, V x) (x : M) : TangentSpace I x →L[ℝ] ℝ :=
+  d% ⟪σ, τ⟫ x - innerSL (E := (V x)) (τ x) ∘L cov σ x - innerSL (E := (V x)) (σ x) ∘L cov τ x
 
 @[simp]
 lemma derivMetricTensorAux_apply (σ τ : Π x : M, V x) {x : M} (X₀ : TangentSpace I x) :
     derivMetricTensorAux I cov σ τ x X₀ =
-      d% ⟪σ, τ⟫ x X₀ - pseudoInner (cov σ x X₀) (τ x)
-        - pseudoInner (σ x) (cov τ x X₀) := by
-  rw [pseudoInner_comm (cov σ x X₀) (τ x)]
-  rfl
+      d% ⟪σ, τ⟫ x X₀ - inner ℝ (cov σ x X₀) (τ x) - inner ℝ (σ x) (cov τ x X₀) := by
+  rw [PseudoInnerProductSpace.inner_comm (cov σ x X₀) (τ x)]
+  simp [derivMetricTensorAux, PseudoInnerProductSpace.inner_eq_innerSL]
 
 -- From now on, assume `V` is a vector bundle endowed with a `C¹` pseudo-Riemannian metric.
 variable [VectorBundle ℝ F V] [IsContMDiffPseudoRiemannianBundle I 1 F V] {x : M}
 
-set_option synthInstance.maxHeartbeats 100000 in
--- TVS fibres: iterated hom-bundle topology.
 theorem tensorial_derivMetricTensorAux₁ (τ : Π x, V x) (hτ : MDiffAt (T% τ) x) :
     TensorialAt I F (derivMetricTensorAux I cov · τ x) x where
   smul hf hσ := by
     ext X₀
-    simp [mvfderiv_fun_mul hf (hσ.pseudoInner_bundle hτ),
-      cov.isCovariantDerivativeOn.leibniz hσ hf, pseudoInner_add_left, pseudoInner_smul_left]
+    simp [mvfderiv_fun_mul hf (hσ.inner_bundle hτ),
+      cov.isCovariantDerivativeOn.leibniz hσ hf, PseudoInnerProductSpace.inner_add_left]
     ring
   add hσ hσ' := by
     ext X₀
-    simp [mvfderiv_fun_add (hσ.pseudoInner_bundle hτ) (hσ'.pseudoInner_bundle hτ),
-      cov.isCovariantDerivativeOn.add hσ hσ', pseudoInner_add_left]
+    simp [mvfderiv_fun_add (hσ.inner_bundle hτ) (hσ'.inner_bundle hτ),
+      cov.isCovariantDerivativeOn.add hσ hσ', PseudoInnerProductSpace.inner_add_left]
     abel
 
-set_option synthInstance.maxHeartbeats 100000 in
--- TVS fibres: iterated hom-bundle topology.
 theorem tensorial_derivMetricTensorAux₂ (σ : Π x, V x) (hσ : MDiffAt (T% σ) x) :
     TensorialAt I F (derivMetricTensorAux I cov σ · x) x where
   smul hf hτ := by
     ext X₀
-    simp [mvfderiv_fun_mul hf (hσ.pseudoInner_bundle hτ),
-      cov.isCovariantDerivativeOn.leibniz hτ hf, pseudoInner_add_right, pseudoInner_smul_right]
+    simp [mvfderiv_fun_mul hf (hσ.inner_bundle hτ),
+      cov.isCovariantDerivativeOn.leibniz hτ hf, PseudoInnerProductSpace.inner_add_right,
+      PseudoInnerProductSpace.inner_smul_right]
     ring
   add hτ hτ' := by
     ext X₀
-    simp [mvfderiv_fun_add (hσ.pseudoInner_bundle hτ) (hσ.pseudoInner_bundle hτ'),
-      cov.isCovariantDerivativeOn.add hτ hτ', pseudoInner_add_right]
+    simp [mvfderiv_fun_add (hσ.inner_bundle hτ) (hσ.inner_bundle hτ'),
+      cov.isCovariantDerivativeOn.add hτ hτ', PseudoInnerProductSpace.inner_add_right]
     abel
 
-variable {I} [ContMDiffVectorBundle 1 F V I]
-
-set_option synthInstance.maxHeartbeats 100000 in
--- TVS fibres: iterated hom-bundle topology.
-/-- The tensor `(X, σ, τ) ↦ X g(σ, τ) - g(∇_X σ, τ) - g(σ, ∇_X τ)` defining when a
-connection `∇` on a pseudo-Riemannian bundle `(M, V)` is compatible with the metric `g`. -/
+variable {I} [ContMDiffVectorBundle 1 F V I] in
+/-- The tensor `(X, σ, τ) ↦ X g(σ, τ) - g(∇_X σ, τ) - g(σ, ∇_X τ)` defining when a connection
+`∇` on a pseudo-Riemannian bundle `(M, V)` is compatible with the metric `g`. -/
 public noncomputable def derivMetricTensor [FiniteDimensional ℝ F] (x : M) :
     V x →L[ℝ] V x →L[ℝ] (TangentSpace I x →L[ℝ] ℝ) :=
   TensorialAt.mkHom₂ (derivMetricTensorAux I cov · · x) _
@@ -152,8 +139,7 @@ public noncomputable def derivMetricTensor [FiniteDimensional ℝ F] (x : M) :
 
 variable {X : Π x : M, TangentSpace I x}
 
-set_option synthInstance.maxHeartbeats 100000 in
--- TVS fibres: iterated hom-bundle topology.
+variable {I} [ContMDiffVectorBundle 1 F V I] in
 public theorem derivMetricTensor_apply [FiniteDimensional ℝ F] (x : M)
     (hσ : MDiffAt (T% σ) x) (hτ : MDiffAt (T% τ) x) :
     cov.derivMetricTensor x (σ x) (τ x) (X x) =
@@ -161,25 +147,23 @@ public theorem derivMetricTensor_apply [FiniteDimensional ℝ F] (x : M)
   unfold derivMetricTensor
   rw [TensorialAt.mkHom₂_apply _ _ hσ hτ, derivMetricTensorAux_apply]
 
-set_option synthInstance.maxHeartbeats 100000 in
--- TVS fibres: iterated hom-bundle topology.
+variable {I} [ContMDiffVectorBundle 1 F V I] in
 public theorem derivMetricTensor_apply_eq_extend [FiniteDimensional ℝ F]
     (X₀ : TangentSpace I x) (σ₀ τ₀ : V x) :
     cov.derivMetricTensor x σ₀ τ₀ X₀ =
       d% ⟪(FiberBundle.extend F σ₀), (FiberBundle.extend F τ₀)⟫ x X₀
-        - pseudoInner (cov (FiberBundle.extend F σ₀) x X₀) τ₀
-        - pseudoInner σ₀ (cov (FiberBundle.extend F τ₀) x X₀) := by
+        - inner ℝ (cov (FiberBundle.extend F σ₀) x X₀) τ₀
+        - inner ℝ σ₀ (cov (FiberBundle.extend F τ₀) x X₀) := by
   simp [derivMetricTensor, TensorialAt.mkHom₂_apply_eq_extend]
 
-set_option synthInstance.maxHeartbeats 100000 in
--- TVS fibres: iterated hom-bundle topology.
+variable {I} [ContMDiffVectorBundle 1 F V I] in
 /-- Predicate saying that a connection `∇` on a pseudo-Riemannian bundle `(V, g)` is compatible
-with the ambient metric, i.e. for all differentiable vector fields `X` on `M` and sections `σ`
-and `τ` of `V`, we have `X ⟨σ, τ⟩ = ⟨∇_X σ, τ⟩ + ⟨σ, ∇_X τ⟩`. -/
+with the ambient metric, i.e. for all differentiable vector fields `X` on `M` and sections `σ` and
+`τ` of `V`, we have `X ⟨σ, τ⟩ = ⟨∇_X σ, τ⟩ + ⟨σ, ∇_X τ⟩`. -/
 public def IsMetricCompatible [FiniteDimensional ℝ F] : Prop := derivMetricTensor cov = 0
 
-set_option synthInstance.maxHeartbeats 100000 in
--- TVS fibres: iterated hom-bundle topology.
+variable {I} [ContMDiffVectorBundle 1 F V I]
+
 variable {cov} in
 public lemma IsMetricCompatible.mvfderiv_inner_eq [FiniteDimensional ℝ F]
     (hcov : cov.IsMetricCompatible) {x : M} (X : Π x, TangentSpace I x) {σ τ : (x : M) → V x}
@@ -191,8 +175,6 @@ public lemma IsMetricCompatible.mvfderiv_inner_eq [FiniteDimensional ℝ F]
 
 variable [IsManifold I 1 M]
 
-set_option synthInstance.maxHeartbeats 100000 in
--- TVS fibres: iterated hom-bundle topology.
 public lemma isMetricCompatible_iff [FiniteDimensional ℝ F] :
     cov.IsMetricCompatible ↔ ∀ {x : M} {X : Π x, TangentSpace I x} {σ τ : (x : M) → V x},
       MDiffAt (T% X) x → MDiffAt (T% σ) x → MDiffAt (T% τ) x →

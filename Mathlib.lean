@@ -2284,7 +2284,7 @@ public import Mathlib.Analysis.Normed.Operator.NNNorm
 public import Mathlib.Analysis.Normed.Operator.NormedSpace
 public import Mathlib.Analysis.Normed.Operator.Perturbation.StrictByFinite
 public import Mathlib.Analysis.Normed.Operator.Prod
-public import Mathlib.Analysis.Normed.Operator.QuadraticFormSignature
+public import Mathlib.Analysis.Normed.Operator.QuadraticForm
 public import Mathlib.Analysis.Normed.Order.Hom.Basic
 public import Mathlib.Analysis.Normed.Order.Hom.Ultra
 public import Mathlib.Analysis.Normed.Order.Lattice
@@ -4758,9 +4758,8 @@ public import Mathlib.Geometry.Manifold.Notation
 public import Mathlib.Geometry.Manifold.PartitionOfUnity
 public import Mathlib.Geometry.Manifold.PoincareConjecture
 public import Mathlib.Geometry.Manifold.PseudoRiemannian.Basic
-public import Mathlib.Geometry.Manifold.PseudoRiemannian.LeviCivita
 public import Mathlib.Geometry.Manifold.PseudoRiemannian.Lorentzian
-public import Mathlib.Geometry.Manifold.PseudoRiemannian.Riemannian
+public import Mathlib.Geometry.Manifold.PseudoRiemannian.Minkowski
 public import Mathlib.Geometry.Manifold.Riemannian.Basic
 public import Mathlib.Geometry.Manifold.Riemannian.PathELength
 public import Mathlib.Geometry.Manifold.Sheaf.Basic
@@ -4775,14 +4774,15 @@ public import Mathlib.Geometry.Manifold.VectorBundle.ContMDiffSection
 public import Mathlib.Geometry.Manifold.VectorBundle.CovariantDerivative.Basic
 public import Mathlib.Geometry.Manifold.VectorBundle.CovariantDerivative.LeviCivita
 public import Mathlib.Geometry.Manifold.VectorBundle.CovariantDerivative.Metric
+public import Mathlib.Geometry.Manifold.VectorBundle.CovariantDerivative.MetricUniqueness
 public import Mathlib.Geometry.Manifold.VectorBundle.CovariantDerivative.Torsion
 public import Mathlib.Geometry.Manifold.VectorBundle.FiberwiseLinear
 public import Mathlib.Geometry.Manifold.VectorBundle.Hom
 public import Mathlib.Geometry.Manifold.VectorBundle.HomInverse
 public import Mathlib.Geometry.Manifold.VectorBundle.LocalFrame
 public import Mathlib.Geometry.Manifold.VectorBundle.MDifferentiable
-public import Mathlib.Geometry.Manifold.VectorBundle.Pullback
 public import Mathlib.Geometry.Manifold.VectorBundle.PseudoRiemannian
+public import Mathlib.Geometry.Manifold.VectorBundle.Pullback
 public import Mathlib.Geometry.Manifold.VectorBundle.Riemannian
 public import Mathlib.Geometry.Manifold.VectorBundle.SmoothSection
 public import Mathlib.Geometry.Manifold.VectorBundle.Tangent
@@ -8383,6 +8383,7 @@ public import Mathlib.Topology.VectorBundle.Constructions
 public import Mathlib.Topology.VectorBundle.ContinuousAlternatingMap
 public import Mathlib.Topology.VectorBundle.FiniteDimensional
 public import Mathlib.Topology.VectorBundle.Hom
+public import Mathlib.Topology.VectorBundle.PseudoRiemannian
 public import Mathlib.Topology.VectorBundle.Riemannian
 public import Mathlib.Topology.WithTopology
 public import Mathlib.Util.AddRelatedDecl

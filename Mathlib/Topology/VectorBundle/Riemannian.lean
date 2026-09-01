@@ -405,7 +405,7 @@ creating diamonds. Use as follows:
   that it varies continuously (i.e., a `[IsContinuousRiemannianBundle]` instance).
 * `instance : RiemannianBundle E := ⟨g.toRiemannianMetric⟩` where
   `g : ContMDiffRiemannianMetric IB n F E` registers the inner product space on the fibers, and the
-  fact that it varies smoothly (and continuously), i.e., `[IsContMDiffRiemannianBundle]` and
+  fact that it varies smoothly (and continuously), i.e., `[IsContMDiffPseudoRiemannianBundle]` and
   `[IsContinuousRiemannianBundle]` instances.
 
 Note that this is only useful when there is a preexisting topology in the fibers of a vector

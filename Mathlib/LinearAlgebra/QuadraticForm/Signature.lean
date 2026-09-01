@@ -97,6 +97,8 @@ lemma le_sigPos_of_posDef [Module.Finite R M] [StrongRankCondition R]
 subspace of `M`. (Defined as `0` if `M` is infinite-dimensional). -/
 def sigNeg : ℕ := sigPos (-Q)
 
+lemma sigNeg_le_finrank : sigNeg Q ≤ Module.finrank R M := sigPos_le_finrank _
+
 /-- Defining property of `sigNeg`. -/
 lemma sigNeg_isGreatest [Module.Finite R M] [StrongRankCondition R] : IsGreatest
     {r | ∃ V : Submodule R M, Module.finrank R V = r ∧ ((-Q).restrict V).PosDef} (sigNeg Q) :=
